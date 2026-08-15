@@ -44,6 +44,12 @@ let environmentAtlasReady = environmentAtlas.complete && environmentAtlas.natura
 environmentAtlas.onload = () => { environmentAtlasReady = true; };
 const ENV_ATLAS_CELL = 128;
 
+const propAtlas = new Image();
+propAtlas.src = "./assets/props/object-atlas.png";
+let propAtlasReady = propAtlas.complete && propAtlas.naturalWidth > 0;
+propAtlas.onload = () => { propAtlasReady = true; };
+const PROP_ATLAS_CELL = 160;
+
 const terrainTexture = new Image();
 terrainTexture.src = "./assets/environment/terrain-seamless.png";
 let terrainTextureReady = terrainTexture.complete && terrainTexture.naturalWidth > 0;

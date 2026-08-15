@@ -85,6 +85,62 @@ const scenerySigns=[];
 const sceneryNPCs=[];
 const sceneryProps=[];
 let solidRects=[];
+
+const PROP_SPECS = {
+  barrel:{col:0,row:0,w:42,h:48},
+  crate:{col:1,row:0,w:44,h:44},
+  sacks:{col:2,row:0,w:48,h:46},
+  bench:{col:3,row:0,w:52,h:30},
+  signpost:{col:4,row:0,w:42,h:56},
+  notice:{col:5,row:0,w:50,h:56},
+  lamppost:{col:6,row:0,w:38,h:60},
+  well:{col:7,row:0,w:62,h:64},
+  mailbox:{col:0,row:1,w:34,h:46},
+  cart:{col:1,row:1,w:62,h:44},
+  table:{col:2,row:1,w:52,h:32},
+  stool:{col:3,row:1,w:34,h:36},
+  flowerBoxA:{col:4,row:1,w:50,h:30},
+  flowerBoxB:{col:5,row:1,w:50,h:30},
+  hay:{col:6,row:1,w:50,h:42},
+  haystack:{col:7,row:1,w:56,h:58},
+  scarecrow:{col:0,row:2,w:44,h:64},
+  trough:{col:1,row:2,w:60,h:36},
+  fence:{col:2,row:2,w:48,h:28},
+  gate:{col:4,row:2,w:48,h:44},
+  stoneWall:{col:5,row:2,w:50,h:34},
+  rockPile:{col:7,row:2,w:50,h:34},
+  boulder:{col:0,row:3,w:44,h:34},
+  stump:{col:1,row:3,w:44,h:36},
+  log:{col:2,row:3,w:50,h:34},
+  bush:{col:3,row:3,w:42,h:34},
+  flowerBush:{col:4,row:3,w:44,h:34},
+  flowerPatch:{col:5,row:3,w:42,h:30},
+  mushrooms:{col:6,row:3,w:36,h:34},
+  campfire:{col:7,row:3,w:44,h:40},
+  cauldron:{col:0,row:4,w:52,h:56},
+  trainingDummy:{col:1,row:4,w:42,h:56},
+  archeryTarget:{col:2,row:4,w:46,h:54},
+  chest:{col:3,row:4,w:44,h:38},
+  spikeBarricade:{col:4,row:4,w:52,h:34},
+  goblinTotem:{col:5,row:4,w:44,h:66},
+  bones:{col:6,row:4,w:48,h:38},
+  goblinTent:{col:7,row:4,w:56,h:56},
+  marketRed:{col:0,row:5,w:52,h:54},
+  marketBlue:{col:1,row:5,w:52,h:52},
+  woodpile:{col:2,row:5,w:52,h:44},
+  bucket:{col:3,row:5,w:30,h:34},
+  barrels3:{col:4,row:5,w:54,h:44},
+  crates3:{col:5,row:5,w:52,h:44},
+  wheel:{col:6,row:5,w:40,h:40},
+  barrelOpen:{col:7,row:5,w:44,h:42},
+  bridge:{col:0,row:6,w:52,h:40},
+  steppingStones:{col:1,row:6,w:52,h:34},
+  birdbath:{col:2,row:6,w:44,h:48},
+  clothesline:{col:4,row:6,w:52,h:40},
+  grave:{col:5,row:6,w:38,h:44},
+  flowerCart:{col:6,row:6,w:52,h:38},
+  hayCrate:{col:7,row:6,w:56,h:44}
+};
 const MOB_SPAWN_TILES = new Set([
   "18,5","21,4","24,6","19,8","22,9","26,5",
   "34,6","37,5","39,8","35,9","40,6",
@@ -121,25 +177,51 @@ function buildScenery(){
     const f=spec.footprint;
     addSolidRect(placement.x+f.x,placement.y+f.y,f.w,f.h,"house");
   }
-
-  // Town decorations / future interaction anchors.
+  // Town, farm, and camp props now pull from the new shared object atlas.
   sceneryProps.push(
-    {type:"well",x:6*TILE+12,y:5*TILE+20},
-    {type:"notice",x:10*TILE+18,y:9*TILE+2},
-    {type:"stall",x:3*TILE+16,y:5*TILE+18},
-    {type:"crate",x:8*TILE+8,y:6*TILE+26},
-    // Farm props.
-    {type:"hay",x:5*TILE+4,y:19*TILE+16},
-    {type:"hay",x:5*TILE+34,y:19*TILE+12},
-    {type:"trough",x:8*TILE+16,y:23*TILE+10},
+    // Starter town
+    {type:"well",x:6*TILE+6,y:5*TILE-4},
+    {type:"notice",x:10*TILE+12,y:9*TILE-10},
+    {type:"marketRed",x:3*TILE+8,y:5*TILE-2},
+    {type:"marketBlue",x:4*TILE+34,y:5*TILE+2},
+    {type:"crate",x:8*TILE+10,y:6*TILE+30},
+    {type:"barrel",x:8*TILE+38,y:6*TILE+28},
+    {type:"bench",x:6*TILE+28,y:9*TILE+30},
+    {type:"mailbox",x:11*TILE+24,y:4*TILE+34},
+    {type:"lamppost",x:4*TILE+12,y:4*TILE+2},
+    {type:"lamppost",x:9*TILE+34,y:4*TILE+4},
+    {type:"flowerBoxA",x:6*TILE+10,y:4*TILE+24},
+    {type:"flowerBoxB",x:10*TILE+34,y:4*TILE+20},
+
+    // Farm
+    {type:"hay",x:4*TILE+8,y:19*TILE+24},
+    {type:"haystack",x:6*TILE+28,y:19*TILE+8},
+    {type:"trough",x:8*TILE+12,y:23*TILE+16},
+    {type:"scarecrow",x:4*TILE+18,y:20*TILE+10},
+    {type:"cart",x:8*TILE+18,y:20*TILE+10},
+    {type:"sacks",x:3*TILE+18,y:18*TILE+24},
+    {type:"bucket",x:9*TILE+18,y:22*TILE+26},
     {type:"crops",x:4*TILE+8,y:22*TILE+6,w:90,h:82},
-    // Goblin camp props.
-    {type:"tent",x:33*TILE+10,y:5*TILE+2},
-    {type:"tent",x:38*TILE+12,y:5*TILE+6},
-    {type:"tent",x:38*TILE+4,y:8*TILE+12},
-    {type:"campfire",x:36*TILE+18,y:7*TILE+14},
+
+    // Slime area / wilderness accents
+    {type:"signpost",x:17*TILE+22,y:8*TILE+2},
+    {type:"mushrooms",x:26*TILE+12,y:4*TILE+24},
+    {type:"boulder",x:29*TILE+18,y:15*TILE+26},
+    {type:"log",x:24*TILE+18,y:24*TILE+18},
+    {type:"flowerPatch",x:20*TILE+26,y:21*TILE+24},
+
+    // Goblin camp
+    {type:"goblinTent",x:33*TILE+4,y:5*TILE+2},
+    {type:"goblinTent",x:37*TILE+8,y:5*TILE+6},
+    {type:"goblinTent",x:38*TILE+2,y:8*TILE+8},
+    {type:"campfire",x:36*TILE+20,y:7*TILE+18},
+    {type:"goblinTotem",x:35*TILE+4,y:4*TILE+4},
+    {type:"spikeBarricade",x:33*TILE+32,y:10*TILE+8},
     {type:"crate",x:34*TILE+14,y:8*TILE+18},
-    {type:"crate",x:40*TILE+12,y:7*TILE+20},
+    {type:"barrels3",x:40*TILE+8,y:7*TILE+18},
+    {type:"bones",x:39*TILE+14,y:8*TILE+20},
+    {type:"chest",x:36*TILE+34,y:5*TILE+28},
+
     // Blocked next-zone entrance.
     {type:"blockedGate",x:35*TILE+24,y:29*TILE+4}
   );
@@ -496,6 +578,17 @@ function drawSignObject(obj,camX,camY){
   ctx.restore();
 }
 
+function drawPropAtlasCell(spec,x,y){
+  if(!propAtlasReady || !spec) return false;
+  ctx.imageSmoothingEnabled=false;
+  ctx.drawImage(
+    propAtlas,
+    spec.col*PROP_ATLAS_CELL, spec.row*PROP_ATLAS_CELL, PROP_ATLAS_CELL, PROP_ATLAS_CELL,
+    Math.round(x), Math.round(y), spec.w, spec.h
+  );
+  return true;
+}
+
 function drawCastle(x,y){
   ctx.imageSmoothingEnabled=false;
 
@@ -543,32 +636,11 @@ function drawNpcObject(obj,camX,camY){
 
 function drawPropObject(obj,camX,camY){
   const x=Math.round(obj.x-camX), y=Math.round(obj.y-camY);
+  const spec=PROP_SPECS[obj.type];
+  if(spec && drawPropAtlasCell(spec,x,y)) return;
+
   ctx.save(); ctx.imageSmoothingEnabled=false;
-  if(obj.type==="well"){
-    ctx.fillStyle="#6f7276"; ctx.fillRect(x,y+7,40,18);
-    ctx.fillStyle="#a2a5a6"; ctx.fillRect(x+3,y+4,34,6);
-    ctx.fillStyle="#2e5360"; ctx.fillRect(x+8,y+9,24,10);
-    ctx.fillStyle="#775238"; ctx.fillRect(x+3,y-10,4,18); ctx.fillRect(x+33,y-10,4,18); ctx.fillRect(x+2,y-11,36,4);
-  }else if(obj.type==="notice"){
-    ctx.fillStyle="#6a472b"; ctx.fillRect(x+13,y+12,5,26);
-    ctx.fillStyle="#95653b"; ctx.fillRect(x,y,31,18);
-    ctx.fillStyle="#d5c08e"; ctx.fillRect(x+4,y+4,23,10);
-    ctx.fillStyle="#75562e"; ctx.fillRect(x+7,y+7,16,2);
-  }else if(obj.type==="stall"){
-    ctx.fillStyle="#795234"; ctx.fillRect(x+2,y+12,34,18);
-    ctx.fillStyle="#b94445"; ctx.fillRect(x,y,40,9);
-    ctx.fillStyle="#efe4c7"; for(let i=4;i<40;i+=10)ctx.fillRect(x+i,y,5,9);
-    ctx.fillStyle="#765034"; ctx.fillRect(x+3,y+8,4,25); ctx.fillRect(x+33,y+8,4,25);
-  }else if(obj.type==="crate"){
-    ctx.fillStyle="#6a4527"; ctx.fillRect(x,y,22,20); ctx.fillStyle="#9a6939"; ctx.fillRect(x+2,y+2,18,16);
-    ctx.fillStyle="#6a4527"; ctx.fillRect(x+3,y+8,16,3); ctx.fillRect(x+9,y+2,3,16);
-  }else if(obj.type==="hay"){
-    ctx.fillStyle="#c99c3e"; ctx.fillRect(x,y+4,25,16); ctx.fillStyle="#e1bd58"; ctx.fillRect(x+3,y,18,18);
-    ctx.fillStyle="#9b742e"; ctx.fillRect(x+4,y+7,16,2); ctx.fillRect(x+8,y+14,12,2);
-  }else if(obj.type==="trough"){
-    ctx.fillStyle="#65472f"; ctx.fillRect(x,y+6,34,13); ctx.fillStyle="#8e6848"; ctx.fillRect(x+2,y+3,30,7);
-    ctx.fillStyle="#5a9ab3"; ctx.fillRect(x+5,y+6,24,5);
-  }else if(obj.type==="crops"){
+  if(obj.type==="crops") {
     const w=obj.w||90,h=obj.h||70;
     ctx.fillStyle="rgba(92,62,38,.42)"; ctx.fillRect(x,y,w,h);
     for(let yy=8;yy<h-4;yy+=18){
@@ -577,18 +649,15 @@ function drawPropObject(obj,camX,camY){
         ctx.fillStyle=alt?"#5f9d45":"#7aae4c"; ctx.fillRect(x+xx,y+yy,8,4); ctx.fillRect(x+xx+2,y+yy-4,4,8);
       }
     }
-  }else if(obj.type==="tent"){
-    ctx.fillStyle="#6c3828"; ctx.beginPath();ctx.moveTo(x+2,y+34);ctx.lineTo(x+26,y);ctx.lineTo(x+50,y+34);ctx.closePath();ctx.fill();
-    ctx.fillStyle="#9a4d35"; ctx.beginPath();ctx.moveTo(x+8,y+31);ctx.lineTo(x+26,y+5);ctx.lineTo(x+26,y+31);ctx.closePath();ctx.fill();
-    ctx.fillStyle="#3d281f"; ctx.fillRect(x+24,y+20,5,14);
-  }else if(obj.type==="campfire"){
-    ctx.fillStyle="#5b4637"; ctx.fillRect(x,y+17,30,5); ctx.fillRect(x+5,y+12,20,14);
-    ctx.fillStyle="#ef7a2c"; ctx.fillRect(x+10,y+3,11,16); ctx.fillStyle="#ffd25c"; ctx.fillRect(x+13,y+6,6,10);
   }else if(obj.type==="blockedGate"){
     ctx.fillStyle="#4f3827"; ctx.fillRect(x,y,8,62); ctx.fillRect(x+142,y,8,62);
     ctx.fillStyle="#755137"; ctx.fillRect(x+5,y+8,140,8); ctx.fillRect(x+5,y+42,140,8);
     ctx.fillStyle="#8e633e"; ctx.fillRect(x+38,y+13,12,44); ctx.fillRect(x+100,y+13,12,44);
     ctx.fillStyle="#6e2e25"; ctx.fillRect(x+59,y+17,33,29); ctx.fillStyle="#e7c064"; ctx.font="900 22px system-ui"; ctx.textAlign="center"; ctx.fillText("×",x+75,y+40); ctx.textAlign="start";
+  }else{
+    // Fallback placeholder for any future prop ids that are not mapped yet.
+    ctx.fillStyle="#8d6740";
+    ctx.fillRect(x,y,24,24);
   }
   ctx.restore();
 }
