@@ -23,6 +23,13 @@ document.getElementById("actionHint").onclick=()=>{
   else toast("Click/tap a mob to target it first.");
 };
 document.getElementById("quickPotion").onclick=useQuickPotion;
+
+document.getElementById("backpackBtn").onclick=toggleBackpack;
+document.getElementById("closeBackpack").onclick=closeBackpack;
+document.getElementById("inventoryGrid").onclick=event=>{
+  const slot=event.target.closest?.("[data-slot]");
+  if(slot) selectInventorySlot(Number(slot.dataset.slot));
+};
 game.addEventListener("pointerdown",handleWorldTap);
 document.getElementById("menuBtn").onclick=()=>{
   input={up:false,down:false,left:false,right:false};

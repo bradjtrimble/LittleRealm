@@ -78,6 +78,13 @@ try:
 except Exception as e:
     failed.append('keyboard input test'); print('FAIL keyboard input test',e)
 
+
+try:
+    inventory=subprocess.run(['node',str(ROOT/'tools'/'inventory-test.js')],check=True,capture_output=True,text=True)
+    print(inventory.stdout.strip())
+except Exception as e:
+    failed.append('backpack inventory test'); print('FAIL backpack inventory test',e)
+
 try:
     config_test=subprocess.run(['node',str(ROOT/'tools'/'config-test.js')],check=True,capture_output=True,text=True)
     print(config_test.stdout.strip())

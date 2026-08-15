@@ -1,4 +1,4 @@
-const CACHE_NAME = "little-realm-v19-water-texture";
+const CACHE_NAME = "little-realm-v20-backpack";
 const FILES = [
   "./",
   "./index.html",
@@ -7,6 +7,7 @@ const FILES = [
   "./js/pwa.js",
   "./js/runtime-loader.js",
   "./config/game-balance.js",
+  "./config/items.js",
   "./config/keybinds.js",
   "./js/game.js",
   "./assets/icons/icon-192.png",

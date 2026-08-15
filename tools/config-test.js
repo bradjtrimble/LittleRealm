@@ -10,6 +10,7 @@ if(!index.includes('./js/runtime-loader.js')) throw new Error('runtime loader mi
 const loader=fs.readFileSync(path.join(ROOT,'js','runtime-loader.js'),'utf8');
 if(!loader.includes('game-balance.js", true')) throw new Error('balance config not cache-busted');
 if(!loader.includes('keybinds.js", true')) throw new Error('keybind config not cache-busted');
+if(!loader.includes('items.js", true')) throw new Error('item config not cache-busted');
 const sw=fs.readFileSync(path.join(ROOT,'service-worker.js'),'utf8');
 if(!sw.includes('cache:"no-store"')) throw new Error('service worker config fetch is not no-store');
 console.log('PASS live config test');

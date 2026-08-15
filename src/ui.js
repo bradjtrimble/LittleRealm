@@ -1,6 +1,7 @@
 function closeAll(){
   document.getElementById("menu").classList.remove("show");
   document.getElementById("battle").classList.remove("show");
+  document.getElementById("backpack")?.classList.remove("show");
 }
 
 function updateUI(){
@@ -39,6 +40,8 @@ function updateUI(){
     document.getElementById("bEnemyHpFill").style.width=`${Math.max(0,100*enemyHp/enemy.maxHp)}%`;
     document.getElementById("potionCount").textContent=`(${state.potions})`;
   }
+
+  updateBackpackHud();
 
   const quickPotion=document.getElementById("quickPotion");
   if(quickPotion) quickPotion.textContent=`POTION ${state.potions}`;

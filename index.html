@@ -8,7 +8,7 @@
   <link rel="icon" type="image/png" sizes="192x192" href="./assets/icons/icon-192.png">
   <link rel="icon" type="image/png" sizes="512x512" href="./assets/icons/icon-512.png">
   <title>Little Realm RPG</title>
-  <link rel="stylesheet" href="./style.css?v=19">
+  <link rel="stylesheet" href="./style.css?v=20">
 </head>
 <body>
 <div id="gameShell">
@@ -26,10 +26,11 @@
   </div>
 
   <button id="menuBtn">MENU</button>
+  <button id="backpackBtn" aria-label="Open backpack"><span class="bagGlyph" aria-hidden="true"></span><span id="backpackCount">0/20</span></button>
   <div id="questChip">Slimes 0/3</div>
   <div id="toast"></div>
   <div id="pcControls" aria-hidden="true"></div>
-  <div id="buildBadge" aria-hidden="true">v15 • PC CONTROLS ACTIVE</div>
+  <div id="buildBadge" aria-hidden="true">v20 • BACKPACK SYSTEM</div>
 
   <div id="dpad">
     <div class="pad" id="up">▲</div>
@@ -46,6 +47,21 @@
     <div id="combatHint">Auto-attacking</div>
   </div>
   <button id="quickPotion">POTION 2</button>
+
+  <div id="backpack" class="overlay">
+    <div id="backpackPanel" class="panel">
+      <div class="inventoryHeader">
+        <div>
+          <div class="inventoryEyebrow">ADVENTURER GEAR</div>
+          <h2>Backpack</h2>
+        </div>
+        <div id="inventoryCapacity">0 / 20 slots</div>
+      </div>
+      <div id="inventoryGrid" aria-label="Backpack inventory"></div>
+      <div id="inventoryDetails"><div class="inventoryDetailEmpty">Select an item to inspect it.</div></div>
+      <button class="action" id="closeBackpack">Close Backpack</button>
+    </div>
+  </div>
 
   <div id="menu" class="overlay">
     <div class="panel">
@@ -105,7 +121,7 @@
     </div>
   </div>
 </div>
-  <script src="./js/pwa.js?v=19"></script>
-  <script src="./js/runtime-loader.js?v=19"></script>
+  <script src="./js/pwa.js?v=20"></script>
+  <script src="./js/runtime-loader.js?v=20"></script>
 </body>
 </html>

@@ -6,7 +6,8 @@ function fresh(){
     hp:numberOr(BALANCE.player?.maxHp,30),maxHp:numberOr(BALANCE.player?.maxHp,30),
     atk:numberOr(BALANCE.player?.attack,5),def:numberOr(BALANCE.player?.defense,1),
     gold:numberOr(BALANCE.player?.startingGold,8),potions:numberOr(BALANCE.player?.startingPotions,2),kills:0,
-    slimeKills:0,questComplete:false,bossDefeated:false
+    slimeKills:0,questComplete:false,bossDefeated:false,
+    inventory:createEmptyInventory()
   };
 }
 
@@ -103,7 +104,7 @@ function moveHeroVector(dx,dy,amount){
 }
 
 function updateMovement(dt){
-  if(document.getElementById("menu").classList.contains("show")) {
+  if(document.getElementById("menu").classList.contains("show") || document.getElementById("backpack").classList.contains("show")) {
     isHeroMoving=false;
     return;
   }

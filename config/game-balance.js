@@ -20,6 +20,11 @@ window.LR_BALANCE = {
     deathGoldLossPercent: 25
   },
 
+  inventory: {
+    slots: 20,
+    defaultStackLimit: 99
+  },
+
   combat: {
     meleeRange: 30,
     engageRange: 72,

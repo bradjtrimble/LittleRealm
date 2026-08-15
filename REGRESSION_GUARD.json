@@ -48,9 +48,10 @@
     "respawn_cleanup": "movement input, attack timers, attack animations, and combat FX reset before Oakrest respawn",
     "v10_balance_preserved": true
   },
-  "architecture_update": "v17 live balance/keybind config refresh on top of v16 workflow cleanup",
+  "architecture_update": "v20 backpack inventory foundation on top of v19 water texture",
   "source_modules": [
     "core.js",
+    "inventory.js",
     "world.js",
     "player.js",
     "mobs.js",
@@ -87,7 +88,7 @@
     "world_feedback": "selected mob gets a target ring and world-space HP bar",
     "attack": "ATTACK prioritizes the selected mob; aggressive mobs still auto-engage normally"
   },
-  "keybind_config": "config/keybinds.js is cache-busted on launch and fetched network-first/no-store; key-only edits require no build step.",
+  "keybind_config": "config/keybinds.js is cache-busted on launch and fetched network-first/no-store; key-only edits require no build step. v20 adds backpack I/B.",
   "pc_controls": {
     "movement": "WASD or arrow keys",
     "target": "Tab / Shift+Tab cycles nearby mobs",
@@ -104,5 +105,15 @@
     "cache_hardening": "runtime-loader cache-busts js/game.js; index version-busts runtime loader/style; service-worker cache v19",
     "collision_changed": false,
     "protected_after_update": true
+  },
+  "inventory_update": {
+    "version": "v20",
+    "slots": "configurable via config/game-balance.js (default 20)",
+    "stacking": "centralized addItem/removeItem API with per-item stack limits",
+    "catalog": "config/items.js is live/cache-busted for item metadata and stack overrides",
+    "save": "inventory persists in existing save object; legacy saves normalize to an empty backpack",
+    "controls": "HUD backpack button plus I/B keyboard toggle",
+    "drops_enabled": false,
+    "protected_world_changed": false
   }
 }

@@ -13,13 +13,20 @@
   }
 
   async function bootLittleRealm() {
-    // Balance and keybind files are deliberately cache-busted. They are the
-    // two files designed for quick GitHub edits without rebuilding the game.
+    // Balance, item, and keybind files are deliberately cache-busted. They are
+    // designed for quick GitHub edits without rebuilding the game.
     try {
       await loadScript("./config/game-balance.js", true);
     } catch (err) {
       console.warn("Fresh balance config unavailable; trying offline cache.", err);
       await loadScript("./config/game-balance.js");
+    }
+
+    try {
+      await loadScript("./config/items.js", true);
+    } catch (err) {
+      console.warn("Fresh item config unavailable; trying offline cache.", err);
+      await loadScript("./config/items.js");
     }
 
     try {

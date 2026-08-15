@@ -8,6 +8,7 @@ function load(){
   if(!raw){toast("No v3 save found.");return}
   try{
     state={...fresh(),...JSON.parse(raw)};
+    ensureInventoryState();
     enemy=null;
     currentMob=null;
     combatTarget=null;

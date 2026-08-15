@@ -525,3 +525,169 @@ button.action:active{transform:scale(.98)}
   }
   #quickPotion{right:158px;bottom:86px}
 }
+
+
+/* v20 Backpack / slot inventory */
+#backpackBtn{
+  position:absolute;
+  top:max(10px, env(safe-area-inset-top));
+  right:88px;
+  height:42px;
+  min-width:62px;
+  padding:5px 8px;
+  border:1px solid rgba(255,255,255,.16);
+  border-radius:12px;
+  background:var(--panel);
+  color:#fff;
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  gap:6px;
+  font-size:10px;
+  font-weight:900;
+  box-shadow:0 6px 18px rgba(0,0,0,.24);
+  cursor:pointer;
+  z-index:8;
+  touch-action:manipulation;
+}
+#backpackBtn:active{transform:scale(.96)}
+#backpackCount{font-variant-numeric:tabular-nums;white-space:nowrap}
+.bagGlyph{
+  position:relative;
+  display:block;
+  width:19px;
+  height:18px;
+  margin-top:2px;
+  border:2px solid #4c2f1d;
+  border-radius:4px 4px 5px 5px;
+  background:#a66b35;
+  box-shadow:inset 0 -4px #7c4c28;
+}
+.bagGlyph::before{
+  content:"";
+  position:absolute;
+  left:3px;
+  top:-7px;
+  width:9px;
+  height:8px;
+  border:2px solid #6a4226;
+  border-bottom:0;
+  border-radius:6px 6px 0 0;
+}
+.bagGlyph::after{
+  content:"";
+  position:absolute;
+  left:3px;
+  right:3px;
+  top:5px;
+  height:2px;
+  background:#d59a54;
+}
+#backpack{z-index:24}
+#backpackPanel{
+  width:min(470px,95vw);
+  padding:15px;
+  background:linear-gradient(180deg,#3b2d49,#2b2235);
+  overflow:hidden;
+}
+.inventoryHeader{
+  display:flex;
+  justify-content:space-between;
+  align-items:flex-end;
+  gap:14px;
+  margin-bottom:12px;
+}
+.inventoryHeader h2{margin:0;font-size:24px}
+.inventoryEyebrow{
+  margin-bottom:2px;
+  color:#cdbada;
+  font-size:9px;
+  font-weight:900;
+  letter-spacing:.14em;
+}
+#inventoryCapacity{
+  padding:6px 8px;
+  border:1px solid rgba(255,255,255,.11);
+  border-radius:9px;
+  background:rgba(0,0,0,.18);
+  color:#eadff0;
+  font-size:10px;
+  font-weight:850;
+  white-space:nowrap;
+}
+#inventoryGrid{
+  display:grid;
+  grid-template-columns:repeat(5,minmax(0,1fr));
+  gap:7px;
+}
+.inventorySlot{
+  position:relative;
+  aspect-ratio:1;
+  min-width:0;
+  border:2px solid rgba(236,214,174,.18);
+  border-radius:9px;
+  background:linear-gradient(145deg,#241c2d,#17131e);
+  color:white;
+  box-shadow:inset 0 0 0 2px rgba(0,0,0,.18),0 2px 5px rgba(0,0,0,.20);
+  cursor:pointer;
+  touch-action:manipulation;
+}
+.inventorySlot.empty{background:rgba(16,13,20,.42);border-color:rgba(255,255,255,.075)}
+.inventorySlot:hover:not(.empty),.inventorySlot.selected{border-color:#d8ae62;box-shadow:inset 0 0 0 2px rgba(246,197,100,.15),0 0 0 1px rgba(216,174,98,.20)}
+.inventorySlot:active{transform:scale(.96)}
+.slotNumber{
+  position:absolute;
+  top:4px;
+  left:5px;
+  color:rgba(255,255,255,.17);
+  font-size:8px;
+  font-weight:800;
+}
+.itemSymbol{
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  width:64%;
+  aspect-ratio:1;
+  margin:auto;
+  border-radius:7px;
+  background:linear-gradient(145deg,#956534,#644324);
+  border:1px solid rgba(255,255,255,.13);
+  color:#fff4d8;
+  font-size:20px;
+  font-weight:950;
+  text-shadow:0 2px rgba(0,0,0,.35);
+}
+.itemQty{
+  position:absolute;
+  right:4px;
+  bottom:3px;
+  min-width:17px;
+  padding:1px 4px;
+  border-radius:6px;
+  background:rgba(0,0,0,.78);
+  color:#fff;
+  font-size:9px;
+  font-weight:900;
+  text-align:center;
+}
+#inventoryDetails{
+  min-height:82px;
+  margin-top:12px;
+  padding:10px 11px;
+  border:1px solid rgba(255,255,255,.09);
+  border-radius:11px;
+  background:rgba(15,12,19,.34);
+}
+.inventoryDetailEmpty{color:#b9adbf;font-size:11px;padding-top:20px;text-align:center}
+.inventoryDetailTitle{display:flex;align-items:center;gap:8px;font-size:14px;font-weight:900}
+.inventoryDetailTitle b{margin-left:auto;font-size:12px;color:#f3d69a}
+.detailSymbol{display:inline-flex;width:27px;height:27px;align-items:center;justify-content:center;border-radius:6px;background:#80552e;color:#fff0cf}
+.inventoryDetailMeta{margin-top:5px;color:#c8b8cf;font-size:9px;font-weight:750;text-transform:uppercase;letter-spacing:.06em}
+.inventoryDetailDescription{margin-top:6px;color:#eee5f2;font-size:11px;line-height:1.35}
+#closeBackpack{width:100%;margin-top:12px}
+@media (max-width:430px){
+  #backpackBtn{right:82px;min-width:58px;padding-left:6px;padding-right:6px}
+  #inventoryGrid{gap:5px}
+  #backpackPanel{padding:12px}
+}

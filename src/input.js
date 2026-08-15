@@ -19,12 +19,13 @@ const INPUT_BINDINGS = {
   attackTarget:bindingList("attackTarget",["Space","KeyF"]),
   potion:bindingList("potion",["KeyQ"]),
   clearTarget:bindingList("clearTarget",["Escape"]),
-  menu:bindingList("menu",["KeyM"])
+  menu:bindingList("menu",["KeyM"]),
+  backpack:bindingList("backpack",["KeyI","KeyB"])
 };
 
 // Exposed only as read-only diagnostics so a desktop tester can confirm the
 // deployed build from DevTools without digging through bundled source.
-window.LR_BUILD_VERSION="v15-pc-controls-verified";
+window.LR_BUILD_VERSION="v20-backpack-inventory";
 window.LR_INPUT_BINDINGS=Object.freeze({...INPUT_BINDINGS});
 window.LR_INPUT_STATE=()=>({...input});
 
@@ -65,7 +66,7 @@ function cycleKeyboardTarget(reverse=false){
 }
 
 function attackTargetFromKeyboard(){
-  if(document.getElementById("menu").classList.contains("show")) return;
+  if(document.getElementById("menu").classList.contains("show") || document.getElementById("backpack").classList.contains("show")) return;
   if(combatTarget && combatTarget.alive){
     // Combat is automatic once engaged. Repeated key presses never create
     // additional attacks and therefore cannot bypass the global cooldown.
@@ -95,6 +96,7 @@ function toggleMenuFromKeyboard(){
   const menu=document.getElementById("menu");
   resetHeldKeyboardMovement();
   isHeroMoving=false;
+  closeBackpack();
   menu.classList.toggle("show");
 }
 
@@ -113,11 +115,11 @@ function bindingLabel(action){
 function updateKeyboardHelp(){
   const compact=document.getElementById("pcControls");
   if(compact){
-    compact.textContent=`PC CONTROLS  •  MOVE ${bindingLabel("moveUp")}/${bindingLabel("moveLeft")}/${bindingLabel("moveDown")}/${bindingLabel("moveRight")}  •  TARGET ${bindingLabel("targetNext")}  •  ATTACK ${bindingLabel("attackTarget")}  •  POTION ${bindingLabel("potion")}  •  CLEAR ${bindingLabel("clearTarget")}  •  MENU ${bindingLabel("menu")}`;
+    compact.textContent=`PC CONTROLS  •  MOVE ${bindingLabel("moveUp")}/${bindingLabel("moveLeft")}/${bindingLabel("moveDown")}/${bindingLabel("moveRight")}  •  TARGET ${bindingLabel("targetNext")}  •  ATTACK ${bindingLabel("attackTarget")}  •  POTION ${bindingLabel("potion")}  •  PACK ${bindingLabel("backpack")}  •  CLEAR ${bindingLabel("clearTarget")}  •  MENU ${bindingLabel("menu")}`;
   }
   const list=document.getElementById("keybindList");
   if(list){
-    list.innerHTML=`<b>PC Controls</b><br>Move: ${bindingLabel("moveUp")} / ${bindingLabel("moveLeft")} / ${bindingLabel("moveDown")} / ${bindingLabel("moveRight")}<br>Target next mob: ${bindingLabel("targetNext")}<br>Attack target: ${bindingLabel("attackTarget")}<br>Quick potion: ${bindingLabel("potion")}<br>Clear target / leave combat: ${bindingLabel("clearTarget")}<br>Menu: ${bindingLabel("menu")}`;
+    list.innerHTML=`<b>PC Controls</b><br>Move: ${bindingLabel("moveUp")} / ${bindingLabel("moveLeft")} / ${bindingLabel("moveDown")} / ${bindingLabel("moveRight")}<br>Target next mob: ${bindingLabel("targetNext")}<br>Attack target: ${bindingLabel("attackTarget")}<br>Quick potion: ${bindingLabel("potion")}<br>Backpack: ${bindingLabel("backpack")}<br>Clear target / leave combat: ${bindingLabel("clearTarget")}<br>Menu: ${bindingLabel("menu")}`;
   }
 }
 
@@ -125,15 +127,21 @@ function bindKeyboardControls(){
   window.addEventListener("keydown",event=>{
     if(isEditableKeyTarget(event.target)) return;
 
-    if(keyMatches("moveUp",event)){event.preventDefault();input.up=true;}
-    if(keyMatches("moveDown",event)){event.preventDefault();input.down=true;}
-    if(keyMatches("moveLeft",event)){event.preventDefault();input.left=true;}
-    if(keyMatches("moveRight",event)){event.preventDefault();input.right=true;}
+    const overlayOpen=document.getElementById("menu").classList.contains("show") || document.getElementById("backpack").classList.contains("show");
+    if(!overlayOpen){
+      if(keyMatches("moveUp",event)){event.preventDefault();input.up=true;}
+      if(keyMatches("moveDown",event)){event.preventDefault();input.down=true;}
+      if(keyMatches("moveLeft",event)){event.preventDefault();input.left=true;}
+      if(keyMatches("moveRight",event)){event.preventDefault();input.right=true;}
+    }
 
     // Discrete actions should only fire once per physical press.
     if(event.repeat) return;
 
-    if(keyMatches("targetNext",event)){
+    if(keyMatches("backpack",event)){
+      event.preventDefault();
+      toggleBackpack();
+    }else if(keyMatches("targetNext",event)){
       event.preventDefault();
       cycleKeyboardTarget(event.shiftKey);
     }else if(keyMatches("attackTarget",event)){
@@ -145,7 +153,9 @@ function bindKeyboardControls(){
     }else if(keyMatches("clearTarget",event)){
       event.preventDefault();
       const menu=document.getElementById("menu");
-      if(menu.classList.contains("show")) menu.classList.remove("show");
+      const backpack=document.getElementById("backpack");
+      if(backpack.classList.contains("show")) closeBackpack();
+      else if(menu.classList.contains("show")) menu.classList.remove("show");
       else clearTargetFromKeyboard();
     }else if(keyMatches("menu",event)){
       event.preventDefault();
