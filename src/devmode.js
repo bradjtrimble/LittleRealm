@@ -301,8 +301,14 @@ function drawPaletteThumb(canvas,type){
   const spec=PROP_SPECS[type];
   if(!canvas||!spec||!propAtlasReady) return;
   const c=canvas.getContext("2d");
-  c.clearRect(0,0,48,48);c.imageSmoothingEnabled=false;
-  c.drawImage(propAtlas,spec.col*PROP_ATLAS_CELL,spec.row*PROP_ATLAS_CELL,PROP_ATLAS_CELL,PROP_ATLAS_CELL,2,2,44,44);
+  c.clearRect(0,0,48,48); c.imageSmoothingEnabled=false;
+  const sx=Number.isFinite(spec.sx)?spec.sx:spec.col*PROP_ATLAS_CELL;
+  const sy=Number.isFinite(spec.sy)?spec.sy:spec.row*PROP_ATLAS_CELL;
+  const sw=Number.isFinite(spec.sw)?spec.sw:PROP_ATLAS_CELL;
+  const sh=Number.isFinite(spec.sh)?spec.sh:PROP_ATLAS_CELL;
+  const scale=Math.min(44/sw,44/sh);
+  const dw=Math.max(1,Math.round(sw*scale)), dh=Math.max(1,Math.round(sh*scale));
+  c.drawImage(propAtlas,sx,sy,sw,sh,Math.round((48-dw)/2),Math.round((48-dh)/2),dw,dh);
 }
 
 function refreshDeveloperObjectList(){
