@@ -17,5 +17,14 @@
     "setting": "CAMERA_ZOOM",
     "value": 1.85,
     "rule": "POV changes modify CAMERA_ZOOM only; do not rewrite terrain/collision systems."
+  },
+  "combat_update": "v8 visual combat redesign; world/camera/collision protected functions unchanged",
+  "combat_protected_validation": {
+    "drawContinuousTerrain": "PASS",
+    "drawGrassTile": "PASS",
+    "circleIntersectsRect": "PASS",
+    "hitsSolidScenery": "PASS",
+    "canStand": "PASS",
+    "drawWorld": "PASS"
   }
 }
