@@ -470,4 +470,5 @@ button.action:active{transform:scale(.98)}
 #actionHint.ready{background:rgba(117,57,47,.88);border-color:rgba(255,180,140,.55)}
 #actionHint.engaged{background:rgba(91,44,45,.9);border-color:rgba(255,122,122,.58)}
 #actionHint.cooldown{background:rgba(58,55,65,.88);border-color:rgba(190,184,205,.35);color:#cfc9d8}
+#actionHint.targeted{background:rgba(71,61,38,.90);border-color:rgba(255,220,96,.50);color:#fff1b8}
 #actionHint:active{transform:scale(.95)}

@@ -11,6 +11,7 @@ function load(){
     enemy=null;
     currentMob=null;
     combatTarget=null;
+    selectedTarget=null;
     combatFx=[];
     attackButtonCooldown=0;
     input={up:false,down:false,left:false,right:false};

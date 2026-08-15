@@ -3,6 +3,19 @@ window.addEventListener("error", (event) => {
 });
 
 (() => {
+const BALANCE = window.LR_BALANCE || {};
+
+function numberOr(value,fallback){
+  const n=Number(value);
+  return Number.isFinite(n)?n:fallback;
+}
+function percentOr(value,fallbackPercent){
+  return clamp(numberOr(value,fallbackPercent),0,100)/100;
+}
+function booleanOr(value,fallback){
+  return typeof value==="boolean"?value:fallback;
+}
+
 const game = document.getElementById("game");
 const ctx = game.getContext("2d");
 const heroCanvas = document.getElementById("heroBattleSprite");
@@ -63,7 +76,7 @@ const HOUSE_SPECS = {
 const TILE = 64;
 const WORLD_W = 28;
 const WORLD_H = 20;
-const HERO_SPEED = 180; // world pixels per second
+const HERO_SPEED = numberOr(BALANCE.player?.moveSpeed,180); // world pixels per second
 const HERO_RADIUS = 5;
 const MOB_RADIUS = 14;
 const MOB_TRIGGER_DISTANCE = 22;
@@ -607,8 +620,8 @@ function drawWorld(){
       const mob=item.obj;
       let sx=mob.x-camX, sy=mob.y-camY;
 
-      if(mob===combatTarget){
-        ctx.strokeStyle="rgba(255,208,88,.92)";
+      if(mob===selectedTarget || mob===combatTarget){
+        ctx.strokeStyle=mob===combatTarget?"rgba(255,154,92,.96)":"rgba(255,220,96,.96)";
         ctx.lineWidth=2;
         ctx.beginPath();ctx.ellipse(sx,sy+12,mob.boss?25:18,mob.boss?10:7,0,0,Math.PI*2);ctx.stroke();
       }
@@ -623,7 +636,7 @@ function drawWorld(){
       ctx.beginPath();ctx.ellipse(sx,sy+12,13,5,0,0,Math.PI*2);ctx.fill();
       drawMob(ctx,mob,sx,sy);
 
-      if(mob===combatTarget || mob.hp<mob.maxHp){
+      if(mob===combatTarget || mob===selectedTarget || mob.hp<mob.maxHp){
         drawWorldHpBar(sx,sy-(mob.boss?38:29),mob.hp,mob.maxHp,mob.boss?52:38);
       }else if(mob.aggro){
         ctx.fillStyle="#f2d15f";
@@ -670,17 +683,19 @@ function townEvent(){
   }else{
     toast("Oakrest Town");
   }
-  if(state.gold>=5 && state.potions<3){
-    state.gold-=5;
+  const potionPrice=Math.max(0,Math.floor(numberOr(BALANCE.shop?.potionPrice,5)));
+  const potionCap=Math.max(0,Math.floor(numberOr(BALANCE.shop?.autoBuyUntilPotions,3)));
+  if(state.gold>=potionPrice && state.potions<potionCap){
+    state.gold-=potionPrice;
     state.potions++;
-    setTimeout(()=>toast("Bought 1 potion for 5 gold."),700);
+    setTimeout(()=>toast(`Bought 1 potion for ${potionPrice} gold.`),700);
   }
   updateUI();
 }
 
 function castleEvent(){
   if(state.bossDefeated){toast("The throne room is quiet.");return}
-  if(!state.questComplete){toast("The castle is sealed. Defeat 3 Slimes.");return}
+  if(!state.questComplete){toast(`The castle is sealed. Defeat ${SLIMES_REQUIRED} Slimes.`);return}
   if(bossMob && bossMob.alive){
     engageMob(bossMob);
     return;
@@ -704,10 +719,10 @@ function fresh(){
   return {
     x:6*TILE+TILE/2,
     y:7*TILE+TILE/2,
-    level:1,xp:0,xpNext:25,
-    hp:30,maxHp:30,
-    atk:5,def:1,
-    gold:8,potions:2,kills:0,
+    level:1,xp:0,xpNext:numberOr(BALANCE.progression?.startingXpToLevel,25),
+    hp:numberOr(BALANCE.player?.maxHp,30),maxHp:numberOr(BALANCE.player?.maxHp,30),
+    atk:numberOr(BALANCE.player?.attack,5),def:numberOr(BALANCE.player?.defense,1),
+    gold:numberOr(BALANCE.player?.startingGold,8),potions:numberOr(BALANCE.player?.startingPotions,2),kills:0,
     slimeKills:0,questComplete:false,bossDefeated:false
   };
 }
@@ -720,6 +735,7 @@ function reset(){
   defending=false;
   battleLocked=false;
   combatTarget=null;
+  selectedTarget=null;
   playerAttackTimer=0;
   enemyAttackTimer=0;
   playerAttackAnim=0;
@@ -729,7 +745,7 @@ function reset(){
   input={up:false,down:false,left:false,right:false};
   spawnMobs();
   closeAll();
-  toast("Tap a mob or use ATTACK to engage.");
+  toast("Click/tap a mob to target it, then press ATTACK.");
   updateUI();
 }
 
@@ -866,18 +882,47 @@ function bindHold(id,dir){
   el.addEventListener("lostpointercapture",end);
 }
 
+function createMobTemplate(name,kind,configKey,fallback,boss=false){
+  const cfg=BALANCE.mobs?.[configKey] || {};
+  return {
+    name,kind,boss,
+    hp:numberOr(cfg.hp,fallback.hp),
+    atk:numberOr(cfg.attack,fallback.atk),
+    def:numberOr(cfg.defense,fallback.def),
+    xp:numberOr(cfg.xp,fallback.xp),
+    gold:[numberOr(cfg.goldMin,fallback.gold[0]),numberOr(cfg.goldMax,fallback.gold[1])],
+    goldDropChance:percentOr(cfg.goldDropChancePercent,100),
+    potionDropChance:percentOr(cfg.potionDropChancePercent,0),
+    potionDropAmount:Math.max(0,Math.floor(numberOr(cfg.potionDropAmount,1))),
+    attackInterval:numberOr(cfg.attackIntervalSeconds,fallback.attackInterval),
+    respawnMin:numberOr(cfg.respawnMinSeconds,18),
+    respawnMax:numberOr(cfg.respawnMaxSeconds,28),
+    aggressive:booleanOr(cfg.aggressive,fallback.aggressive),
+    aggroTriggerRange:numberOr(cfg.aggroTriggerRange,58),
+    alertRange:numberOr(cfg.alertRange,82),
+    chaseSpeed:numberOr(cfg.chaseSpeed,fallback.chaseSpeed),
+    wanderSpeed:numberOr(cfg.wanderSpeed,fallback.wanderSpeed),
+    leashDistance:numberOr(cfg.leashDistance,120),
+    leashSpeed:numberOr(cfg.leashSpeed,34),
+    wanderDelayMin:numberOr(cfg.wanderDelayMinSeconds,1.2),
+    wanderDelayMax:numberOr(cfg.wanderDelayMaxSeconds,4.0)
+  };
+}
+
 const enemyTemplates = [
-  {name:"Slime",kind:"slime",hp:14,atk:4,def:0,xp:8,gold:[2,5]},
-  {name:"Goblin",kind:"goblin",hp:20,atk:6,def:1,xp:13,gold:[4,8]},
-  {name:"Wolf",kind:"wolf",hp:18,atk:7,def:1,xp:14,gold:[3,7]}
+  createMobTemplate("Slime","slime","slime",{hp:14,atk:4,def:0,xp:8,gold:[2,5],attackInterval:1.45,aggressive:false,chaseSpeed:45,wanderSpeed:20}),
+  createMobTemplate("Goblin","goblin","goblin",{hp:20,atk:6,def:1,xp:13,gold:[4,8],attackInterval:1.45,aggressive:true,chaseSpeed:58,wanderSpeed:20}),
+  createMobTemplate("Wolf","wolf","wolf",{hp:18,atk:7,def:1,xp:14,gold:[3,7],attackInterval:1.33,aggressive:true,chaseSpeed:72,wanderSpeed:30})
 ];
-const bossTemplate = {name:"Stone King",kind:"boss",hp:50,atk:10,def:3,xp:45,gold:[20,30],boss:true};
+const bossTemplate = createMobTemplate("Stone King","boss","stoneKing",{hp:50,atk:10,def:3,xp:45,gold:[20,30],attackInterval:1.63,aggressive:false,chaseSpeed:48,wanderSpeed:0},true);
 
 function mobScaledStats(template){
   const levelBoost=Math.max(0,state.level-1);
+  const hpPerLevel=numberOr(BALANCE.progression?.mobHpPerPlayerLevel,2);
+  const atkPerLevel=numberOr(BALANCE.progression?.mobAttackPerPlayerLevel,.55);
   return {
-    maxHp:template.hp+levelBoost*2,
-    atk:template.atk+Math.floor(levelBoost*.55),
+    maxHp:template.hp+levelBoost*hpPerLevel,
+    atk:template.atk+Math.floor(levelBoost*atkPerLevel),
     def:template.def
   };
 }
@@ -1161,12 +1206,13 @@ function updateMobs(dt){
     const d=dist(state.x,state.y,mob.x,mob.y);
     const isTarget=mob===combatTarget;
 
-    // Goblins and wolves are aggressive at close range. Slimes wait to be selected.
-    if(!combatTarget && !mob.boss && (mob.kind==="goblin"||mob.kind==="wolf") && d<58){
+    // Aggression and movement are data-driven so routine mob tuning only
+    // requires editing config/game-balance.js.
+    if(!combatTarget && !mob.boss && mob.template.aggressive && d<mob.template.aggroTriggerRange){
       engageMob(mob,true);
     }
 
-    mob.aggro=isTarget || (!combatTarget && (mob.kind==="goblin"||mob.kind==="wolf") && d<82);
+    mob.aggro=isTarget || (!combatTarget && mob.template.aggressive && d<mob.template.alertRange);
 
     let vx=0,vy=0;
     if(isTarget){
@@ -1174,7 +1220,7 @@ function updateMobs(dt){
       if(d>desired){
         const dx=state.x-mob.x, dy=state.y-mob.y;
         const len=Math.max(.001,Math.hypot(dx,dy));
-        const speed=mob.kind==="wolf"?72:mob.kind==="goblin"?58:mob.kind==="boss"?48:45;
+        const speed=mob.template.chaseSpeed;
         vx=dx/len*speed; vy=dy/len*speed;
       }
     }else if(mob.boss){
@@ -1182,17 +1228,18 @@ function updateMobs(dt){
     }else{
       mob.moveTimer-=dt;
       if(mob.moveTimer<=0){
-        mob.moveTimer=1.2+Math.random()*2.8;
+        const minDelay=Math.min(mob.template.wanderDelayMin,mob.template.wanderDelayMax);
+        const maxDelay=Math.max(mob.template.wanderDelayMin,mob.template.wanderDelayMax);
+        mob.moveTimer=minDelay+Math.random()*(maxDelay-minDelay);
         const ang=Math.random()*Math.PI*2;
-        const speed=mob.kind==="wolf"?30:20;
-        mob.vx=Math.cos(ang)*speed; mob.vy=Math.sin(ang)*speed;
+        mob.vx=Math.cos(ang)*mob.template.wanderSpeed; mob.vy=Math.sin(ang)*mob.template.wanderSpeed;
       }
       vx=mob.vx; vy=mob.vy;
       const homeDist=dist(mob.x,mob.y,mob.homeX,mob.homeY);
-      if(homeDist>120){
+      if(homeDist>mob.template.leashDistance){
         const dx=mob.homeX-mob.x, dy=mob.homeY-mob.y;
         const len=Math.max(.001,Math.hypot(dx,dy));
-        vx=dx/len*34; vy=dy/len*34;
+        vx=dx/len*mob.template.leashSpeed; vy=dy/len*mob.template.leashSpeed;
       }
     }
 
@@ -1225,15 +1272,27 @@ function findNearestMob(maxDistance=Infinity){
 }
 
 // Open-world combat state (RuneScape-style auto combat)
-const ATTACK_RANGE=30;
-const MAX_ENGAGE_RANGE=72;
-const DISENGAGE_RANGE=260;
-const AUTO_CHASE_RANGE=82;
-const PLAYER_ATTACK_INTERVAL=1.15;
-const ENEMY_ATTACK_INTERVAL=1.45;
-const ATTACK_BUTTON_GCD=.90;
-const ATTACK_START_DELAY=.62;
+// Routine balance values come from config/game-balance.js so they can be
+// changed independently without rebuilding js/game.js.
+const ATTACK_RANGE=numberOr(BALANCE.combat?.meleeRange,30);
+const MAX_ENGAGE_RANGE=numberOr(BALANCE.combat?.engageRange,72);
+const DISENGAGE_RANGE=numberOr(BALANCE.combat?.disengageRange,260);
+const AUTO_CHASE_RANGE=numberOr(BALANCE.combat?.autoChaseRange,82);
+const PLAYER_ATTACK_INTERVAL=numberOr(BALANCE.combat?.playerAttackIntervalSeconds,1.15);
+const ATTACK_BUTTON_GCD=numberOr(BALANCE.combat?.attackButtonCooldownSeconds,.90);
+const ATTACK_START_DELAY=numberOr(BALANCE.combat?.openingAttackDelaySeconds,.62);
+const PLAYER_CRIT_CHANCE=percentOr(BALANCE.combat?.playerCritChancePercent,10);
+const PLAYER_DAMAGE_MIN=Math.floor(numberOr(BALANCE.combat?.playerDamageBonusMin,0));
+const PLAYER_DAMAGE_MAX=Math.floor(numberOr(BALANCE.combat?.playerDamageBonusMax,3));
+const ENEMY_DAMAGE_MIN=Math.floor(numberOr(BALANCE.combat?.enemyDamageBonusMin,0));
+const ENEMY_DAMAGE_MAX=Math.floor(numberOr(BALANCE.combat?.enemyDamageBonusMax,2));
+const TARGET_CLICK_RADIUS=numberOr(BALANCE.combat?.targetClickRadius,34);
+const POTION_HEAL=Math.max(0,Math.floor(numberOr(BALANCE.player?.potionHeal,14)));
+const POTION_COOLDOWN=numberOr(BALANCE.player?.potionCooldownSeconds,.85);
+const DEATH_GOLD_LOSS=percentOr(BALANCE.player?.deathGoldLossPercent,25);
+const SLIMES_REQUIRED=Math.max(1,Math.floor(numberOr(BALANCE.quest?.slimesRequired,3)));
 let combatTarget=null;
+let selectedTarget=null;
 let playerAttackTimer=0;
 let enemyAttackTimer=0;
 let attackButtonCooldown=0;
@@ -1242,6 +1301,33 @@ let enemyAttackAnim=0;
 let potionCooldown=0;
 let combatFx=[];
 let bossMob=null;
+
+function getMobRespawnSeconds(mob){
+  if(!mob||mob.boss) return 999999;
+  const min=Math.min(mob.template.respawnMin,mob.template.respawnMax);
+  const max=Math.max(mob.template.respawnMin,mob.template.respawnMax);
+  return min+Math.random()*(max-min);
+}
+
+function selectMob(mob,showToast=true){
+  if(!mob||!mob.alive) return false;
+  selectedTarget=mob;
+  updateCombatHud();
+  if(showToast) toast(`${mob.template.name} targeted • ${Math.max(0,Math.ceil(mob.hp))}/${mob.maxHp} HP`);
+  return true;
+}
+
+function clearSelectedTarget(){
+  selectedTarget=null;
+  updateCombatHud();
+}
+
+function getHudTarget(){
+  if(selectedTarget && selectedTarget.alive) return selectedTarget;
+  if(combatTarget && combatTarget.alive) return combatTarget;
+  selectedTarget=null;
+  return null;
+}
 
 function updateOpenCombat(dt){
   playerAttackAnim=Math.max(0,playerAttackAnim-dt);
@@ -1281,7 +1367,7 @@ function updateOpenCombat(dt){
     // A killing blow can clear combatTarget during worldCombatDeath(), so never
     // dereference combatTarget after performEnemyAutoAttack() returns.
     const attackingMob=combatTarget;
-    enemyAttackTimer=ENEMY_ATTACK_INTERVAL + (attackingMob.kind==="wolf"?-.12:attackingMob.kind==="boss"?.18:0);
+    enemyAttackTimer=numberOr(attackingMob.template.attackInterval,1.45);
     performEnemyAutoAttack(attackingMob);
     if(!combatTarget){
       updateCombatHud();
@@ -1296,26 +1382,45 @@ function updateCombatHud(){
   const action=document.getElementById("actionHint");
   if(!hud||!action) return;
 
-  action.classList.remove("ready","engaged","cooldown");
-  if(combatTarget && combatTarget.alive){
+  const target=getHudTarget();
+  action.classList.remove("ready","engaged","cooldown","targeted");
+
+  if(target){
     hud.classList.add("show");
-    document.getElementById("targetName").textContent=combatTarget.template.name;
-    document.getElementById("targetHpText").textContent=`${Math.max(0,Math.ceil(combatTarget.hp))}/${combatTarget.maxHp}`;
-    document.getElementById("targetHpFill").style.width=`${Math.max(0,100*combatTarget.hp/combatTarget.maxHp)}%`;
-    const d=dist(state.x,state.y,combatTarget.x,combatTarget.y);
-    document.getElementById("combatHint").textContent=d>ATTACK_RANGE?"Closing to melee range…":"Auto-attacking • move away to escape";
-    action.innerHTML="LEAVE<br>COMBAT";
-    action.classList.add("engaged");
-  }else{
-    hud.classList.remove("show");
-    const near=findNearestMob(MAX_ENGAGE_RANGE);
+    document.getElementById("targetName").textContent=target.template.name;
+    document.getElementById("targetHpText").textContent=`${Math.max(0,Math.ceil(target.hp))}/${target.maxHp} HP`;
+    document.getElementById("targetHpFill").style.width=`${Math.max(0,100*target.hp/target.maxHp)}%`;
+    const d=dist(state.x,state.y,target.x,target.y);
+
+    if(combatTarget && combatTarget.alive){
+      document.getElementById("combatHint").textContent=d>ATTACK_RANGE?"Closing to melee range…":"In combat • move away to escape";
+      action.innerHTML="LEAVE<br>COMBAT";
+      action.classList.add("engaged");
+      return;
+    }
+
+    document.getElementById("combatHint").textContent=d>MAX_ENGAGE_RANGE?`Targeted • ${Math.ceil(d)} away • move closer`:`Targeted • ${Math.ceil(d)} away • ready to attack`;
     if(attackButtonCooldown>0){
       action.innerHTML=`ATTACK<br>${attackButtonCooldown.toFixed(1)}s`;
       action.classList.add("cooldown");
+    }else if(d<=MAX_ENGAGE_RANGE){
+      action.innerHTML="ATTACK<br>TARGET";
+      action.classList.add("ready");
     }else{
-      action.innerHTML=near?"ATTACK<br>MOB":"TAP MOB<br>TO FIGHT";
-      if(near) action.classList.add("ready");
+      action.innerHTML="MOVE<br>CLOSER";
+      action.classList.add("targeted");
     }
+    return;
+  }
+
+  hud.classList.remove("show");
+  const near=findNearestMob(MAX_ENGAGE_RANGE);
+  if(attackButtonCooldown>0){
+    action.innerHTML=`ATTACK<br>${attackButtonCooldown.toFixed(1)}s`;
+    action.classList.add("cooldown");
+  }else{
+    action.innerHTML=near?"ATTACK<br>NEAREST":"SELECT MOB<br>TO TARGET";
+    if(near) action.classList.add("ready");
   }
 }
 
@@ -1325,7 +1430,8 @@ function engageMob(mob,forced=false){
 
   const engageDistance=dist(state.x,state.y,mob.x,mob.y);
   if(!forced && engageDistance>MAX_ENGAGE_RANGE){
-    toast("Move closer before attacking.");
+    selectMob(mob,false);
+    toast("Target selected. Move closer before attacking.");
     return false;
   }
   if(!forced && attackButtonCooldown>0){
@@ -1333,6 +1439,7 @@ function engageMob(mob,forced=false){
     return false;
   }
 
+  selectedTarget=mob;
   combatTarget=mob;
   currentMob=mob;
   mob.aggro=true;
@@ -1361,8 +1468,10 @@ function addCombatFx(x,y,text,kind="damage"){
 
 function performPlayerAutoAttack(mob){
   if(!mob||!mob.alive) return;
-  const crit=Math.random()<.10;
-  let dmg=Math.max(1,state.atk+rand(0,3)-mob.def);
+  const crit=Math.random()<PLAYER_CRIT_CHANCE;
+  const low=Math.min(PLAYER_DAMAGE_MIN,PLAYER_DAMAGE_MAX);
+  const high=Math.max(PLAYER_DAMAGE_MIN,PLAYER_DAMAGE_MAX);
+  let dmg=Math.max(1,state.atk+rand(low,high)-mob.def);
   if(crit) dmg*=2;
   mob.hp-=dmg;
   playerAttackAnim=.20;
@@ -1375,7 +1484,9 @@ function performPlayerAutoAttack(mob){
 
 function performEnemyAutoAttack(mob){
   if(!mob||!mob.alive) return;
-  let dmg=Math.max(1,mob.atk+rand(0,2)-state.def);
+  const low=Math.min(ENEMY_DAMAGE_MIN,ENEMY_DAMAGE_MAX);
+  const high=Math.max(ENEMY_DAMAGE_MIN,ENEMY_DAMAGE_MAX);
+  let dmg=Math.max(1,mob.atk+rand(low,high)-state.def);
   state.hp=Math.max(0,state.hp-dmg);
   mob.attackAnim=.20;
   enemyAttackAnim=.20;
@@ -1387,27 +1498,45 @@ function performEnemyAutoAttack(mob){
 function defeatWorldMob(mob){
   if(!mob||!mob.alive) return;
   const e=mob.template;
-  const gold=rand(e.gold[0],e.gold[1]);
-  state.xp+=e.xp; state.gold+=gold; state.kills++;
+  let gold=0;
+  let potionDrop=0;
+  if(Math.random()<e.goldDropChance) gold=rand(Math.floor(e.gold[0]),Math.floor(e.gold[1]));
+  if(e.potionDropAmount>0 && Math.random()<e.potionDropChance) potionDrop=e.potionDropAmount;
+
+  state.xp+=e.xp;
+  state.gold+=gold;
+  state.potions+=potionDrop;
+  state.kills++;
 
   if(e.name==="Slime"){
     state.slimeKills++;
-    if(state.slimeKills>=3&&!state.questComplete){
+    if(state.slimeKills>=SLIMES_REQUIRED&&!state.questComplete){
       state.questComplete=true;
       setTimeout(()=>toast("Quest complete! The castle is open."),550);
     }
   }
   if(mob.boss||e.boss) state.bossDefeated=true;
 
-  mob.alive=false; mob.aggro=false; mob.respawnTimer=mob.boss?999999:18+Math.random()*10;
+  mob.alive=false;
+  mob.aggro=false;
+  mob.respawnTimer=getMobRespawnSeconds(mob);
+  if(selectedTarget===mob) selectedTarget=null;
   levelCheck();
   disengageCombat(false);
-  toast(mob.boss?"You defeated the Stone King!":`Defeated ${e.name}: +${e.xp} XP, +${gold} gold`);
+
+  if(mob.boss){
+    toast("You defeated the Stone King!");
+  }else{
+    const rewards=[`+${e.xp} XP`];
+    if(gold>0) rewards.push(`+${gold} gold`);
+    if(potionDrop>0) rewards.push(`+${potionDrop} potion${potionDrop===1?"":"s"}`);
+    toast(`Defeated ${e.name}: ${rewards.join(", ")}`);
+  }
   updateUI();
 }
 
 function worldCombatDeath(){
-  state.gold=Math.floor(state.gold*.75);
+  state.gold=Math.floor(state.gold*(1-DEATH_GOLD_LOSS));
 
   // Clear active controls/effects before teleporting so the new life begins in
   // a clean frame even if a direction or combat button was held at death.
@@ -1423,6 +1552,7 @@ function worldCombatDeath(){
     combatTarget.x=combatTarget.homeX; combatTarget.y=combatTarget.homeY;
   }
   disengageCombat(false);
+  selectedTarget=null;
 
   state.hp=state.maxHp;
   state.x=6*TILE+TILE/2; state.y=7*TILE+TILE/2;
@@ -1437,8 +1567,8 @@ function useQuickPotion(){
   if(state.hp>=state.maxHp){toast("Your HP is already full.");return}
   state.potions--;
   const before=state.hp;
-  state.hp=Math.min(state.maxHp,state.hp+14);
-  potionCooldown=.85;
+  state.hp=Math.min(state.maxHp,state.hp+POTION_HEAL);
+  potionCooldown=POTION_COOLDOWN;
   addCombatFx(state.x,state.y-20,`+${state.hp-before}`,"heal");
   toast(`Potion restored ${state.hp-before} HP.`);
   updateUI();
@@ -1451,13 +1581,27 @@ function handleWorldTap(ev){
   const viewW=innerWidth/CAMERA_ZOOM, viewH=innerHeight/CAMERA_ZOOM;
   const camX=state.x-viewW/2, camY=state.y-viewH/2;
   const wx=camX+sx/CAMERA_ZOOM, wy=camY+sy/CAMERA_ZOOM;
-  let best=null,bestD=30;
+
+  let best=null;
+  let bestScore=Infinity;
   for(const mob of mobs){
     if(!mob.alive) continue;
-    const d=dist(wx,wy,mob.x,mob.y);
-    if(d<bestD){best=mob;bestD=d}
+    // Mobs are taller than their feet position, so use a generous vertical
+    // selection box rather than requiring a click directly on their feet.
+    const dx=Math.abs(wx-mob.x);
+    const dy=wy-mob.y;
+    const radius=mob.boss?TARGET_CLICK_RADIUS*1.45:TARGET_CLICK_RADIUS;
+    if(dx<=radius && dy>=-radius*1.35 && dy<=radius*.75){
+      const score=dx*dx+(dy*.65)*(dy*.65);
+      if(score<bestScore){best=mob;bestScore=score}
+    }
   }
-  if(best) engageMob(best);
+
+  if(best){
+    selectMob(best);
+  }else if(!combatTarget){
+    clearSelectedTarget();
+  }
 }
 
 function battleMessage(msg){
@@ -1585,7 +1729,7 @@ function potion(){
   setBattleTurn("guard","USING POTION");
   state.potions--;
   const before=state.hp;
-  state.hp=Math.min(state.maxHp,state.hp+14);
+  state.hp=Math.min(state.maxHp,state.hp+POTION_HEAL);
   const healed=state.hp-before;
   battleFloat("hero",`+${healed}`,"heal");
   battleMessage(`You drink a potion and recover ${healed} HP.`);
@@ -1666,7 +1810,7 @@ function winBattle(){
 
   if(e.name==="Slime"){
     state.slimeKills++;
-    if(state.slimeKills>=3&&!state.questComplete){
+    if(state.slimeKills>=SLIMES_REQUIRED&&!state.questComplete){
       state.questComplete=true;
       setTimeout(()=>toast("Quest complete! The castle is open."),500);
     }
@@ -1675,7 +1819,7 @@ function winBattle(){
 
   if(currentMob){
     currentMob.alive=false;
-    currentMob.respawnTimer=18+Math.random()*10;
+    currentMob.respawnTimer=getMobRespawnSeconds(currentMob);
     currentMob.aggro=false;
   }
 
@@ -1688,7 +1832,7 @@ function winBattle(){
 }
 
 function loseBattle(){
-  state.gold=Math.floor(state.gold*.75);
+  state.gold=Math.floor(state.gold*(1-DEATH_GOLD_LOSS));
   state.hp=state.maxHp;
   state.x=6*TILE+TILE/2;
   state.y=7*TILE+TILE/2;
@@ -1699,12 +1843,16 @@ function loseBattle(){
 }
 
 function levelCheck(){
+  const growth=1+percentOr(BALANCE.progression?.xpRequirementGrowthPercent,35);
+  const hpGain=Math.floor(numberOr(BALANCE.progression?.hpPerLevel,8));
+  const atkGain=Math.floor(numberOr(BALANCE.progression?.attackPerLevel,2));
+  const defGain=Math.floor(numberOr(BALANCE.progression?.defensePerLevel,1));
   while(state.xp>=state.xpNext){
     state.xp-=state.xpNext;
     state.level++;
-    state.xpNext=Math.floor(state.xpNext*1.35);
-    state.maxHp+=8;state.hp=state.maxHp;
-    state.atk+=2;state.def+=1;
+    state.xpNext=Math.floor(state.xpNext*growth);
+    state.maxHp+=hpGain;state.hp=state.maxHp;
+    state.atk+=atkGain;state.def+=defGain;
     setTimeout(()=>toast(`Level up! Level ${state.level}`),650);
   }
 }
@@ -1748,8 +1896,8 @@ function updateUI(){
     q="Go southeast to Stone Castle and defeat the Stone King.";
     document.getElementById("questChip").textContent="Go to the castle";
   }else{
-    q=`Defeat 3 Slimes (${state.slimeKills}/3).`;
-    document.getElementById("questChip").textContent=`Slimes ${state.slimeKills}/3`;
+    q=`Defeat ${SLIMES_REQUIRED} Slimes (${state.slimeKills}/${SLIMES_REQUIRED}).`;
+    document.getElementById("questChip").textContent=`Slimes ${state.slimeKills}/${SLIMES_REQUIRED}`;
   }
   document.getElementById("mQuest").textContent=q;
 
@@ -1782,6 +1930,7 @@ function load(){
     enemy=null;
     currentMob=null;
     combatTarget=null;
+    selectedTarget=null;
     combatFx=[];
     attackButtonCooldown=0;
     input={up:false,down:false,left:false,right:false};
@@ -1838,16 +1987,16 @@ window.addEventListener("keyup",e=>{
   if(k==="arrowright"||k==="d")input.right=false;
 });
 
-document.getElementById("actionHint").innerHTML="TAP MOB<br>TO FIGHT";
+document.getElementById("actionHint").innerHTML="SELECT MOB<br>TO TARGET";
 document.getElementById("actionHint").onclick=()=>{
   if(combatTarget){disengageCombat();return}
   if(attackButtonCooldown>0){
     toast(`Attack ready in ${attackButtonCooldown.toFixed(1)}s.`);
     return;
   }
-  const near=findNearestMob(MAX_ENGAGE_RANGE);
-  if(near) engageMob(near);
-  else toast("Move closer before attacking.");
+  const target=(selectedTarget&&selectedTarget.alive)?selectedTarget:findNearestMob(MAX_ENGAGE_RANGE);
+  if(target) engageMob(target);
+  else toast("Click/tap a mob to target it first.");
 };
 document.getElementById("quickPotion").onclick=useQuickPotion;
 game.addEventListener("pointerdown",handleWorldTap);

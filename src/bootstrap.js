@@ -31,16 +31,16 @@ window.addEventListener("keyup",e=>{
   if(k==="arrowright"||k==="d")input.right=false;
 });
 
-document.getElementById("actionHint").innerHTML="TAP MOB<br>TO FIGHT";
+document.getElementById("actionHint").innerHTML="SELECT MOB<br>TO TARGET";
 document.getElementById("actionHint").onclick=()=>{
   if(combatTarget){disengageCombat();return}
   if(attackButtonCooldown>0){
     toast(`Attack ready in ${attackButtonCooldown.toFixed(1)}s.`);
     return;
   }
-  const near=findNearestMob(MAX_ENGAGE_RANGE);
-  if(near) engageMob(near);
-  else toast("Move closer before attacking.");
+  const target=(selectedTarget&&selectedTarget.alive)?selectedTarget:findNearestMob(MAX_ENGAGE_RANGE);
+  if(target) engageMob(target);
+  else toast("Click/tap a mob to target it first.");
 };
 document.getElementById("quickPotion").onclick=useQuickPotion;
 game.addEventListener("pointerdown",handleWorldTap);

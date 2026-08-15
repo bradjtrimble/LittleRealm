@@ -1,3 +1,16 @@
+const BALANCE = window.LR_BALANCE || {};
+
+function numberOr(value,fallback){
+  const n=Number(value);
+  return Number.isFinite(n)?n:fallback;
+}
+function percentOr(value,fallbackPercent){
+  return clamp(numberOr(value,fallbackPercent),0,100)/100;
+}
+function booleanOr(value,fallback){
+  return typeof value==="boolean"?value:fallback;
+}
+
 const game = document.getElementById("game");
 const ctx = game.getContext("2d");
 const heroCanvas = document.getElementById("heroBattleSprite");
@@ -58,7 +71,7 @@ const HOUSE_SPECS = {
 const TILE = 64;
 const WORLD_W = 28;
 const WORLD_H = 20;
-const HERO_SPEED = 180; // world pixels per second
+const HERO_SPEED = numberOr(BALANCE.player?.moveSpeed,180); // world pixels per second
 const HERO_RADIUS = 5;
 const MOB_RADIUS = 14;
 const MOB_TRIGGER_DISTANCE = 22;

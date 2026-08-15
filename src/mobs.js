@@ -1,15 +1,44 @@
+function createMobTemplate(name,kind,configKey,fallback,boss=false){
+  const cfg=BALANCE.mobs?.[configKey] || {};
+  return {
+    name,kind,boss,
+    hp:numberOr(cfg.hp,fallback.hp),
+    atk:numberOr(cfg.attack,fallback.atk),
+    def:numberOr(cfg.defense,fallback.def),
+    xp:numberOr(cfg.xp,fallback.xp),
+    gold:[numberOr(cfg.goldMin,fallback.gold[0]),numberOr(cfg.goldMax,fallback.gold[1])],
+    goldDropChance:percentOr(cfg.goldDropChancePercent,100),
+    potionDropChance:percentOr(cfg.potionDropChancePercent,0),
+    potionDropAmount:Math.max(0,Math.floor(numberOr(cfg.potionDropAmount,1))),
+    attackInterval:numberOr(cfg.attackIntervalSeconds,fallback.attackInterval),
+    respawnMin:numberOr(cfg.respawnMinSeconds,18),
+    respawnMax:numberOr(cfg.respawnMaxSeconds,28),
+    aggressive:booleanOr(cfg.aggressive,fallback.aggressive),
+    aggroTriggerRange:numberOr(cfg.aggroTriggerRange,58),
+    alertRange:numberOr(cfg.alertRange,82),
+    chaseSpeed:numberOr(cfg.chaseSpeed,fallback.chaseSpeed),
+    wanderSpeed:numberOr(cfg.wanderSpeed,fallback.wanderSpeed),
+    leashDistance:numberOr(cfg.leashDistance,120),
+    leashSpeed:numberOr(cfg.leashSpeed,34),
+    wanderDelayMin:numberOr(cfg.wanderDelayMinSeconds,1.2),
+    wanderDelayMax:numberOr(cfg.wanderDelayMaxSeconds,4.0)
+  };
+}
+
 const enemyTemplates = [
-  {name:"Slime",kind:"slime",hp:14,atk:4,def:0,xp:8,gold:[2,5]},
-  {name:"Goblin",kind:"goblin",hp:20,atk:6,def:1,xp:13,gold:[4,8]},
-  {name:"Wolf",kind:"wolf",hp:18,atk:7,def:1,xp:14,gold:[3,7]}
+  createMobTemplate("Slime","slime","slime",{hp:14,atk:4,def:0,xp:8,gold:[2,5],attackInterval:1.45,aggressive:false,chaseSpeed:45,wanderSpeed:20}),
+  createMobTemplate("Goblin","goblin","goblin",{hp:20,atk:6,def:1,xp:13,gold:[4,8],attackInterval:1.45,aggressive:true,chaseSpeed:58,wanderSpeed:20}),
+  createMobTemplate("Wolf","wolf","wolf",{hp:18,atk:7,def:1,xp:14,gold:[3,7],attackInterval:1.33,aggressive:true,chaseSpeed:72,wanderSpeed:30})
 ];
-const bossTemplate = {name:"Stone King",kind:"boss",hp:50,atk:10,def:3,xp:45,gold:[20,30],boss:true};
+const bossTemplate = createMobTemplate("Stone King","boss","stoneKing",{hp:50,atk:10,def:3,xp:45,gold:[20,30],attackInterval:1.63,aggressive:false,chaseSpeed:48,wanderSpeed:0},true);
 
 function mobScaledStats(template){
   const levelBoost=Math.max(0,state.level-1);
+  const hpPerLevel=numberOr(BALANCE.progression?.mobHpPerPlayerLevel,2);
+  const atkPerLevel=numberOr(BALANCE.progression?.mobAttackPerPlayerLevel,.55);
   return {
-    maxHp:template.hp+levelBoost*2,
-    atk:template.atk+Math.floor(levelBoost*.55),
+    maxHp:template.hp+levelBoost*hpPerLevel,
+    atk:template.atk+Math.floor(levelBoost*atkPerLevel),
     def:template.def
   };
 }
@@ -293,12 +322,13 @@ function updateMobs(dt){
     const d=dist(state.x,state.y,mob.x,mob.y);
     const isTarget=mob===combatTarget;
 
-    // Goblins and wolves are aggressive at close range. Slimes wait to be selected.
-    if(!combatTarget && !mob.boss && (mob.kind==="goblin"||mob.kind==="wolf") && d<58){
+    // Aggression and movement are data-driven so routine mob tuning only
+    // requires editing config/game-balance.js.
+    if(!combatTarget && !mob.boss && mob.template.aggressive && d<mob.template.aggroTriggerRange){
       engageMob(mob,true);
     }
 
-    mob.aggro=isTarget || (!combatTarget && (mob.kind==="goblin"||mob.kind==="wolf") && d<82);
+    mob.aggro=isTarget || (!combatTarget && mob.template.aggressive && d<mob.template.alertRange);
 
     let vx=0,vy=0;
     if(isTarget){
@@ -306,7 +336,7 @@ function updateMobs(dt){
       if(d>desired){
         const dx=state.x-mob.x, dy=state.y-mob.y;
         const len=Math.max(.001,Math.hypot(dx,dy));
-        const speed=mob.kind==="wolf"?72:mob.kind==="goblin"?58:mob.kind==="boss"?48:45;
+        const speed=mob.template.chaseSpeed;
         vx=dx/len*speed; vy=dy/len*speed;
       }
     }else if(mob.boss){
@@ -314,17 +344,18 @@ function updateMobs(dt){
     }else{
       mob.moveTimer-=dt;
       if(mob.moveTimer<=0){
-        mob.moveTimer=1.2+Math.random()*2.8;
+        const minDelay=Math.min(mob.template.wanderDelayMin,mob.template.wanderDelayMax);
+        const maxDelay=Math.max(mob.template.wanderDelayMin,mob.template.wanderDelayMax);
+        mob.moveTimer=minDelay+Math.random()*(maxDelay-minDelay);
         const ang=Math.random()*Math.PI*2;
-        const speed=mob.kind==="wolf"?30:20;
-        mob.vx=Math.cos(ang)*speed; mob.vy=Math.sin(ang)*speed;
+        mob.vx=Math.cos(ang)*mob.template.wanderSpeed; mob.vy=Math.sin(ang)*mob.template.wanderSpeed;
       }
       vx=mob.vx; vy=mob.vy;
       const homeDist=dist(mob.x,mob.y,mob.homeX,mob.homeY);
-      if(homeDist>120){
+      if(homeDist>mob.template.leashDistance){
         const dx=mob.homeX-mob.x, dy=mob.homeY-mob.y;
         const len=Math.max(.001,Math.hypot(dx,dy));
-        vx=dx/len*34; vy=dy/len*34;
+        vx=dx/len*mob.template.leashSpeed; vy=dy/len*mob.template.leashSpeed;
       }
     }
 

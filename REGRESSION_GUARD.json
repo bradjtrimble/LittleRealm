@@ -31,7 +31,7 @@
     "world_assets": "PASS"
   },
   "combat_behavior": {
-    "engage": "tap a mob or use ATTACK only within 72 world pixels",
+    "engage": "click/tap selects a mob; ATTACK engages the selected mob within configured engage range",
     "melee_range": "30 world pixels",
     "auto_chase": "up to 82 world pixels after a valid engage",
     "attack_button_gcd": "0.90 seconds; repeated attack presses cannot bypass combat timing",
@@ -46,7 +46,7 @@
     "respawn_cleanup": "movement input, attack timers, attack animations, and combat FX reset before Oakrest respawn",
     "v10_balance_preserved": true
   },
-  "architecture_update": "v12 modular source refactor; no intentional gameplay changes from user-confirmed v11 baseline",
+  "architecture_update": "v13 targeting + live balance config on top of user-confirmed v12 modular baseline",
   "source_modules": [
     "core.js",
     "world.js",
@@ -74,5 +74,12 @@
     "assets/buildings/house-a.png": "dd3d3a6c09872df7aaf311a55518098a3168e0dd4d79a24b99d2dc3fbe3c134a",
     "assets/buildings/house-b.png": "7ed626acaf32c39e80ad45f067aec8d4435e8269dd3a8111fc3a77a4fb562851"
   },
-  "validation_command": "python3 tools/validate.py"
+  "validation_command": "python3 tools/validate.py",
+  "balance_config": "config/game-balance.js loads directly before js/game.js; balance-only edits require no build step",
+  "targeting_update": {
+    "selection": "click/tap a living mob to select it without immediately entering combat",
+    "hud": "selected mob name and exact HP/max HP remain visible in the target HUD",
+    "world_feedback": "selected mob gets a target ring and world-space HP bar",
+    "attack": "ATTACK prioritizes the selected mob; aggressive mobs still auto-engage normally"
+  }
 }

@@ -24,8 +24,8 @@ function updateUI(){
     q="Go southeast to Stone Castle and defeat the Stone King.";
     document.getElementById("questChip").textContent="Go to the castle";
   }else{
-    q=`Defeat 3 Slimes (${state.slimeKills}/3).`;
-    document.getElementById("questChip").textContent=`Slimes ${state.slimeKills}/3`;
+    q=`Defeat ${SLIMES_REQUIRED} Slimes (${state.slimeKills}/${SLIMES_REQUIRED}).`;
+    document.getElementById("questChip").textContent=`Slimes ${state.slimeKills}/${SLIMES_REQUIRED}`;
   }
   document.getElementById("mQuest").textContent=q;
 

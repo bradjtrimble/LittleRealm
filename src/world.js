@@ -500,8 +500,8 @@ function drawWorld(){
       const mob=item.obj;
       let sx=mob.x-camX, sy=mob.y-camY;
 
-      if(mob===combatTarget){
-        ctx.strokeStyle="rgba(255,208,88,.92)";
+      if(mob===selectedTarget || mob===combatTarget){
+        ctx.strokeStyle=mob===combatTarget?"rgba(255,154,92,.96)":"rgba(255,220,96,.96)";
         ctx.lineWidth=2;
         ctx.beginPath();ctx.ellipse(sx,sy+12,mob.boss?25:18,mob.boss?10:7,0,0,Math.PI*2);ctx.stroke();
       }
@@ -516,7 +516,7 @@ function drawWorld(){
       ctx.beginPath();ctx.ellipse(sx,sy+12,13,5,0,0,Math.PI*2);ctx.fill();
       drawMob(ctx,mob,sx,sy);
 
-      if(mob===combatTarget || mob.hp<mob.maxHp){
+      if(mob===combatTarget || mob===selectedTarget || mob.hp<mob.maxHp){
         drawWorldHpBar(sx,sy-(mob.boss?38:29),mob.hp,mob.maxHp,mob.boss?52:38);
       }else if(mob.aggro){
         ctx.fillStyle="#f2d15f";
@@ -563,17 +563,19 @@ function townEvent(){
   }else{
     toast("Oakrest Town");
   }
-  if(state.gold>=5 && state.potions<3){
-    state.gold-=5;
+  const potionPrice=Math.max(0,Math.floor(numberOr(BALANCE.shop?.potionPrice,5)));
+  const potionCap=Math.max(0,Math.floor(numberOr(BALANCE.shop?.autoBuyUntilPotions,3)));
+  if(state.gold>=potionPrice && state.potions<potionCap){
+    state.gold-=potionPrice;
     state.potions++;
-    setTimeout(()=>toast("Bought 1 potion for 5 gold."),700);
+    setTimeout(()=>toast(`Bought 1 potion for ${potionPrice} gold.`),700);
   }
   updateUI();
 }
 
 function castleEvent(){
   if(state.bossDefeated){toast("The throne room is quiet.");return}
-  if(!state.questComplete){toast("The castle is sealed. Defeat 3 Slimes.");return}
+  if(!state.questComplete){toast(`The castle is sealed. Defeat ${SLIMES_REQUIRED} Slimes.`);return}
   if(bossMob && bossMob.alive){
     engageMob(bossMob);
     return;

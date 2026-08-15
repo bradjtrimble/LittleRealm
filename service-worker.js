@@ -1,10 +1,11 @@
-const CACHE_NAME = "little-realm-v12-modular";
+const CACHE_NAME = "little-realm-v13-targeting-config";
 const FILES = [
   "./",
   "./index.html",
   "./style.css",
   "./manifest.webmanifest",
   "./js/pwa.js",
+  "./config/game-balance.js",
   "./js/game.js",
   "./assets/icons/icon-192.png",
   "./assets/icons/icon-512.png",

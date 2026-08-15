@@ -2,10 +2,10 @@ function fresh(){
   return {
     x:6*TILE+TILE/2,
     y:7*TILE+TILE/2,
-    level:1,xp:0,xpNext:25,
-    hp:30,maxHp:30,
-    atk:5,def:1,
-    gold:8,potions:2,kills:0,
+    level:1,xp:0,xpNext:numberOr(BALANCE.progression?.startingXpToLevel,25),
+    hp:numberOr(BALANCE.player?.maxHp,30),maxHp:numberOr(BALANCE.player?.maxHp,30),
+    atk:numberOr(BALANCE.player?.attack,5),def:numberOr(BALANCE.player?.defense,1),
+    gold:numberOr(BALANCE.player?.startingGold,8),potions:numberOr(BALANCE.player?.startingPotions,2),kills:0,
     slimeKills:0,questComplete:false,bossDefeated:false
   };
 }
@@ -18,6 +18,7 @@ function reset(){
   defending=false;
   battleLocked=false;
   combatTarget=null;
+  selectedTarget=null;
   playerAttackTimer=0;
   enemyAttackTimer=0;
   playerAttackAnim=0;
@@ -27,7 +28,7 @@ function reset(){
   input={up:false,down:false,left:false,right:false};
   spawnMobs();
   closeAll();
-  toast("Tap a mob or use ATTACK to engage.");
+  toast("Click/tap a mob to target it, then press ATTACK.");
   updateUI();
 }
 
