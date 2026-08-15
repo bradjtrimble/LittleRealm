@@ -1,4 +1,5 @@
 const BALANCE = window.LR_BALANCE || {};
+const PROJECT_WORLD_OBJECTS = window.LR_WORLD_OBJECTS || [];
 
 function numberOr(value,fallback){
   const n=Number(value);

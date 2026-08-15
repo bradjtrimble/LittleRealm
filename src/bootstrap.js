@@ -10,6 +10,7 @@ bindHold("left","left");
 bindHold("right","right");
 
 bindKeyboardControls();
+initDeveloperMode();
 
 document.getElementById("actionHint").innerHTML="SELECT MOB<br>TO TARGET";
 document.getElementById("actionHint").onclick=()=>{

@@ -1,0 +1,11 @@
+const fs=require('fs'), path=require('path');
+const root=path.resolve(__dirname,'..');
+const bundle=fs.readFileSync(path.join(root,'js/game.js'),'utf8');
+const loader=fs.readFileSync(path.join(root,'js/runtime-loader.js'),'utf8');
+const cfg=fs.readFileSync(path.join(root,'config/world-objects.js'),'utf8');
+const required=['initDeveloperMode','toggleDeveloperMode','drawDeveloperOverlay','rebuildWorldObjectCollision','exportDeveloperLayout','DEV_DRAFT_KEY'];
+for(const s of required) if(!bundle.includes(s)) throw new Error('missing '+s);
+if(!loader.includes('config/world-objects.js')) throw new Error('world object config is not live-loaded');
+if(!cfg.includes('window.LR_WORLD_OBJECTS')) throw new Error('world object config missing');
+if(!cfg.includes('container:true')) throw new Error('container metadata example missing');
+console.log('PASS developer world builder test');

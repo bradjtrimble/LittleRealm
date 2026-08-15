@@ -36,6 +36,13 @@
       await loadScript("./config/keybinds.js");
     }
 
+    try {
+      await loadScript("./config/world-objects.js", true);
+    } catch (err) {
+      console.warn("Fresh world-object config unavailable; trying offline cache.", err);
+      await loadScript("./config/world-objects.js");
+    }
+
     await loadScript("./js/game.js", true);
   }
 

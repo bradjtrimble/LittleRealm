@@ -177,54 +177,9 @@ function buildScenery(){
     const f=spec.footprint;
     addSolidRect(placement.x+f.x,placement.y+f.y,f.w,f.h,"house");
   }
-  // Town, farm, and camp props now pull from the new shared object atlas.
-  sceneryProps.push(
-    // Starter town
-    {type:"well",x:6*TILE+6,y:5*TILE-4},
-    {type:"notice",x:10*TILE+12,y:9*TILE-10},
-    {type:"marketRed",x:3*TILE+8,y:5*TILE-2},
-    {type:"marketBlue",x:4*TILE+34,y:5*TILE+2},
-    {type:"crate",x:8*TILE+10,y:6*TILE+30},
-    {type:"barrel",x:8*TILE+38,y:6*TILE+28},
-    {type:"bench",x:6*TILE+28,y:9*TILE+30},
-    {type:"mailbox",x:11*TILE+24,y:4*TILE+34},
-    {type:"lamppost",x:4*TILE+12,y:4*TILE+2},
-    {type:"lamppost",x:9*TILE+34,y:4*TILE+4},
-    {type:"flowerBoxA",x:6*TILE+10,y:4*TILE+24},
-    {type:"flowerBoxB",x:10*TILE+34,y:4*TILE+20},
-
-    // Farm
-    {type:"hay",x:4*TILE+8,y:19*TILE+24},
-    {type:"haystack",x:6*TILE+28,y:19*TILE+8},
-    {type:"trough",x:8*TILE+12,y:23*TILE+16},
-    {type:"scarecrow",x:4*TILE+18,y:20*TILE+10},
-    {type:"cart",x:8*TILE+18,y:20*TILE+10},
-    {type:"sacks",x:3*TILE+18,y:18*TILE+24},
-    {type:"bucket",x:9*TILE+18,y:22*TILE+26},
-    {type:"crops",x:4*TILE+8,y:22*TILE+6,w:90,h:82},
-
-    // Slime area / wilderness accents
-    {type:"signpost",x:17*TILE+22,y:8*TILE+2},
-    {type:"mushrooms",x:26*TILE+12,y:4*TILE+24},
-    {type:"boulder",x:29*TILE+18,y:15*TILE+26},
-    {type:"log",x:24*TILE+18,y:24*TILE+18},
-    {type:"flowerPatch",x:20*TILE+26,y:21*TILE+24},
-
-    // Goblin camp
-    {type:"goblinTent",x:33*TILE+4,y:5*TILE+2},
-    {type:"goblinTent",x:37*TILE+8,y:5*TILE+6},
-    {type:"goblinTent",x:38*TILE+2,y:8*TILE+8},
-    {type:"campfire",x:36*TILE+20,y:7*TILE+18},
-    {type:"goblinTotem",x:35*TILE+4,y:4*TILE+4},
-    {type:"spikeBarricade",x:33*TILE+32,y:10*TILE+8},
-    {type:"crate",x:34*TILE+14,y:8*TILE+18},
-    {type:"barrels3",x:40*TILE+8,y:7*TILE+18},
-    {type:"bones",x:39*TILE+14,y:8*TILE+20},
-    {type:"chest",x:36*TILE+34,y:5*TILE+28},
-
-    // Blocked next-zone entrance.
-    {type:"blockedGate",x:35*TILE+24,y:29*TILE+4}
-  );
+  // Static world props come from config/world-objects.js. Developer Mode can
+  // edit this list visually and export a replacement config file.
+  sceneryProps.push(...getProjectWorldObjects());
 
   // Future vendor / quest-giver placeholders. They are intentionally simple
   // NPCs now; interaction behavior can be added later without redesigning town.
@@ -264,9 +219,6 @@ function buildScenery(){
     {x:36*TILE+4,y:28*TILE+12,text:"Next Zone"}
   );
 
-  // The blocked next-zone gate is real collision, not just a picture.
-  addSolidRect(35*TILE+24,29*TILE+14,2*TILE+40,24,"zone-gate");
-
   // Forest object placement. Boundary forest is deliberately denser than the
   // interior clusters; only the trunk remains solid, as in the stable build.
   const reserved=new Set([...MOB_SPAWN_TILES]);
@@ -284,6 +236,9 @@ function buildScenery(){
       addSolidRect(obj.x+24,obj.y+38,16,19,"tree");
     }
   }
+
+  // blockedGate objects are registered as "zone-gate" collision by Developer Mode.
+  rebuildWorldObjectCollision();
 }
 
 const tile = {
@@ -846,6 +801,7 @@ function drawWorld(){
   label(37,4,"Goblin Camp");
   label(37,29,"Next Zone Entrance");
 
+  if(devModeActive) drawDeveloperOverlay(camX,camY,viewW,viewH);
   ctx.restore();
 }
 

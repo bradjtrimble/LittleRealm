@@ -1,4 +1,4 @@
-const CACHE_NAME = "little-realm-v21-starter-zone";
+const CACHE_NAME = "little-realm-v23-world-builder";
 const FILES = [
   "./",
   "./index.html",
@@ -9,12 +9,14 @@ const FILES = [
   "./config/game-balance.js",
   "./config/items.js",
   "./config/keybinds.js",
+  "./config/world-objects.js",
   "./js/game.js",
   "./assets/icons/icon-192.png",
   "./assets/icons/icon-512.png",
   "./assets/environment/terrain-seamless.png",
   "./assets/environment/water-seamless.png",
   "./assets/environment/environment-atlas.png",
+  "./assets/props/object-atlas.png",
   "./assets/buildings/house-a.png",
   "./assets/buildings/house-b.png",
   "./assets/characters/player.png",
