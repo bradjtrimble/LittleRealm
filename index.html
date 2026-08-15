@@ -1215,9 +1215,11 @@ function drawBattleSprites(){
   else drawBoss(enemyCtx,36,38,.95);
 }
 
+const CAMERA_ZOOM = 1.85; // protected camera setting: closer, character-focused POV
+
 function drawWorld(){
   const vw=innerWidth, vh=innerHeight;
-  const zoom=1.35;
+  const zoom=CAMERA_ZOOM;
   const viewW=vw/zoom, viewH=vh/zoom;
   const camX=state.x-viewW/2;
   const camY=state.y-viewH/2;

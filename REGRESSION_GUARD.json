@@ -12,5 +12,10 @@
     "house collision uses HOUSE_SPECS footprint only",
     "tree collision uses trunk rectangle only",
     "new scenery features must be additive overlays, not replacements for protected render/collision functions"
-  ]
+  ],
+  "camera": {
+    "setting": "CAMERA_ZOOM",
+    "value": 1.85,
+    "rule": "POV changes modify CAMERA_ZOOM only; do not rewrite terrain/collision systems."
+  }
 }
