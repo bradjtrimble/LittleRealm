@@ -10,6 +10,45 @@ let devShowHitboxes=true;
 let devSnap=8;
 let devStatusTimer=null;
 
+function ensureDeveloperStyles(){
+  if(document.getElementById("littleRealmDevStyles")) return;
+  const style=document.createElement("style");
+  style.id="littleRealmDevStyles";
+  style.textContent=`
+    #devPanel{position:fixed!important;z-index:10000!important;top:10px!important;right:10px!important;width:min(430px,44vw)!important;height:calc(100vh - 20px)!important;background:rgba(24,20,30,.98)!important;border:1px solid rgba(255,255,255,.22)!important;border-radius:14px!important;box-shadow:0 18px 50px rgba(0,0,0,.55)!important;color:#f8f2ff!important;display:none!important;overflow:hidden!important;font:12px system-ui,sans-serif!important;backdrop-filter:blur(8px)!important}
+    #devPanel.show{display:flex!important;flex-direction:column!important}
+    #devPanel *{box-sizing:border-box}
+    #devPanel .devHeader{display:flex;align-items:center;justify-content:space-between;padding:10px 12px;background:#453552;border-bottom:1px solid rgba(255,255,255,.12)}
+    #devPanel .devHeader b{display:block;font-size:14px;letter-spacing:.08em} #devPanel .devHeader span{display:block;font-size:10px;color:#cdbed9;margin-top:2px}
+    #devPanel button,#devPanel select,#devPanel input{font:inherit}
+    #devPanel .devHeader button{width:32px;height:32px;border:0;border-radius:8px;background:#2a2132;color:white;font-size:20px}
+    #devPanel .devToolbar{display:flex;gap:7px;align-items:center;flex-wrap:wrap;padding:8px;border-bottom:1px solid rgba(255,255,255,.1)}
+    #devPanel .devToolbar button,#devPanel .devToolbar select,#devPanel .devProjectActions button,#devPanel .devRow button{border:1px solid rgba(255,255,255,.14);background:#5a4869;color:#fff;border-radius:7px;padding:7px 8px;font-weight:700}
+    #devPanel .devToolbar button.active,#devPanel .devPropButton.active{outline:2px solid #63e6ff;background:#385a64}
+    #devPanel .devToolbar label{display:flex;gap:4px;align-items:center;color:#e5d9ec}
+    #devPanel .devSectionTitle{padding:7px 10px 5px;font-weight:900;color:#d8c1e7;letter-spacing:.06em;text-transform:uppercase}
+    #devPanel #devPalette{display:grid!important;grid-template-columns:repeat(5,minmax(0,1fr))!important;gap:5px!important;padding:0 8px 8px!important;min-height:118px!important;max-height:220px!important;overflow:auto!important}
+    #devPanel .devPropButton{min-width:0;border:1px solid rgba(255,255,255,.12);background:#30283a;color:#eee;border-radius:7px;padding:3px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px;cursor:pointer}
+    #devPanel .devPropButton canvas{width:48px;height:48px;image-rendering:pixelated;background:rgba(255,255,255,.025);border-radius:4px}
+    #devPanel .devPropButton span{font-size:9px;line-height:1.05;max-width:100%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;text-transform:capitalize}
+    #devPanel #devObjectList{display:flex;gap:4px;overflow:auto;padding:0 8px 8px;min-height:44px;max-height:92px;flex-wrap:wrap;align-content:flex-start}
+    #devPanel .devObjectChip{border:1px solid rgba(255,255,255,.12);background:#2e2736;color:#e9dff0;border-radius:999px;padding:5px 8px;font-size:10px;cursor:pointer}
+    #devPanel .devObjectChip.active{outline:2px solid #63e6ff;background:#385a64}
+    #devPanel #devInspector{padding:0 10px 10px;overflow:auto;min-height:90px}
+    #devPanel .devEmpty{color:#baaec2;padding:8px;background:#2b2432;border-radius:8px}.devSelectedTitle{font-size:14px;font-weight:900;margin-bottom:7px;color:#7ceaff;text-transform:capitalize}
+    #devPanel #devInspector label{display:flex;flex-direction:column;gap:3px;margin:5px 0;color:#d7cbdc}
+    #devPanel #devInspector input[type=text],#devPanel #devInspector input[type=number],#devPanel #devInspector input:not([type]){width:100%;background:#1c1821;color:#fff;border:1px solid #594b62;border-radius:6px;padding:6px}
+    #devPanel .devChecks{display:grid;grid-template-columns:1fr 1fr;gap:3px} #devPanel .devChecks label{flex-direction:row!important;align-items:center!important}
+    #devPanel .devPair{display:grid;grid-template-columns:1fr 1fr;gap:7px} #devPanel .devQuad{display:grid;grid-template-columns:repeat(4,1fr);gap:5px}
+    #devPanel .devSubhead{font-weight:800;margin-top:7px;color:#c9b9d2} #devPanel .devRow{display:flex;gap:5px;margin-top:8px} #devPanel .devRow button{flex:1} #devPanel .devRow .danger{background:#713b47}
+    #devPanel .devProjectActions{display:grid;grid-template-columns:1fr 1fr;gap:5px;padding:8px 10px;border-top:1px solid rgba(255,255,255,.1)} #devPanel .devProjectActions button:first-child{grid-column:1/-1;background:#38606a}
+    #devPanel #devStatus{padding:7px 10px;background:#1d1822;color:#bdb0c5;font-size:10px;margin-top:auto}
+    body.devMode #pcControls{opacity:.25}
+    @media(max-width:900px){#devPanel{width:calc(100vw - 16px)!important;right:8px!important;top:8px!important;height:calc(100vh - 16px)!important}#devPanel #devPalette{grid-template-columns:repeat(6,minmax(0,1fr))!important}}
+  `;
+  document.head.appendChild(style);
+}
+
 function cloneWorldObject(obj){
   return JSON.parse(JSON.stringify(obj));
 }
@@ -66,11 +105,12 @@ function devWorldFromPointer(event){
 function snapDev(v){ return Math.round(v/devSnap)*devSnap; }
 
 function findWorldObjectAt(wx,wy){
-  const sorted=[...sceneryProps].sort((a,b)=>(b.y||0)-(a.y||0));
+  const pad=10;
+  const sorted=[...sceneryProps].sort((a,b)=>((b.y+(worldObjectSpec(b)?.h||0))-(a.y+(worldObjectSpec(a)?.h||0))));
   for(const obj of sorted){
     const spec=worldObjectSpec(obj);
     if(!spec) continue;
-    if(wx>=obj.x && wx<=obj.x+spec.w && wy>=obj.y && wy<=obj.y+spec.h) return obj;
+    if(wx>=obj.x-pad && wx<=obj.x+spec.w+pad && wy>=obj.y-pad && wy<=obj.y+spec.h+pad) return obj;
   }
   return null;
 }
@@ -153,6 +193,10 @@ function devPointerDown(event){
   if(devSelected){
     devDragging=true;
     devDragOffset={x:p.x-devSelected.x,y:p.y-devSelected.y};
+    try{ game.setPointerCapture?.(event.pointerId); }catch{}
+    devSetStatus(`Selected ${devSelected.label||devSelected.type} — drag to move`);
+  }else{
+    devSetStatus("No prop under cursor — choose one from the palette or Existing Objects");
   }
   refreshDeveloperPanel();
 }
@@ -169,6 +213,7 @@ function devPointerUp(event){
   if(!devModeActive || !devDragging) return;
   event.preventDefault(); event.stopImmediatePropagation();
   devDragging=false;
+  try{ game.releasePointerCapture?.(event.pointerId); }catch{}
   saveDeveloperDraft();
 }
 
@@ -260,11 +305,35 @@ function drawPaletteThumb(canvas,type){
   c.drawImage(propAtlas,spec.col*PROP_ATLAS_CELL,spec.row*PROP_ATLAS_CELL,PROP_ATLAS_CELL,PROP_ATLAS_CELL,2,2,44,44);
 }
 
+function refreshDeveloperObjectList(){
+  if(!devPanel) return;
+  const list=devPanel.querySelector("#devObjectList");
+  const count=devPanel.querySelector("#devObjectCount");
+  if(count) count.textContent=`${sceneryProps.length} placed`;
+  if(!list) return;
+  list.innerHTML="";
+  for(const obj of sceneryProps){
+    const b=document.createElement("button");
+    b.className="devObjectChip"+(obj===devSelected?" active":"");
+    b.textContent=obj.label||obj.type;
+    b.title=`${obj.type} @ ${Math.round(obj.x)}, ${Math.round(obj.y)}`;
+    b.onclick=()=>{
+      devPlaceType=null;
+      devSelected=obj;
+      updateDevPaletteActive();
+      refreshDeveloperPanel();
+      devSetStatus(`Selected ${obj.label||obj.type}`);
+    };
+    list.appendChild(b);
+  }
+}
+
 function refreshDeveloperPanel(rebuild=true){
   if(!devPanel) return;
   if(!rebuild){ refreshDeveloperInspectorValues(); return; }
   const inspector=devPanel.querySelector("#devInspector");
   if(!inspector) return;
+  refreshDeveloperObjectList();
   if(!devSelected){
     inspector.innerHTML='<div class="devEmpty">Select an object in the world or choose a prop from the palette and click to place it.</div>';
     return;
@@ -285,6 +354,7 @@ function refreshDeveloperPanel(rebuild=true){
 }
 
 function buildDeveloperPanel(){
+  ensureDeveloperStyles();
   const root=document.createElement("aside");
   root.id="devPanel";
   root.innerHTML=`
@@ -297,6 +367,8 @@ function buildDeveloperPanel(){
     </div>
     <div class="devSectionTitle">Prop Palette</div>
     <div id="devPalette"></div>
+    <div class="devSectionTitle">Existing Objects <span id="devObjectCount" style="float:right;font-weight:600;text-transform:none;letter-spacing:0;color:#a99bb3"></span></div>
+    <div id="devObjectList"></div>
     <div class="devSectionTitle">Selected Object</div>
     <div id="devInspector"></div>
     <div class="devProjectActions"><button id="devExport">Export world-objects.js</button><button id="devLoadDraft">Load Local Draft</button><button id="devReset">Use Project Layout</button></div>
@@ -312,7 +384,8 @@ function buildDeveloperPanel(){
   root.querySelector("#devLoadDraft").onclick=loadDeveloperDraft;
   root.querySelector("#devReset").onclick=resetDeveloperLayout;
   const palette=root.querySelector("#devPalette");
-  for(const type of Object.keys(PROP_SPECS)){
+  const propTypes=Object.keys(PROP_SPECS);
+  for(const type of propTypes){
     const b=document.createElement("button");b.className="devPropButton";b.dataset.type=type;b.title=type;
     const cv=document.createElement("canvas");cv.width=48;cv.height=48;
     const name=document.createElement("span");name.textContent=type.replace(/([A-Z])/g," $1");
@@ -323,6 +396,7 @@ function buildDeveloperPanel(){
   }
   if(!propAtlasReady) propAtlas.addEventListener("load",()=>root.querySelectorAll(".devPropButton").forEach(b=>drawPaletteThumb(b.querySelector("canvas"),b.dataset.type)),{once:true});
   refreshDeveloperPanel();
+  devSetStatus(`${propTypes.length} props available • ${sceneryProps.length} existing objects`);
   return root;
 }
 function updateDevPaletteActive(){
@@ -352,6 +426,8 @@ function initDeveloperMode(){
   game.addEventListener("pointermove",devPointerMove,true);
   game.addEventListener("pointerup",devPointerUp,true);
   game.addEventListener("pointercancel",devPointerUp,true);
+  window.addEventListener("pointermove",devPointerMove,true);
+  window.addEventListener("pointerup",devPointerUp,true);
   window.addEventListener("keydown",event=>{
     if(event.code==="F2"){
       event.preventDefault();toggleDeveloperMode();return;
