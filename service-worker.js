@@ -1,13 +1,21 @@
-const CACHE_NAME = "little-realm-v11-death-fix";
+const CACHE_NAME = "little-realm-v12-modular";
 const FILES = [
   "./",
   "./index.html",
+  "./style.css",
   "./manifest.webmanifest",
-  "./icon-192.png",
-  "./icon-512.png",
-  "./terrain-seamless.png",
-  "./house-a.png",
-  "./house-b.png"
+  "./js/pwa.js",
+  "./js/game.js",
+  "./assets/icons/icon-192.png",
+  "./assets/icons/icon-512.png",
+  "./assets/environment/terrain-seamless.png",
+  "./assets/environment/environment-atlas.png",
+  "./assets/buildings/house-a.png",
+  "./assets/buildings/house-b.png",
+  "./assets/characters/player.png",
+  "./assets/mobs/slime.png",
+  "./assets/mobs/wolf.png",
+  "./assets/mobs/goblin.png"
 ];
 
 self.addEventListener("install", event => {
