@@ -252,7 +252,7 @@ function defeatWorldMob(mob){
   disengageCombat(false);
 
   if(mob.boss){
-    toast("You defeated the Stone King!");
+    toast("You defeated Snickers!");
   }else{
     const rewards=[`+${e.xp} XP`];
     if(gold>0) rewards.push(`+${gold} gold`);
@@ -466,7 +466,7 @@ function potion(){
 
 function run(){
   if(!enemy||battleLocked)return;
-  if(enemy.boss){battleMessage("There is no escape from the Stone King.");return}
+  if(enemy.boss){battleMessage("There is no escape from Snickers.");return}
   battleLocked=true;
   setBattleButtons(false);
   setBattleTurn("guard","ESCAPE ATTEMPT");
@@ -553,7 +553,7 @@ function winBattle(){
   levelCheck();
   endBattle();
 
-  if(e.boss)toast("You defeated the Stone King!");
+  if(e.boss)toast("You defeated Snickers!");
   else toast(`Defeated ${e.name}: +${e.xp} XP, +${gold} gold`);
   updateUI();
 }

@@ -94,6 +94,10 @@ except Exception as e:
 try:
     dev=subprocess.run(['node',str(ROOT/'tools'/'devmode-test.js')],check=True,capture_output=True,text=True)
     print(dev.stdout.strip())
+except subprocess.CalledProcessError as e:
+    failed.append('developer world builder test')
+    detail=(e.stderr or e.stdout or str(e)).strip()
+    print('FAIL developer world builder test',detail)
 except Exception as e:
     failed.append('developer world builder test'); print('FAIL developer world builder test',e)
 

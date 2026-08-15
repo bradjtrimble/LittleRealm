@@ -33,7 +33,7 @@ const enemyTemplates = [
   createMobTemplate("Pig","pig","pig",{hp:8,atk:1,def:0,xp:3,gold:[0,0],attackInterval:1.8,aggressive:false,chaseSpeed:30,wanderSpeed:14}),
   createMobTemplate("Chicken","chicken","chicken",{hp:4,atk:1,def:0,xp:2,gold:[0,0],attackInterval:1.7,aggressive:false,chaseSpeed:34,wanderSpeed:18})
 ];
-const bossTemplate = createMobTemplate("Stone King","boss","stoneKing",{hp:50,atk:10,def:3,xp:45,gold:[20,30],attackInterval:1.63,aggressive:false,chaseSpeed:48,wanderSpeed:0},true);
+const bossTemplate = createMobTemplate("Snickers","boss","snickers",{hp:110,atk:12,def:4,xp:95,gold:[35,55],attackInterval:1.55,aggressive:true,chaseSpeed:52,wanderSpeed:0},true);
 
 function mobScaledStats(template){
   const levelBoost=Math.max(0,state.level-1);
@@ -98,6 +98,28 @@ function spawnMobs(){
     restoreMobStats(mob);
     mobs.push(mob);
   }
+
+  const boss={
+    id:nextMobId++,
+    kind:"boss",
+    template:bossTemplate,
+    x:36*TILE+TILE/2,
+    y:27*TILE+TILE/2,
+    homeX:36*TILE+TILE/2,
+    homeY:27*TILE+TILE/2,
+    vx:0,vy:0,
+    drawVx:0,drawVy:0,
+    facing:"down",
+    animTime:0,
+    moveTimer:999999,
+    alive:true,
+    respawnTimer:0,
+    aggro:false,
+    boss:true
+  };
+  restoreMobStats(boss);
+  mobs.push(boss);
+  bossMob=boss;
 }
 
 function drawSheetSprite(c, sheet, ready, x, y, scale=1, facing="down", animT=0, moving=true, rowMap=null, fallbackKind=""){
@@ -178,6 +200,22 @@ function drawGoblinSprite(c,x,y,scale=1,facing="down",animT=0,moving=true){
     moving,
     { down: 0, right: 1, left: 2, up: 3 },
     "goblin"
+  );
+}
+
+function drawBearSprite(c,x,y,scale=1,facing="down",animT=0,moving=true){
+  drawSheetSprite(
+    c,
+    bearSheet,
+    bearSheetReady,
+    x,
+    y,
+    scale,
+    facing,
+    animT,
+    moving,
+    { down: 0, right: 1, left: 2, up: 3 },
+    "boss"
   );
 }
 
@@ -331,7 +369,7 @@ function drawMob(c,mob,sx,sy){
   } else if(mob.kind==="chicken") {
     drawChicken(c,sx,sy,1.0);
   } else if(mob.kind==="boss") {
-    drawBoss(c,sx,sy,1.15);
+    drawBearSprite(c,sx,sy,0.18,mob.facing||"down",mob.animTime||0,Math.hypot(mob.drawVx||0,mob.drawVy||0)>1 || mob===combatTarget);
   }
 }
 
@@ -346,6 +384,7 @@ function drawBattleSprites(){
   else if(enemy.kind==="cow") drawCow(enemyCtx,36,40,1.55);
   else if(enemy.kind==="pig") drawPig(enemyCtx,36,40,1.65);
   else if(enemy.kind==="chicken") drawChicken(enemyCtx,36,40,1.8);
+  else if(enemy.kind==="boss") drawBearSprite(enemyCtx,36,54,0.15,"down",performance.now()/1000,true);
   else drawBoss(enemyCtx,36,38,.95);
 }
 
@@ -370,7 +409,7 @@ function updateMobs(dt){
 
     // Aggression and movement are data-driven so routine mob tuning only
     // requires editing config/game-balance.js.
-    if(!combatTarget && !mob.boss && mob.template.aggressive && d<mob.template.aggroTriggerRange){
+    if(!combatTarget && mob.template.aggressive && d<mob.template.aggroTriggerRange){
       engageMob(mob,true);
     }
 

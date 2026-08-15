@@ -61,6 +61,7 @@ function worldObjectSpec(obj){
   if(!obj) return null;
   if(obj.type==="crops") return {w:obj.w||90,h:obj.h||70};
   if(obj.type==="blockedGate") return {w:150,h:62};
+  if(obj.type==="caveEntrance") return {w:obj.w||154,h:obj.h||88};
   return PROP_SPECS[obj.type]||null;
 }
 
@@ -171,7 +172,7 @@ function devSetStatus(text){
 }
 
 function placeDeveloperObject(type,wx,wy){
-  const spec=PROP_SPECS[type];
+  const spec=worldObjectSpec({type});
   if(!spec) return;
   const obj=defaultWorldObject(type,snapDev(wx-spec.w/2),snapDev(wy-spec.h/2));
   sceneryProps.push(obj);
@@ -298,10 +299,19 @@ function refreshDeveloperInspectorValues(){
 }
 
 function drawPaletteThumb(canvas,type){
-  const spec=PROP_SPECS[type];
-  if(!canvas||!spec||!propAtlasReady) return;
+  if(!canvas) return;
   const c=canvas.getContext("2d");
   c.clearRect(0,0,48,48); c.imageSmoothingEnabled=false;
+  if(type==="caveEntrance"){
+    c.fillStyle="#6f5a48"; c.fillRect(7,9,34,8);
+    c.fillStyle="#7c6653"; c.fillRect(4,15,7,13); c.fillRect(37,15,7,13);
+    c.fillStyle="#121013"; c.fillRect(12,16,24,18);
+    c.fillStyle="#1f1a20"; c.fillRect(15,19,18,13);
+    c.fillStyle="#85705d"; c.fillRect(9,31,30,5);
+    return;
+  }
+  const spec=PROP_SPECS[type];
+  if(!spec||!propAtlasReady) return;
   const sx=Number.isFinite(spec.sx)?spec.sx:spec.col*PROP_ATLAS_CELL;
   const sy=Number.isFinite(spec.sy)?spec.sy:spec.row*PROP_ATLAS_CELL;
   const sw=Number.isFinite(spec.sw)?spec.sw:PROP_ATLAS_CELL;
@@ -390,7 +400,7 @@ function buildDeveloperPanel(){
   root.querySelector("#devLoadDraft").onclick=loadDeveloperDraft;
   root.querySelector("#devReset").onclick=resetDeveloperLayout;
   const palette=root.querySelector("#devPalette");
-  const propTypes=Object.keys(PROP_SPECS);
+  const propTypes=[...Object.keys(PROP_SPECS),"caveEntrance"];
   for(const type of propTypes){
     const b=document.createElement("button");b.className="devPropButton";b.dataset.type=type;b.title=type;
     const cv=document.createElement("canvas");cv.width=48;cv.height=48;

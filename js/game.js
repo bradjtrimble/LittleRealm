@@ -44,6 +44,11 @@ goblinSheet.src = "./assets/mobs/goblin.png";
 let goblinSheetReady = goblinSheet.complete && goblinSheet.naturalWidth > 0;
 goblinSheet.onload = () => { goblinSheetReady = true; };
 
+const bearSheet = new Image();
+bearSheet.src = "./assets/mobs/bear.png";
+let bearSheetReady = bearSheet.complete && bearSheet.naturalWidth > 0;
+bearSheet.onload = () => { bearSheetReady = true; };
+
 const environmentAtlas = new Image();
 environmentAtlas.src = "./assets/environment/environment-atlas.png";
 let environmentAtlasReady = environmentAtlas.complete && environmentAtlas.naturalWidth > 0;
@@ -559,7 +564,7 @@ function buildScenery(){
     {x:7*TILE+8,y:17*TILE+10,text:"Farm"},
     {x:18*TILE+8,y:10*TILE+5,text:"Slimes"},
     {x:35*TILE+8,y:10*TILE+5,text:"Goblin Camp"},
-    {x:36*TILE+4,y:28*TILE+12,text:"Next Zone"}
+    {x:36*TILE+4,y:28*TILE+12,text:"Snickers Cave"}
   );
 
   // Forest object placement. Boundary forest is deliberately denser than the
@@ -938,7 +943,26 @@ function drawPropObject(obj,camX,camY){
   if(spec && drawPropAtlasCell(spec,x,y)) return;
 
   ctx.save(); ctx.imageSmoothingEnabled=false;
-  if(obj.type==="crops") {
+  if(obj.type==="caveEntrance"){
+    const w=obj.w||154, h=obj.h||88;
+    const mouthW=Math.round(w*0.62), mouthH=Math.round(h*0.48);
+    const mouthX=x+Math.round((w-mouthW)/2), mouthY=y+Math.round(h*0.33);
+    const rock=(rx,ry,rw,rh,color)=>{ ctx.fillStyle=color; ctx.fillRect(Math.round(rx),Math.round(ry),Math.round(rw),Math.round(rh)); };
+    rock(x+18,y+14,w-36,16,"#6f5a48");
+    rock(x+8,y+22,18,26,"#7c6653");
+    rock(x+w-26,y+22,18,26,"#7c6653");
+    rock(x+4,y+40,22,26,"#635040");
+    rock(x+w-26,y+40,22,26,"#635040");
+    rock(x+28,y+8,w-56,10,"#8c755f");
+    rock(mouthX,mouthY,mouthW,mouthH,"#121013");
+    rock(mouthX+8,mouthY+8,mouthW-16,mouthH-8,"#1f1a20");
+    rock(x+30,y+h-14,w-60,8,"#5f4b3d");
+    ctx.fillStyle="rgba(0,0,0,.18)";
+    ctx.beginPath();
+    ctx.ellipse(x+w/2,y+h-4,w*.34,7,0,0,Math.PI*2);
+    ctx.fill();
+    for(const [ox,oy,rw,rh,col] of [[18,34,10,10,"#93806c"],[30,22,12,12,"#7b6755"],[w-40,20,12,12,"#8f7a66"],[w-28,36,10,10,"#756250"],[44,h-18,14,8,"#85705d"],[w-58,h-18,14,8,"#85705d"]]) rock(x+ox,y+oy,rw,rh,col);
+  }else if(obj.type==="crops") {
     const w=obj.w||90,h=obj.h||70;
     ctx.fillStyle="rgba(92,62,38,.42)"; ctx.fillRect(x,y,w,h);
     for(let yy=8;yy<h-4;yy+=18){
@@ -1055,7 +1079,7 @@ function drawWorld(){
   for(const prop of sceneryProps){
     const sx=prop.x-camX, sy=prop.y-camY;
     if(sx<-180||sy<-100||sx>viewW+180||sy>viewH+120) continue;
-    renderables.push({kind:"prop",depth:prop.y+(prop.type==="blockedGate"?62:36),obj:prop});
+    renderables.push({kind:"prop",depth:prop.y+(prop.type==="blockedGate"?62:prop.type==="caveEntrance"?76:36),obj:prop});
   }
   for(const npc of sceneryNPCs){
     const sx=npc.x-camX, sy=npc.y-camY;
@@ -1142,7 +1166,7 @@ function drawWorld(){
   label(6,17,"Farm");
   label(22,3,"Slime Spawns");
   label(37,4,"Goblin Camp");
-  label(37,29,"Next Zone Entrance");
+  label(36.8,28.5,"Snickers' Cave");
 
   if(devModeActive) drawDeveloperOverlay(camX,camY,viewW,viewH);
   ctx.restore();
@@ -1227,6 +1251,7 @@ function worldObjectSpec(obj){
   if(!obj) return null;
   if(obj.type==="crops") return {w:obj.w||90,h:obj.h||70};
   if(obj.type==="blockedGate") return {w:150,h:62};
+  if(obj.type==="caveEntrance") return {w:obj.w||154,h:obj.h||88};
   return PROP_SPECS[obj.type]||null;
 }
 
@@ -1337,7 +1362,7 @@ function devSetStatus(text){
 }
 
 function placeDeveloperObject(type,wx,wy){
-  const spec=PROP_SPECS[type];
+  const spec=worldObjectSpec({type});
   if(!spec) return;
   const obj=defaultWorldObject(type,snapDev(wx-spec.w/2),snapDev(wy-spec.h/2));
   sceneryProps.push(obj);
@@ -1464,10 +1489,19 @@ function refreshDeveloperInspectorValues(){
 }
 
 function drawPaletteThumb(canvas,type){
-  const spec=PROP_SPECS[type];
-  if(!canvas||!spec||!propAtlasReady) return;
+  if(!canvas) return;
   const c=canvas.getContext("2d");
   c.clearRect(0,0,48,48); c.imageSmoothingEnabled=false;
+  if(type==="caveEntrance"){
+    c.fillStyle="#6f5a48"; c.fillRect(7,9,34,8);
+    c.fillStyle="#7c6653"; c.fillRect(4,15,7,13); c.fillRect(37,15,7,13);
+    c.fillStyle="#121013"; c.fillRect(12,16,24,18);
+    c.fillStyle="#1f1a20"; c.fillRect(15,19,18,13);
+    c.fillStyle="#85705d"; c.fillRect(9,31,30,5);
+    return;
+  }
+  const spec=PROP_SPECS[type];
+  if(!spec||!propAtlasReady) return;
   const sx=Number.isFinite(spec.sx)?spec.sx:spec.col*PROP_ATLAS_CELL;
   const sy=Number.isFinite(spec.sy)?spec.sy:spec.row*PROP_ATLAS_CELL;
   const sw=Number.isFinite(spec.sw)?spec.sw:PROP_ATLAS_CELL;
@@ -1556,7 +1590,7 @@ function buildDeveloperPanel(){
   root.querySelector("#devLoadDraft").onclick=loadDeveloperDraft;
   root.querySelector("#devReset").onclick=resetDeveloperLayout;
   const palette=root.querySelector("#devPalette");
-  const propTypes=Object.keys(PROP_SPECS);
+  const propTypes=[...Object.keys(PROP_SPECS),"caveEntrance"];
   for(const type of propTypes){
     const b=document.createElement("button");b.className="devPropButton";b.dataset.type=type;b.title=type;
     const cv=document.createElement("canvas");cv.width=48;cv.height=48;
@@ -1819,7 +1853,7 @@ const enemyTemplates = [
   createMobTemplate("Pig","pig","pig",{hp:8,atk:1,def:0,xp:3,gold:[0,0],attackInterval:1.8,aggressive:false,chaseSpeed:30,wanderSpeed:14}),
   createMobTemplate("Chicken","chicken","chicken",{hp:4,atk:1,def:0,xp:2,gold:[0,0],attackInterval:1.7,aggressive:false,chaseSpeed:34,wanderSpeed:18})
 ];
-const bossTemplate = createMobTemplate("Stone King","boss","stoneKing",{hp:50,atk:10,def:3,xp:45,gold:[20,30],attackInterval:1.63,aggressive:false,chaseSpeed:48,wanderSpeed:0},true);
+const bossTemplate = createMobTemplate("Snickers","boss","snickers",{hp:110,atk:12,def:4,xp:95,gold:[35,55],attackInterval:1.55,aggressive:true,chaseSpeed:52,wanderSpeed:0},true);
 
 function mobScaledStats(template){
   const levelBoost=Math.max(0,state.level-1);
@@ -1884,6 +1918,28 @@ function spawnMobs(){
     restoreMobStats(mob);
     mobs.push(mob);
   }
+
+  const boss={
+    id:nextMobId++,
+    kind:"boss",
+    template:bossTemplate,
+    x:36*TILE+TILE/2,
+    y:27*TILE+TILE/2,
+    homeX:36*TILE+TILE/2,
+    homeY:27*TILE+TILE/2,
+    vx:0,vy:0,
+    drawVx:0,drawVy:0,
+    facing:"down",
+    animTime:0,
+    moveTimer:999999,
+    alive:true,
+    respawnTimer:0,
+    aggro:false,
+    boss:true
+  };
+  restoreMobStats(boss);
+  mobs.push(boss);
+  bossMob=boss;
 }
 
 function drawSheetSprite(c, sheet, ready, x, y, scale=1, facing="down", animT=0, moving=true, rowMap=null, fallbackKind=""){
@@ -1964,6 +2020,22 @@ function drawGoblinSprite(c,x,y,scale=1,facing="down",animT=0,moving=true){
     moving,
     { down: 0, right: 1, left: 2, up: 3 },
     "goblin"
+  );
+}
+
+function drawBearSprite(c,x,y,scale=1,facing="down",animT=0,moving=true){
+  drawSheetSprite(
+    c,
+    bearSheet,
+    bearSheetReady,
+    x,
+    y,
+    scale,
+    facing,
+    animT,
+    moving,
+    { down: 0, right: 1, left: 2, up: 3 },
+    "boss"
   );
 }
 
@@ -2117,7 +2189,7 @@ function drawMob(c,mob,sx,sy){
   } else if(mob.kind==="chicken") {
     drawChicken(c,sx,sy,1.0);
   } else if(mob.kind==="boss") {
-    drawBoss(c,sx,sy,1.15);
+    drawBearSprite(c,sx,sy,0.18,mob.facing||"down",mob.animTime||0,Math.hypot(mob.drawVx||0,mob.drawVy||0)>1 || mob===combatTarget);
   }
 }
 
@@ -2132,6 +2204,7 @@ function drawBattleSprites(){
   else if(enemy.kind==="cow") drawCow(enemyCtx,36,40,1.55);
   else if(enemy.kind==="pig") drawPig(enemyCtx,36,40,1.65);
   else if(enemy.kind==="chicken") drawChicken(enemyCtx,36,40,1.8);
+  else if(enemy.kind==="boss") drawBearSprite(enemyCtx,36,54,0.15,"down",performance.now()/1000,true);
   else drawBoss(enemyCtx,36,38,.95);
 }
 
@@ -2156,7 +2229,7 @@ function updateMobs(dt){
 
     // Aggression and movement are data-driven so routine mob tuning only
     // requires editing config/game-balance.js.
-    if(!combatTarget && !mob.boss && mob.template.aggressive && d<mob.template.aggroTriggerRange){
+    if(!combatTarget && mob.template.aggressive && d<mob.template.aggroTriggerRange){
       engageMob(mob,true);
     }
 
@@ -2473,7 +2546,7 @@ function defeatWorldMob(mob){
   disengageCombat(false);
 
   if(mob.boss){
-    toast("You defeated the Stone King!");
+    toast("You defeated Snickers!");
   }else{
     const rewards=[`+${e.xp} XP`];
     if(gold>0) rewards.push(`+${gold} gold`);
@@ -2687,7 +2760,7 @@ function potion(){
 
 function run(){
   if(!enemy||battleLocked)return;
-  if(enemy.boss){battleMessage("There is no escape from the Stone King.");return}
+  if(enemy.boss){battleMessage("There is no escape from Snickers.");return}
   battleLocked=true;
   setBattleButtons(false);
   setBattleTurn("guard","ESCAPE ATTEMPT");
@@ -2774,7 +2847,7 @@ function winBattle(){
   levelCheck();
   endBattle();
 
-  if(e.boss)toast("You defeated the Stone King!");
+  if(e.boss)toast("You defeated Snickers!");
   else toast(`Defeated ${e.name}: +${e.xp} XP, +${gold} gold`);
   updateUI();
 }

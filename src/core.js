@@ -39,6 +39,11 @@ goblinSheet.src = "./assets/mobs/goblin.png";
 let goblinSheetReady = goblinSheet.complete && goblinSheet.naturalWidth > 0;
 goblinSheet.onload = () => { goblinSheetReady = true; };
 
+const bearSheet = new Image();
+bearSheet.src = "./assets/mobs/bear.png";
+let bearSheetReady = bearSheet.complete && bearSheet.naturalWidth > 0;
+bearSheet.onload = () => { bearSheetReady = true; };
+
 const environmentAtlas = new Image();
 environmentAtlas.src = "./assets/environment/environment-atlas.png";
 let environmentAtlasReady = environmentAtlas.complete && environmentAtlas.naturalWidth > 0;
