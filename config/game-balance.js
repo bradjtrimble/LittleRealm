@@ -12,7 +12,7 @@ window.LR_BALANCE = {
     maxHp: 30,
     attack: 5,
     defense: 1,
-    startingGold: 8,
+    startingGold: 0,
     startingPotions: 2,
     moveSpeed: 180,
     potionHeal: 14,
