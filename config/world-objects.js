@@ -20,8 +20,8 @@ window.LR_WORLD_OBJECTS = [
   {
     "id": "town-notice",
     "type": "notice",
-    "x": 512,
-    "y": 568,
+    "x": 520,
+    "y": 544,
     "solid": true,
     "hitbox": {
       "x": 13,
@@ -38,7 +38,7 @@ window.LR_WORLD_OBJECTS = [
     "id": "town-market-red",
     "type": "marketRed",
     "x": 400,
-    "y": 224,
+    "y": 208,
     "solid": true,
     "hitbox": {
       "x": 5,
@@ -88,8 +88,8 @@ window.LR_WORLD_OBJECTS = [
   {
     "id": "town-mailbox",
     "type": "mailbox",
-    "x": 728,
-    "y": 290,
+    "x": 344,
+    "y": 472,
     "solid": true,
     "hitbox": {
       "x": 11,
@@ -105,8 +105,8 @@ window.LR_WORLD_OBJECTS = [
   {
     "id": "town-lamp-west",
     "type": "lamppost",
-    "x": 312,
-    "y": 264,
+    "x": 304,
+    "y": 256,
     "solid": true,
     "hitbox": {
       "x": 14,
@@ -594,6 +594,42 @@ window.LR_WORLD_OBJECTS = [
     },
     "interactable": false,
     "label": "Goblin Totem",
+    "container": false,
+    "capacity": 8,
+    "contents": []
+  },
+  {
+    "id": "signpost-msuzzpnt-jphr",
+    "type": "signpost",
+    "x": 512,
+    "y": 768,
+    "solid": false,
+    "hitbox": {
+      "x": 7,
+      "y": 41,
+      "w": 28,
+      "h": 15
+    },
+    "interactable": false,
+    "label": "Signpost",
+    "container": false,
+    "capacity": 8,
+    "contents": []
+  },
+  {
+    "id": "lamppost-msv003i0-3g6q",
+    "type": "lamppost",
+    "x": 352,
+    "y": 768,
+    "solid": false,
+    "hitbox": {
+      "x": 7,
+      "y": 44,
+      "w": 25,
+      "h": 16
+    },
+    "interactable": false,
+    "label": "Lamppost",
     "container": false,
     "capacity": 8,
     "contents": []
