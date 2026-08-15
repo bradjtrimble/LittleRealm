@@ -72,6 +72,12 @@ try:
 except Exception as e:
     failed.append('initialization smoke test'); print('FAIL initialization smoke test',e)
 
+try:
+    keyboard=subprocess.run(['node',str(ROOT/'tools'/'input-test.js')],check=True,capture_output=True,text=True)
+    print(keyboard.stdout.strip())
+except Exception as e:
+    failed.append('keyboard input test'); print('FAIL keyboard input test',e)
+
 if failed:
     print('\nValidation failed:',', '.join(failed)); sys.exit(1)
 print('\nAll protected-system checks passed.')

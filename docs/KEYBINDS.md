@@ -1,16 +1,13 @@
-# Little Realm PC keybinds
+# Little Realm PC controls
 
-Keyboard bindings are configured in `config/keybinds.js` and load directly in the browser. You can edit and push only that file; rebuilding `js/game.js` is not required.
-
-Default controls:
+Default bindings are stored in `config/keybinds.js`. Editing that file does not require rebuilding the game.
 
 - Move: W/A/S/D or arrow keys
-- Cycle nearby target: Tab (Shift+Tab cycles backward)
+- Cycle nearby targets: Tab (Shift+Tab goes backward)
 - Attack selected target: Space or F
 - Quick potion: Q
 - Clear target / leave combat: Escape
-- Toggle menu: M
+- Menu: M
 
-Bindings use `KeyboardEvent.code` values such as `KeyW`, `Space`, `Tab`, and `ArrowUp`.
-
-`combat.keyboardTargetRange` in `config/game-balance.js` controls how far away the Tab target selector can find mobs.
+On screens 720px or wider the mobile D-pad is hidden and a persistent PC control strip is shown at the bottom.
+The bottom-left badge should read `v15 • PC CONTROLS ACTIVE`; this makes it obvious that the newest deployment loaded.

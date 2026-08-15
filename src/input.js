@@ -22,6 +22,12 @@ const INPUT_BINDINGS = {
   menu:bindingList("menu",["KeyM"])
 };
 
+// Exposed only as read-only diagnostics so a desktop tester can confirm the
+// deployed build from DevTools without digging through bundled source.
+window.LR_BUILD_VERSION="v15-pc-controls-verified";
+window.LR_INPUT_BINDINGS=Object.freeze({...INPUT_BINDINGS});
+window.LR_INPUT_STATE=()=>({...input});
+
 function keyMatches(action,event){
   const keys=INPUT_BINDINGS[action]||[];
   return keys.includes(event.code) || keys.includes(event.key);
@@ -107,7 +113,7 @@ function bindingLabel(action){
 function updateKeyboardHelp(){
   const compact=document.getElementById("pcControls");
   if(compact){
-    compact.textContent=`Move ${bindingLabel("moveUp")}/${bindingLabel("moveLeft")}/${bindingLabel("moveDown")}/${bindingLabel("moveRight")}  •  Target ${bindingLabel("targetNext")}  •  Attack ${bindingLabel("attackTarget")}  •  Potion ${bindingLabel("potion")}  •  Clear ${bindingLabel("clearTarget")}  •  Menu ${bindingLabel("menu")}`;
+    compact.textContent=`PC CONTROLS  •  MOVE ${bindingLabel("moveUp")}/${bindingLabel("moveLeft")}/${bindingLabel("moveDown")}/${bindingLabel("moveRight")}  •  TARGET ${bindingLabel("targetNext")}  •  ATTACK ${bindingLabel("attackTarget")}  •  POTION ${bindingLabel("potion")}  •  CLEAR ${bindingLabel("clearTarget")}  •  MENU ${bindingLabel("menu")}`;
   }
   const list=document.getElementById("keybindList");
   if(list){

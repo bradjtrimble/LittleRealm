@@ -1,4 +1,4 @@
-const CACHE_NAME = "little-realm-v14-keybinds-node24";
+const CACHE_NAME = "little-realm-v15-pc-controls-verified";
 const FILES = [
   "./",
   "./index.html",

@@ -473,26 +473,55 @@ button.action:active{transform:scale(.98)}
 #actionHint.targeted{background:rgba(71,61,38,.90);border-color:rgba(255,220,96,.50);color:#fff1b8}
 #actionHint:active{transform:scale(.95)}
 
-/* Desktop keyboard help. Hidden on touch-first devices to keep the phone UI clean. */
+/* Desktop keyboard mode. Kept width-based instead of pointer-based so
+   touch-enabled laptops do not accidentally hide the PC controls. */
+#pcControls,#buildBadge{display:none}
 #pcControls{
-  display:none;
   position:absolute;
   left:50%;
-  bottom:12px;
+  bottom:18px;
   transform:translateX(-50%);
-  z-index:8;
-  max-width:min(760px,78vw);
-  padding:7px 11px;
-  border:1px solid rgba(255,255,255,.13);
-  border-radius:9px;
-  background:rgba(18,18,24,.70);
-  color:rgba(255,255,255,.78);
-  font-size:11px;
-  font-weight:700;
+  z-index:11;
+  max-width:min(980px,86vw);
+  padding:10px 15px;
+  border:1px solid rgba(255,255,255,.22);
+  border-radius:11px;
+  background:rgba(18,18,24,.90);
+  color:#fff;
+  font-size:12px;
+  font-weight:800;
   text-align:center;
   pointer-events:none;
   white-space:nowrap;
+  box-shadow:0 8px 24px rgba(0,0,0,.34);
 }
-@media (hover:hover) and (pointer:fine){
-  #pcControls{display:block}
+#buildBadge{
+  position:absolute;
+  left:12px;
+  bottom:12px;
+  z-index:12;
+  padding:5px 8px;
+  border:1px solid rgba(255,255,255,.14);
+  border-radius:8px;
+  background:rgba(18,18,24,.78);
+  color:rgba(255,255,255,.72);
+  font-size:10px;
+  font-weight:850;
+  letter-spacing:.04em;
+  pointer-events:none;
+}
+@media (min-width:720px){
+  #pcControls,#buildBadge{display:block}
+  /* A desktop should look like a desktop: remove the phone D-pad while
+     keeping the mouse-click attack and potion buttons available. */
+  #dpad{display:none}
+  #actionHint{
+    width:124px;
+    height:56px;
+    right:24px;
+    bottom:78px;
+    border-radius:14px;
+    font-size:11px;
+  }
+  #quickPotion{right:158px;bottom:86px}
 }
