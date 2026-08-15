@@ -382,28 +382,10 @@ let environmentAtlasReady = environmentAtlas.complete && environmentAtlas.natura
 environmentAtlas.onload = () => { environmentAtlasReady = true; };
 const ENV_ATLAS_CELL = 128;
 
-const terrainTexture = new Image();
-terrainTexture.src = "./terrain-seamless.png";
-let terrainTextureReady = terrainTexture.complete && terrainTexture.naturalWidth > 0;
-terrainTexture.onload = () => { terrainTextureReady = true; };
-
-const houseAImage = new Image();
-houseAImage.src = "./house-a.png";
-let houseAReady = houseAImage.complete && houseAImage.naturalWidth > 0;
-houseAImage.onload = () => { houseAReady = true; };
-
-const houseBImage = new Image();
-houseBImage.src = "./house-b.png";
-let houseBReady = houseBImage.complete && houseBImage.naturalWidth > 0;
-houseBImage.onload = () => { houseBReady = true; };
-
-const HOUSE_SPECS = {
-  A:{image:houseAImage, ready:()=>houseAReady, w:118, h:91, footprint:{x:12,y:66,w:94,h:23}},
-  B:{image:houseBImage, ready:()=>houseBReady, w:128, h:89, footprint:{x:8,y:67,w:112,h:20}}
-};
-
-
-
+const houseAImg = new Image();
+houseAImg.src = "./house_A.png";
+const houseBImg = new Image();
+houseBImg.src = "./house_B.png";
 
 
 const TILE = 64;
@@ -414,99 +396,104 @@ const HERO_RADIUS = 5;
 const MOB_RADIUS = 14;
 const MOB_TRIGGER_DISTANCE = 22;
 
-// 0 grass, 1 water, 2 forest, 3 road, 4 town, 5 castle
+// 0 grass, 1 water, 2 forest floor, 3 road, 4 town, 5 castle
 const world = Array.from({length:WORLD_H}, () => Array(WORLD_W).fill(0));
+const decor = { trees:[], houses:[], fences:[], signs:[] };
+const colliders = [];
+
+function safeSetTile(x,y,t){
+  if(x>=0&&y>=0&&x<WORLD_W&&y<WORLD_H) world[y][x]=t;
+}
+function fillTiles(x1,y1,x2,y2,t){
+  for(let y=y1;y<=y2;y++) for(let x=x1;x<=x2;x++) safeSetTile(x,y,t);
+}
+function addCollider(x,y,w,h,type="solid"){
+  colliders.push({x,y,w,h,type});
+}
+function addFence(tileX,tileY,length,dir="h"){
+  for(let i=0;i<length;i++){
+    const tx = tileX + (dir==="h"?i:0);
+    const ty = tileY + (dir==="v"?i:0);
+    decor.fences.push({x:tx*TILE,y:ty*TILE,dir});
+  }
+}
+function addSign(tileX,tileY,text){
+  decor.signs.push({x:tileX*TILE,y:tileY*TILE,text});
+}
+function addTreeAt(tileX,tileY,variant=0,scale=1){
+  const x=tileX*TILE, y=tileY*TILE;
+  decor.trees.push({x,y,variant,scale});
+  addCollider(x+22,y+26,20,26,"tree");
+}
+function addHouseAt(tileX,tileY,type="A"){
+  const baseX=tileX*TILE, baseY=tileY*TILE;
+  const meta = type==="A"
+    ? {w:118,h:98,ox:-28,oy:-38,cx:20,cy:54,cw:40,ch:24}
+    : {w:132,h:88,ox:-34,oy:-26,cx:16,cy:56,cw:52,ch:20};
+  decor.houses.push({
+    type,
+    x:baseX+meta.ox, y:baseY+meta.oy,
+    w:meta.w, h:meta.h,
+    sortY:baseY+58
+  });
+  addCollider(baseX+meta.cx,baseY+meta.cy,meta.cw,meta.ch,"house");
+}
+function paintForestPatch(x1,y1,x2,y2){
+  for(let y=y1;y<=y2;y++) for(let x=x1;x<=x2;x++){
+    if(world[y][x]===0) world[y][x]=2;
+  }
+}
 
 function buildWorld(){
-  for(let y=0;y<WORLD_H;y++){
-    for(let x=0;x<WORLD_W;x++){
-      world[y][x]=(x===0||y===0||x===WORLD_W-1||y===WORLD_H-1)?1:0;
-    }
-  }
+  for(let y=0;y<WORLD_H;y++) for(let x=0;x<WORLD_W;x++) world[y][x]=0;
+  decor.trees.length=0; decor.houses.length=0; decor.fences.length=0; decor.signs.length=0; colliders.length=0;
 
-  for(let y=2;y<=6;y++) for(let x=12;x<=16;x++) world[y][x]=1;
-  for(let y=10;y<=15;y++) world[y][22]=1;
-  for(let y=15;y<=17;y++) for(let x=21;x<=25;x++) world[y][x]=1;
+  // outer coast and lakes
+  for(let x=0;x<WORLD_W;x++){ safeSetTile(x,0,1); safeSetTile(x,WORLD_H-1,1); }
+  for(let y=0;y<WORLD_H;y++){ safeSetTile(0,y,1); safeSetTile(WORLD_W-1,y,1); }
+  fillTiles(13,2,16,5,1);
+  safeSetTile(12,3,1); safeSetTile(17,3,1); safeSetTile(14,6,1); safeSetTile(15,6,1);
+  for(let y=12;y<=17;y++) safeSetTile(23,y,1);
+  for(let x=21;x<=25;x++) safeSetTile(x,17,1);
+  safeSetTile(22,16,1); safeSetTile(24,16,1);
 
-  const forestAreas = [
-    [3,2,8,6],[18,2,24,6],[3,12,9,17],[14,10,19,15]
-  ];
-  forestAreas.forEach(([x1,y1,x2,y2])=>{
-    for(let y=y1;y<=y2;y++) for(let x=x1;x<=x2;x++){
-      if(world[y][x]!==1 && Math.random()<.78) world[y][x]=2;
-    }
-  });
+  // roads
+  for(let x=4;x<=23;x++) safeSetTile(x,9,3);
+  for(let y=6;y<=10;y++) safeSetTile(7,y,3);
+  for(let y=9;y<=15;y++) safeSetTile(23,y,3);
+  for(let x=20;x<=23;x++) safeSetTile(x,15,3);
 
-  for(let x=4;x<=24;x++) world[9][x]=3;
-  for(let y=6;y<=9;y++) world[y][6]=3;
-  for(let y=9;y<=15;y++) world[y][24]=3;
+  // town and castle grounds
+  fillTiles(4,6,10,11,4);
+  fillTiles(21,13,25,16,5);
+  for(let x=5;x<=9;x++) safeSetTile(x,8,3);
+  for(let x=5;x<=9;x++) safeSetTile(x,10,3);
+  for(let y=7;y<=10;y++) safeSetTile(7,y,3);
 
-  for(let y=6;y<=8;y++) for(let x=4;x<=7;x++) world[y][x]=4;
-  world[7][6]=3;
-  world[8][6]=3;
+  // forest floor zones
+  paintForestPatch(2,2,8,6);
+  paintForestPatch(18,2,25,6);
+  paintForestPatch(2,13,8,18);
+  paintForestPatch(14,11,20,15);
 
-  world[15][24]=5;
+  // town layout
+  addHouseAt(4,6,"A");
+  addHouseAt(8,6,"B");
+  addHouseAt(4,11,"B");
+  addHouseAt(8,11,"A");
+  addFence(4,6,2,"h"); addFence(8,6,3,"h");
+  addFence(4,12,2,"h"); addFence(8,12,3,"h");
+  addFence(4,7,5,"v"); addFence(10,7,5,"v");
+  addSign(6,7,"Oakrest");
+  addSign(22,14,"Stone Castle");
+
+  // trees with sensible spacing + collision
+  [[2,2,1],[4,2,3],[6,3,2],[3,5,5],[7,5,0],[5,4,4],
+   [18,2,2],[20,3,4],[22,2,0],[24,4,5],[19,5,1],[22,5,3],
+   [2,14,1],[4,15,4],[6,14,0],[7,17,2],[3,17,5],[5,18,3],
+   [15,11,2],[17,12,5],[19,11,0],[18,14,4],[16,15,1],[20,14,3]].forEach(([x,y,v])=>addTreeAt(x,y,v));
 }
 buildWorld();
-
-const sceneryTrees=[];
-const sceneryHouses=[];
-let solidRects=[];
-const MOB_SPAWN_TILES = new Set([
-  "10,8","8,11","11,12","17,8","18,13","9,5","20,7",
-  "17,4","19,11","11,15","23,12","5,14","8,16","20,5","16,14"
-]);
-
-function addSolidRect(x,y,w,h,type="solid"){
-  solidRects.push({x,y,w,h,type});
-}
-
-function buildScenery(){
-  sceneryTrees.length=0;
-  sceneryHouses.length=0;
-  solidRects=[];
-
-  // Oakrest: houses sit beside the road rather than occupying every town tile.
-  const houses=[
-    {type:"A", x:4*TILE-12, y:6*TILE-69},
-    {type:"B", x:7*TILE,    y:6*TILE-56},
-    {type:"B", x:4*TILE-18, y:8*TILE-67},
-    {type:"A", x:7*TILE,    y:8*TILE-76}
-  ];
-
-  for(const placement of houses){
-    const spec=HOUSE_SPECS[placement.type];
-    const obj={...placement,spec};
-    sceneryHouses.push(obj);
-    const f=spec.footprint;
-    addSolidRect(placement.x+f.x,placement.y+f.y,f.w,f.h,"house");
-  }
-
-  // Real tree objects. Only trunks are solid; canopies are visual.
-  const reserved = new Set([
-    ...MOB_SPAWN_TILES,
-    "4,6","5,6","6,6","7,6","8,6",
-    "4,7","5,7","6,7","7,7","8,7",
-    "3,8","4,8","5,8","6,8","7,8","8,8",
-    "3,9","4,9","5,9","6,9","7,9","8,9"
-  ]);
-
-  for(let ty=0;ty<WORLD_H;ty++){
-    for(let tx=0;tx<WORLD_W;tx++){
-      if(world[ty][tx]!==2) continue;
-      if(reserved.has(`${tx},${ty}`)) continue;
-      if(worldHash(tx,ty)%100 >= 66) continue;
-
-      const ox=(worldHash(tx+31,ty+11)%15)-7;
-      const oy=(worldHash(tx+7,ty+41)%11)-5;
-      const obj={x:tx*TILE+ox,y:ty*TILE+oy,variant:worldHash(tx,ty)%6};
-      sceneryTrees.push(obj);
-      addSolidRect(obj.x+24,obj.y+38,16,19,"tree");
-    }
-  }
-}
-
-buildScenery();
 
 const tile = {
   0:{walk:true},
@@ -544,8 +531,8 @@ let castleCooldown=0;
 
 function fresh(){
   return {
-    x:6*TILE+TILE/2,
-    y:7*TILE+TILE/2,
+    x:7*TILE+TILE/2,
+    y:9*TILE+TILE/2,
     level:1,xp:0,xpNext:25,
     hp:30,maxHp:30,
     atk:5,def:1,
@@ -638,16 +625,15 @@ function tileAtWorld(px,py){
   return world[ty][tx];
 }
 
-function circleIntersectsRect(px,py,radius,rect){
-  const nearestX=Math.max(rect.x,Math.min(px,rect.x+rect.w));
-  const nearestY=Math.max(rect.y,Math.min(py,rect.y+rect.h));
-  const dx=px-nearestX;
-  const dy=py-nearestY;
-  return dx*dx+dy*dy < radius*radius;
+function circleHitsRect(cx,cy,r,rect){
+  const nx=clamp(cx,rect.x,rect.x+rect.w);
+  const ny=clamp(cy,rect.y,rect.y+rect.h);
+  const dx=cx-nx, dy=cy-ny;
+  return dx*dx + dy*dy < r*r;
 }
 
-function hitsSolidScenery(px,py,radius=HERO_RADIUS){
-  return solidRects.some(rect=>circleIntersectsRect(px,py,radius,rect));
+function objectBlocked(px,py,radius=HERO_RADIUS){
+  return colliders.some(rect=>circleHitsRect(px,py,radius,rect));
 }
 
 function canStand(px,py,radius=HERO_RADIUS){
@@ -661,8 +647,7 @@ function canStand(px,py,radius=HERO_RADIUS){
     [px-radius,py],
     [px+radius,py]
   ];
-  if(!points.every(([x,y])=>tile[tileAtWorld(x,y)].walk)) return false;
-  return !hitsSolidScenery(px,py,radius);
+  return points.every(([x,y])=>tile[tileAtWorld(x,y)].walk) && !objectBlocked(px,py,radius);
 }
 
 function updateUI(){
@@ -723,75 +708,99 @@ function worldHash(x,y){
   return Math.abs((x*928371 + y*364479 + x*y*31) % 10007);
 }
 
-function drawContinuousTerrain(kind,x,y,tx=0,ty=0){
-  if(!terrainTextureReady) return false;
-  ctx.imageSmoothingEnabled=false;
-  const baseX=kind==="dirt" ? 256 : 0;
-  const sx=baseX + (((tx*TILE)%256)+256)%256;
-  const sy=(((ty*TILE)%256)+256)%256;
-
-  // Overlap by one pixel so the 1.35x camera transform never exposes seams.
-  ctx.drawImage(
-    terrainTexture,
-    sx,sy,TILE,TILE,
-    Math.floor(x)-1,Math.floor(y)-1,TILE+2,TILE+2
-  );
-  return true;
+function getWorldType(tx,ty){
+  if(tx<0||ty<0||tx>=WORLD_W||ty>=WORLD_H) return 1;
+  return world[ty][tx];
 }
+function isRoadLike(t){ return t===3 || t===4 || t===5; }
 
 function drawGrassTile(x,y,variant=0,tx=0,ty=0){
-  if(!drawContinuousTerrain("grass",x,y,tx,ty)){
-    ctx.fillStyle="#718f45";
-    ctx.fillRect(Math.floor(x)-1,Math.floor(y)-1,TILE+2,TILE+2);
-  }
-
-  // Sparse decoration only, so the underlying tile grid stays invisible.
   if(environmentAtlasReady){
-    const h=worldHash(tx+21,ty+9)%43;
-    if(h===0) drawAtlasCell(0,3,x+13,y+TILE-17,18,18);
-    else if(h===1) drawAtlasCell(3,3,x+37,y+TILE-15,15,15);
+    const grassCol = (worldHash(tx,ty)+variant)%4;
+    drawAtlasCell(grassCol,0,x,y,TILE,TILE);
+    const h=worldHash(tx+21,ty+9)%22;
+    if(h===0) drawAtlasCell(0,2,x+6,y+TILE-23,28,28);
+    else if(h===1) drawAtlasCell(1,2,x+8,y+TILE-21,25,25);
+    else if(h===2) drawAtlasCell(0,3,x+12,y+TILE-17,18,18);
+    else if(h===3) drawAtlasCell(3,3,x+36,y+TILE-15,15,15);
+    return;
   }
+  ctx.fillStyle="#98d77b";
+  ctx.fillRect(x,y,TILE+1,TILE+1);
 }
 
 function drawForestTile(x,y,variant=0,tx=0,ty=0){
   drawGrassTile(x,y,variant,tx,ty);
+  ctx.fillStyle="rgba(28,52,31,.10)";
+  ctx.fillRect(x,y,TILE,TILE);
 }
 
-function drawWaterTile(x,y,variant=0){
+function drawWaterTile(x,y,variant=0,tx=0,ty=0){
   ctx.fillStyle="#68addd";
-  ctx.fillRect(Math.floor(x)-1,Math.floor(y)-1,TILE+2,TILE+2);
-  ctx.fillStyle="#85c6ed";
-  ctx.fillRect(x,y,TILE,4);
-  ctx.fillStyle="#4f96c9";
-  ctx.fillRect(x,y+TILE-7,TILE,8);
-  ctx.strokeStyle="rgba(255,255,255,.18)";
-  ctx.beginPath();
-  ctx.moveTo(x+9,y+18);ctx.lineTo(x+29,y+18);
-  ctx.moveTo(x+35,y+31);ctx.lineTo(x+54,y+31);
-  ctx.moveTo(x+15,y+46);ctx.lineTo(x+38,y+46);
-  ctx.stroke();
+  ctx.fillRect(x,y,TILE+1,TILE+1);
+
+  ctx.fillStyle="#7fc2ea";
+  ctx.fillRect(x,y,TILE,5);
+  ctx.fillStyle="#4d91c7";
+  ctx.fillRect(x,y+TILE-8,TILE,8);
+
+  const n = getWorldType(tx,ty-1)===1;
+  const s = getWorldType(tx,ty+1)===1;
+  const w = getWorldType(tx-1,ty)===1;
+  const e = getWorldType(tx+1,ty)===1;
+  ctx.fillStyle="#cfbc7a";
+  if(!n) ctx.fillRect(x,y,TILE,7);
+  if(!s) ctx.fillRect(x,y+TILE-7,TILE,7);
+  if(!w) ctx.fillRect(x,y,7,TILE);
+  if(!e) ctx.fillRect(x+TILE-7,y,7,TILE);
+  ctx.fillStyle="rgba(255,255,255,.14)";
+  ctx.fillRect(x+10,y+16,18,2);
+  ctx.fillRect(x+34,y+29,16,2);
+  ctx.fillRect(x+18,y+44,20,2);
 }
 
 function drawRoadTile(x,y,variant=0,tx=0,ty=0){
-  if(!drawContinuousTerrain("dirt",x,y,tx,ty)){
-    ctx.fillStyle="#a97442";
-    ctx.fillRect(Math.floor(x)-1,Math.floor(y)-1,TILE+2,TILE+2);
-  }
+  drawGrassTile(x,y,variant,tx,ty);
+  const n = isRoadLike(getWorldType(tx,ty-1));
+  const s = isRoadLike(getWorldType(tx,ty+1));
+  const w = isRoadLike(getWorldType(tx-1,ty));
+  const e = isRoadLike(getWorldType(tx+1,ty));
+
+  ctx.fillStyle="#c58a50";
+  ctx.beginPath();
+  ctx.roundRect(x+14,y+14,36,36,12);
+  ctx.fill();
+  if(n) ctx.fillRect(x+18,y,28,32);
+  if(s) ctx.fillRect(x+18,y+32,28,32);
+  if(w) ctx.fillRect(x,y+18,32,28);
+  if(e) ctx.fillRect(x+32,y+18,32,28);
+
+  ctx.fillStyle="rgba(103,68,35,.22)";
+  if(!n) ctx.fillRect(x+12,y+14,40,3);
+  if(!s) ctx.fillRect(x+12,y+47,40,3);
+  if(!w) ctx.fillRect(x+14,y+12,3,40);
+  if(!e) ctx.fillRect(x+47,y+12,3,40);
+
+  ctx.fillStyle="rgba(255,255,255,.08)";
+  for(const [ox,oy] of [[22,18],[34,28],[27,39],[17,33]]) ctx.fillRect(x+ox,y+oy,3,3);
 }
 
 function drawTownTile(x,y,variant=0,tx=0,ty=0){
   drawGrassTile(x,y,variant,tx,ty);
+  ctx.fillStyle="rgba(255,226,185,.08)";
+  ctx.fillRect(x,y,TILE,TILE);
 }
 
 function drawCastleGroundTile(x,y,tx=0,ty=0){
   drawRoadTile(x,y,0,tx,ty);
+  ctx.fillStyle="rgba(90,90,104,.18)";
+  ctx.fillRect(x+4,y+4,TILE-8,TILE-8);
 }
 
-function drawTree(x,y,variant=0){
+function drawTree(x,y,variant=0,scale=1){
   if(environmentAtlasReady){
     const col=variant%6;
-    // Trees intentionally overlap beyond their 64px tile footprint.
-    drawAtlasCell(col,1,x-18,y-42,100,108);
+    drawAtlasCell(col,1,x-18,y-42,100*scale,108*scale);
     return;
   }
   ctx.fillStyle="#7c4d2a";
@@ -800,28 +809,47 @@ function drawTree(x,y,variant=0){
   ctx.beginPath();ctx.arc(x+32,y+23,22,0,Math.PI*2);ctx.fill();
 }
 
-function drawHouseObject(obj,camX,camY){
-  const sx=obj.x-camX;
-  const sy=obj.y-camY;
-  const spec=obj.spec;
-
-  if(spec.ready()){
-    ctx.imageSmoothingEnabled=false;
-    ctx.drawImage(spec.image,Math.round(sx),Math.round(sy),spec.w,spec.h);
-    return;
+function drawHouse(x,y,type="A",w=118,h=98){
+  ctx.save();
+  ctx.imageSmoothingEnabled=false;
+  const img = type==="A" ? houseAImg : houseBImg;
+  if(img && img.complete && img.naturalWidth){
+    ctx.drawImage(img,Math.round(x),Math.round(y),Math.round(w),Math.round(h));
+  }else{
+    ctx.fillStyle="#68452f"; ctx.fillRect(x+8,y+54,48,6);
+    ctx.fillStyle="#a96d3f"; ctx.fillRect(x+9,y+27,46,29);
+    ctx.fillStyle="#c1814c"; ctx.fillRect(x+13,y+31,38,22);
+    ctx.fillStyle="#6e3927"; ctx.fillRect(x+6,y+23,52,6);
+    ctx.fillStyle="#9a4837"; ctx.fillRect(x+10,y+18,44,6);
+    ctx.fillStyle="#c6654c"; ctx.fillRect(x+15,y+13,34,6);
+    ctx.fillRect(x+21,y+8,22,6); ctx.fillRect(x+27,y+4,10,5);
+    ctx.fillStyle="#70472c"; ctx.fillRect(x+27,y+38,11,18);
+    ctx.fillStyle="#d4a65f"; ctx.fillRect(x+29,y+40,7,16);
+    ctx.fillStyle="#41637c"; ctx.fillRect(x+16,y+37,8,8);
+    ctx.fillStyle="#88c5e5"; ctx.fillRect(x+17,y+38,6,5);
   }
-
-  // Simple loading fallback.
-  ctx.fillStyle="#d8c7a0";
-  ctx.fillRect(sx+14,sy+38,spec.w-28,spec.h-45);
-  ctx.fillStyle="#9a4837";
-  ctx.fillRect(sx+5,sy+22,spec.w-10,22);
-  ctx.fillStyle="#70472c";
-  ctx.fillRect(sx+spec.w*.47,sy+spec.h-32,14,32);
+  ctx.restore();
 }
 
-function drawTreeObject(obj,camX,camY){
-  drawTree(obj.x-camX,obj.y-camY,obj.variant||0);
+function drawFence(x,y,dir="h"){
+  ctx.fillStyle="#6a4a2c";
+  if(dir==="h"){
+    ctx.fillRect(x+8,y+28,48,4);
+    ctx.fillRect(x+8,y+40,48,4);
+    for(const ox of [12,28,44]) ctx.fillRect(x+ox,y+22,4,28);
+  }else{
+    ctx.fillRect(x+28,y+8,4,48);
+    ctx.fillRect(x+40,y+8,4,48);
+    for(const oy of [12,28,44]) ctx.fillRect(x+22,y+oy,28,4);
+  }
+}
+
+function drawSign(x,y,text=""){
+  ctx.fillStyle="#7a5331";
+  ctx.fillRect(x+28,y+24,5,24);
+  ctx.fillRect(x+18,y+16,24,12);
+  ctx.fillStyle="#d9c293";
+  ctx.fillRect(x+20,y+18,20,8);
 }
 
 function drawCastle(x,y){
@@ -1114,80 +1142,79 @@ function drawWorld(){
   const camX=state.x-viewW/2;
   const camY=state.y-viewH/2;
 
-  ctx.fillStyle="#718f45";
+  ctx.fillStyle="#cde7fb";
   ctx.fillRect(0,0,vw,vh);
 
   ctx.save();
-  ctx.scale(zoom,zoom);
+  ctx.scale(zoom, zoom);
 
-  const minX=Math.max(0,Math.floor(camX/TILE)-1);
-  const maxX=Math.min(WORLD_W-1,Math.ceil((camX+viewW)/TILE)+1);
-  const minY=Math.max(0,Math.floor(camY/TILE)-1);
-  const maxY=Math.min(WORLD_H-1,Math.ceil((camY+viewH)/TILE)+1);
+  const minX=Math.max(0,Math.floor(camX/TILE)-2);
+  const maxX=Math.min(WORLD_W-1,Math.ceil((camX+viewW)/TILE)+2);
+  const minY=Math.max(0,Math.floor(camY/TILE)-2);
+  const maxY=Math.min(WORLD_H-1,Math.ceil((camY+viewH)/TILE)+2);
 
-  // Ground only. Tiles still exist for gameplay, but not as visible bordered squares.
   for(let y=minY;y<=maxY;y++){
     for(let x=minX;x<=maxX;x++){
       const sx=x*TILE-camX;
       const sy=y*TILE-camY;
       const t=world[y][x];
       const variant=(x+y)%3;
-
-      if(t===1) drawWaterTile(sx,sy,variant);
+      if(t===1) drawWaterTile(sx,sy,variant,x,y);
+      else if(t===2) drawForestTile(sx,sy,variant,x,y);
       else if(t===3) drawRoadTile(sx,sy,variant,x,y);
       else if(t===4) drawTownTile(sx,sy,variant,x,y);
-      else if(t===5){
-        drawCastleGroundTile(sx,sy,x,y);
-        drawCastle(sx,sy);
-      }else if(t===2) drawForestTile(sx,sy,variant,x,y);
+      else if(t===5){ drawCastleGroundTile(sx,sy,x,y); if(x===23&&y===14) drawCastle(sx,sy); }
       else drawGrassTile(sx,sy,variant,x,y);
     }
   }
 
-  // Y-sort scenery, mobs, and the player so overlap feels like an RPG world.
   const renderables=[];
 
-  for(const tree of sceneryTrees){
-    const sx=tree.x-camX, sy=tree.y-camY;
-    if(sx<-120||sy<-130||sx>viewW+120||sy>viewH+90) continue;
-    renderables.push({kind:"tree",depth:tree.y+58,obj:tree});
+  for(const f of decor.fences){
+    const sx=f.x-camX, sy=f.y-camY;
+    if(sx<-80||sy<-80||sx>viewW+80||sy>viewH+80) continue;
+    renderables.push({y:sy+44, draw:()=>drawFence(sx,sy,f.dir)});
   }
-
-  for(const house of sceneryHouses){
+  for(const sign of decor.signs){
+    const sx=sign.x-camX, sy=sign.y-camY;
+    if(sx<-80||sy<-80||sx>viewW+80||sy>viewH+80) continue;
+    renderables.push({y:sy+48, draw:()=>drawSign(sx,sy,sign.text)});
+  }
+  for(const house of decor.houses){
     const sx=house.x-camX, sy=house.y-camY;
-    if(sx<-house.spec.w||sy<-house.spec.h||sx>viewW+60||sy>viewH+60) continue;
-    renderables.push({kind:"house",depth:house.y+house.spec.h-5,obj:house});
+    if(sx<-160||sy<-140||sx>viewW+140||sy>viewH+140) continue;
+    renderables.push({y:house.sortY-camY, draw:()=>drawHouse(sx,sy,house.type,house.w,house.h)});
+  }
+  for(const tree of decor.trees){
+    const sx=tree.x-camX, sy=tree.y-camY;
+    if(sx<-120||sy<-120||sx>viewW+120||sy>viewH+120) continue;
+    renderables.push({y:sy+58, draw:()=>drawTree(sx,sy,tree.variant,tree.scale)});
   }
 
   for(const mob of mobs){
     if(!mob.alive) continue;
-    const sx=mob.x-camX, sy=mob.y-camY;
-    if(sx<-60||sy<-60||sx>viewW+60||sy>viewH+60) continue;
-    renderables.push({kind:"mob",depth:mob.y,obj:mob});
-  }
-
-  renderables.push({kind:"hero",depth:state.y,obj:null});
-  renderables.sort((a,b)=>a.depth-b.depth);
-
-  for(const item of renderables){
-    if(item.kind==="tree"){
-      drawTreeObject(item.obj,camX,camY);
-    }else if(item.kind==="house"){
-      drawHouseObject(item.obj,camX,camY);
-    }else if(item.kind==="mob"){
-      const mob=item.obj;
-      const sx=mob.x-camX, sy=mob.y-camY;
-      ctx.fillStyle="rgba(0,0,0,.20)";
-      ctx.beginPath();ctx.ellipse(sx,sy+12,13,5,0,0,Math.PI*2);ctx.fill();
-      drawMob(ctx,mob,sx,sy);
-      if(mob.aggro){
-        ctx.fillStyle="#f2d15f";
-        ctx.beginPath();ctx.arc(sx,sy-26,4,0,Math.PI*2);ctx.fill();
+    const sx=mob.x-camX;
+    const sy=mob.y-camY;
+    if(sx<-50||sy<-50||sx>viewW+50||sy>viewH+50) continue;
+    renderables.push({
+      y:sy+16,
+      draw:()=>{
+        drawMob(ctx,mob,sx,sy);
+        if(mob.aggro){
+          ctx.fillStyle="#f2d15f";
+          ctx.beginPath();ctx.arc(sx,sy-26,4,0,Math.PI*2);ctx.fill();
+        }
       }
-    }else{
-      drawHero(ctx,viewW/2,viewH/2,0.055,isHeroMoving,moveAnimTime,heroFacing);
-    }
+    });
   }
+
+  renderables.push({
+    y:viewH/2+16,
+    draw:()=>drawHero(ctx,viewW/2,viewH/2,0.055,isHeroMoving,moveAnimTime,heroFacing)
+  });
+
+  renderables.sort((a,b)=>a.y-b.y);
+  for(const item of renderables) item.draw();
 
   function label(wx,wy,text){
     const sx=wx*TILE-camX;
@@ -1201,11 +1228,12 @@ function drawWorld(){
     ctx.fillText(text,sx+24,sy-12);
     ctx.textAlign="start";
   }
-  label(5,6,"Oakrest");
-  label(24,15,"Stone Castle");
+  label(6,7,"Oakrest");
+  label(22,14,"Stone Castle");
 
   ctx.restore();
 }
+
 
 function updateMovement(dt){
   if(enemy || document.getElementById("menu").classList.contains("show")) {
