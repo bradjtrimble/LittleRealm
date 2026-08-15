@@ -382,6 +382,16 @@ let environmentAtlasReady = environmentAtlas.complete && environmentAtlas.natura
 environmentAtlas.onload = () => { environmentAtlasReady = true; };
 const ENV_ATLAS_CELL = 128;
 
+const houseAtlas = new Image();
+houseAtlas.src = "./house-atlas.png";
+let houseAtlasReady = houseAtlas.complete && houseAtlas.naturalWidth > 0;
+houseAtlas.onload = () => { houseAtlasReady = true; };
+
+const HOUSE_SPRITES = {
+  cottageA:{sx:26, sy:880, sw:520, sh:398, drawW:172, drawH:132, collider:{x:34,y:94,w:100,h:28}},
+  cottageB:{sx:566, sy:914, sw:592, sh:318, drawW:184, drawH:102, collider:{x:22,y:74,w:132,h:22}}
+};
+
 
 
 
@@ -427,6 +437,64 @@ function buildWorld(){
   world[15][24]=5;
 }
 buildWorld();
+
+const sceneryTrees=[];
+const sceneryHouses=[];
+let solidRects=[];
+const MOB_SPAWN_TILES = new Set([
+  "10,8","8,11","11,12","17,8","18,13","9,5","20,7",
+  "17,4","19,11","11,15","23,12","5,14","8,16","20,5","16,14"
+]);
+
+function addSolidRect(x,y,w,h){
+  solidRects.push({x,y,w,h});
+}
+
+function buildScenery(){
+  sceneryTrees.length=0;
+  sceneryHouses.length=0;
+  solidRects=[];
+
+  const houses=[
+    {type:"cottageA", x:4*TILE-18, y:6*TILE-42},
+    {type:"cottageB", x:6*TILE+6, y:6*TILE-14},
+    {type:"cottageB", x:3*TILE-8, y:8*TILE-14},
+    {type:"cottageB", x:7*TILE+8, y:8*TILE-14}
+  ];
+
+  for(const placement of houses){
+    const spec=HOUSE_SPRITES[placement.type];
+    const obj={...placement,spec};
+    sceneryHouses.push(obj);
+    addSolidRect(placement.x+spec.collider.x, placement.y+spec.collider.y, spec.collider.w, spec.collider.h);
+  }
+
+  const reservedTreeTiles = new Set([
+    ...MOB_SPAWN_TILES,
+    "4,6","5,6","6,6","7,6","8,6",
+    "4,7","5,7","6,7","7,7","8,7",
+    "3,8","4,8","5,8","6,8","7,8","8,8",
+    "3,9","4,9","5,9","6,9","7,9","8,9",
+    "12,8","13,8","14,8","15,8","16,8",
+    "22,10","22,11","22,12","22,13","22,14","22,15"
+  ]);
+
+  for(let y=0;y<WORLD_H;y++){
+    for(let x=0;x<WORLD_W;x++){
+      if(world[y][x]!==2) continue;
+      if(reservedTreeTiles.has(`,`)) continue;
+      if(worldHash(x,y)%100 >= 60) continue;
+
+      const ox=(worldHash(x+31,y+11)%15)-7;
+      const oy=(worldHash(x+7,y+41)%11)-5;
+      const obj={x:x*TILE+ox,y:y*TILE+oy,variant:worldHash(x,y)%6};
+      sceneryTrees.push(obj);
+      addSolidRect(obj.x+23,obj.y+35,18,22);
+    }
+  }
+}
+
+buildScenery();
 
 const tile = {
   0:{walk:true},
@@ -558,6 +626,18 @@ function tileAtWorld(px,py){
   return world[ty][tx];
 }
 
+function circleIntersectsRect(px,py,radius,rect){
+  const nearestX = Math.max(rect.x, Math.min(px, rect.x + rect.w));
+  const nearestY = Math.max(rect.y, Math.min(py, rect.y + rect.h));
+  const dx = px - nearestX;
+  const dy = py - nearestY;
+  return dx*dx + dy*dy < radius*radius;
+}
+
+function hitsSolidScenery(px,py,radius=HERO_RADIUS){
+  return solidRects.some(rect => circleIntersectsRect(px,py,radius,rect));
+}
+
 function canStand(px,py,radius=HERO_RADIUS){
   const points=[
     [px-radius,py-radius],
@@ -569,7 +649,9 @@ function canStand(px,py,radius=HERO_RADIUS){
     [px-radius,py],
     [px+radius,py]
   ];
-  return points.every(([x,y])=>tile[tileAtWorld(x,y)].walk);
+  if(!points.every(([x,y])=>tile[tileAtWorld(x,y)].walk)) return false;
+  if(hitsSolidScenery(px,py,radius)) return false;
+  return true;
 }
 
 function updateUI(){
@@ -693,7 +775,6 @@ function drawCastleGroundTile(x,y,tx=0,ty=0){
 function drawTree(x,y,variant=0){
   if(environmentAtlasReady){
     const col=variant%6;
-    // Trees intentionally overlap beyond their 64px tile footprint.
     drawAtlasCell(col,1,x-18,y-42,100,108);
     return;
   }
@@ -703,46 +784,62 @@ function drawTree(x,y,variant=0){
   ctx.beginPath();ctx.arc(x+32,y+23,22,0,Math.PI*2);ctx.fill();
 }
 
-function drawHouse(x,y){
-  // Pixel-art style house so it does not clash as much with the sprite assets.
+function drawTreeObject(obj,camX,camY){
+  const sx=obj.x-camX;
+  const sy=obj.y-camY;
+  drawTree(sx,sy,obj.variant||0);
+}
+
+function drawHouseSprite(obj,camX,camY){
+  const sx=obj.x-camX;
+  const sy=obj.y-camY;
+  const spec=obj.spec;
+
+  if(houseAtlasReady){
+    ctx.imageSmoothingEnabled=false;
+    ctx.drawImage(houseAtlas,spec.sx,spec.sy,spec.sw,spec.sh,Math.round(sx),Math.round(sy),spec.drawW,spec.drawH);
+    return;
+  }
+
+  drawHouseFallback(sx,sy,spec.drawW,spec.drawH);
+}
+
+function drawHouseFallback(x,y,w=172,h=132){
   ctx.imageSmoothingEnabled=false;
+  const scaleW=w/172;
+  const scaleH=h/132;
+  const rx=v=>Math.round(x+v*scaleW);
+  const ry=v=>Math.round(y+v*scaleH);
+  const rw=v=>Math.round(v*scaleW);
+  const rh=v=>Math.round(v*scaleH);
 
-  // shadow/foundation
   ctx.fillStyle="#68452f";
-  ctx.fillRect(x+8,y+54,48,6);
-
-  // wall
+  ctx.fillRect(rx(8),ry(108),rw(152),rh(10));
   ctx.fillStyle="#a96d3f";
-  ctx.fillRect(x+9,y+27,46,29);
-  ctx.fillStyle="#c1814c";
-  ctx.fillRect(x+13,y+31,38,22);
-
-  // roof, built with blocky strips
+  ctx.fillRect(rx(20),ry(52),rw(132),rh(58));
+  ctx.fillStyle="#d8c7a0";
+  ctx.fillRect(rx(28),ry(58),rw(116),rh(46));
   ctx.fillStyle="#6e3927";
-  ctx.fillRect(x+6,y+23,52,6);
+  ctx.fillRect(rx(14),ry(42),rw(144),rh(12));
   ctx.fillStyle="#9a4837";
-  ctx.fillRect(x+10,y+18,44,6);
+  ctx.fillRect(rx(24),ry(30),rw(124),rh(12));
   ctx.fillStyle="#c6654c";
-  ctx.fillRect(x+15,y+13,34,6);
-  ctx.fillRect(x+21,y+8,22,6);
-  ctx.fillRect(x+27,y+4,10,5);
-
-  // door
+  ctx.fillRect(rx(40),ry(18),rw(92),rh(12));
+  ctx.fillRect(rx(56),ry(8),rw(60),rh(12));
+  ctx.fillRect(rx(70),ry(0),rw(32),rh(10));
   ctx.fillStyle="#70472c";
-  ctx.fillRect(x+27,y+38,11,18);
+  ctx.fillRect(rx(78),ry(70),rw(22),rh(40));
   ctx.fillStyle="#d4a65f";
-  ctx.fillRect(x+29,y+40,7,16);
-
-  // window
+  ctx.fillRect(rx(82),ry(74),rw(14),rh(36));
   ctx.fillStyle="#41637c";
-  ctx.fillRect(x+16,y+37,8,8);
+  ctx.fillRect(rx(42),ry(68),rw(16),rh(16));
+  ctx.fillRect(rx(116),ry(68),rw(16),rh(16));
   ctx.fillStyle="#88c5e5";
-  ctx.fillRect(x+17,y+38,6,5);
-
-  // beam details
+  ctx.fillRect(rx(44),ry(70),rw(12),rh(10));
+  ctx.fillRect(rx(118),ry(70),rw(12),rh(10));
   ctx.fillStyle="#7d4d30";
-  ctx.fillRect(x+11,y+29,3,25);
-  ctx.fillRect(x+50,y+29,3,25);
+  ctx.fillRect(rx(24),ry(54),rw(6),rh(54));
+  ctx.fillRect(rx(142),ry(54),rw(6),rh(54));
 }
 
 function drawCastle(x,y){
@@ -1057,12 +1154,10 @@ function drawWorld(){
         drawWaterTile(sx,sy,variant);
       }else if(t===2){
         drawForestTile(sx,sy,variant,x,y);
-        drawTree(sx,sy,worldHash(x,y)%6);
       }else if(t===3){
         drawRoadTile(sx,sy,variant,x,y);
       }else if(t===4){
         drawTownTile(sx,sy,variant,x,y);
-        if((x+y)%2===0) drawHouse(sx,sy);
       }else if(t===5){
         drawCastleGroundTile(sx,sy,x,y);
         drawCastle(sx,sy);
@@ -1070,6 +1165,26 @@ function drawWorld(){
         drawGrassTile(sx,sy,variant,x,y);
       }
     }
+  }
+
+  const visibleScenery = [];
+  for(const tree of sceneryTrees){
+    const sx=tree.x-camX;
+    const sy=tree.y-camY;
+    if(sx<-120||sy<-130||sx>viewW+120||sy>viewH+80) continue;
+    visibleScenery.push({kind:"tree", y:tree.y+58, obj:tree});
+  }
+  for(const house of sceneryHouses){
+    const sx=house.x-camX;
+    const sy=house.y-camY;
+    const spec=house.spec;
+    if(sx<-spec.drawW||sy<-spec.drawH||sx>viewW+40||sy>viewH+40) continue;
+    visibleScenery.push({kind:"house", y:house.y+spec.drawH, obj:house});
+  }
+  visibleScenery.sort((a,b)=>a.y-b.y);
+  for(const item of visibleScenery){
+    if(item.kind==="tree") drawTreeObject(item.obj,camX,camY);
+    else drawHouseSprite(item.obj,camX,camY);
   }
 
   function label(wx,wy,text){

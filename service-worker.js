@@ -1,10 +1,11 @@
-const CACHE_NAME = "little-realm-phone-v2";
+const CACHE_NAME = "little-realm-phone-v3";
 const FILES = [
   "./",
   "./index.html",
   "./manifest.webmanifest",
   "./icon-192.png",
-  "./icon-512.png"
+  "./icon-512.png",
+  "./house-atlas.png"
 ];
 
 self.addEventListener("install", event => {
@@ -28,7 +29,6 @@ self.addEventListener("activate", event => {
 self.addEventListener("fetch", event => {
   if (event.request.method !== "GET") return;
 
-  // Always try the newest page first so game updates appear immediately.
   if (event.request.mode === "navigate") {
     event.respondWith(
       fetch(event.request)
