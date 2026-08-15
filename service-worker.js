@@ -1,4 +1,4 @@
-const CACHE_NAME = "little-realm-v17-live-config";
+const CACHE_NAME = "little-realm-v18-water-pass";
 const FILES = [
   "./",
   "./index.html",
