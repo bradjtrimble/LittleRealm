@@ -18,13 +18,22 @@
     "value": 1.85,
     "rule": "POV changes modify CAMERA_ZOOM only; do not rewrite terrain/collision systems."
   },
-  "combat_update": "v8 visual combat redesign; world/camera/collision protected functions unchanged",
+  "combat_update": "v9 open-world auto combat; no separate turn-based battle screen",
   "combat_protected_validation": {
     "drawContinuousTerrain": "PASS",
     "drawGrassTile": "PASS",
     "circleIntersectsRect": "PASS",
     "hitsSolidScenery": "PASS",
     "canStand": "PASS",
-    "drawWorld": "PASS"
+    "drawRoadShapeOverlay": "PASS",
+    "drawWaterEdgeOverlay": "PASS",
+    "CAMERA_ZOOM": "PASS"
+  },
+  "combat_behavior": {
+    "engage": "tap a mob or use the ATTACK button near a mob",
+    "attack_style": "timed automatic melee exchanges while both actors remain in the overworld",
+    "disengage": "move beyond disengage range or tap LEAVE COMBAT",
+    "hp_display": "world-space health bars and target HUD",
+    "potions": "quick-use button remains available during combat"
   }
 }

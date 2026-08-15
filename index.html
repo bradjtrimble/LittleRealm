@@ -429,6 +429,59 @@ button.action:active{transform:scale(.98)}
   #hud{width:210px}
 }
 
+
+/* Open-world combat HUD */
+#battle{display:none!important}
+#targetHud{
+  position:absolute;
+  top:max(76px, calc(env(safe-area-inset-top) + 76px));
+  left:50%;
+  transform:translateX(-50%);
+  width:min(210px,46vw);
+  padding:7px 9px 8px;
+  border:1px solid rgba(255,255,255,.16);
+  border-radius:11px;
+  background:rgba(22,18,27,.82);
+  box-shadow:0 7px 20px rgba(0,0,0,.28);
+  display:none;
+  z-index:8;
+  pointer-events:none;
+}
+#targetHud.show{display:block}
+#targetHudTop{display:flex;justify-content:space-between;gap:8px;font-size:11px;font-weight:850;margin-bottom:5px}
+#targetHpTrack{height:7px;background:rgba(0,0,0,.5);border-radius:999px;overflow:hidden}
+#targetHpFill{height:100%;width:100%;background:#e35d5d;transition:width .16s linear}
+#combatHint{font-size:9px;color:#e7ddef;margin-top:4px;text-align:center;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+#quickPotion{
+  position:absolute;
+  right:28px;
+  bottom:max(126px, calc(env(safe-area-inset-bottom) + 116px));
+  min-width:68px;
+  height:40px;
+  padding:0 10px;
+  border:1px solid rgba(255,255,255,.18);
+  border-radius:12px;
+  background:rgba(48,91,59,.86);
+  color:#fff;
+  font-size:11px;
+  font-weight:850;
+  box-shadow:0 5px 14px rgba(0,0,0,.25);
+  z-index:7;
+  touch-action:manipulation;
+}
+#quickPotion:active{transform:scale(.96)}
+#actionHint{
+  pointer-events:auto;
+  touch-action:manipulation;
+  cursor:pointer;
+  color:#fff;
+  border-color:rgba(255,255,255,.28);
+  transition:background .15s,border-color .15s,transform .12s;
+}
+#actionHint.ready{background:rgba(117,57,47,.88);border-color:rgba(255,180,140,.55)}
+#actionHint.engaged{background:rgba(91,44,45,.9);border-color:rgba(255,122,122,.58)}
+#actionHint:active{transform:scale(.95)}
+
 </style>
 </head>
 <body>
@@ -457,7 +510,14 @@ button.action:active{transform:scale(.98)}
     <div class="pad" id="down">▼</div>
   </div>
 
-  <div id="actionHint">MOVE<br>AROUND</div>
+  <div id="actionHint">ATTACK<br>MOB</div>
+
+  <div id="targetHud">
+    <div id="targetHudTop"><span id="targetName">Target</span><span id="targetHpText">0/0</span></div>
+    <div id="targetHpTrack"><div id="targetHpFill"></div></div>
+    <div id="combatHint">Auto-attacking</div>
+  </div>
+  <button id="quickPotion">POTION 2</button>
 
   <div id="menu" class="overlay">
     <div class="panel">
@@ -743,6 +803,21 @@ let lastSafePos={x:0,y:0};
 let townCooldown=0;
 let castleCooldown=0;
 
+// Open-world combat state (RuneScape-style auto combat)
+const ATTACK_RANGE=46;
+const DISENGAGE_RANGE=260;
+const AUTO_CHASE_RANGE=210;
+const PLAYER_ATTACK_INTERVAL=1.15;
+const ENEMY_ATTACK_INTERVAL=1.45;
+let combatTarget=null;
+let playerAttackTimer=0;
+let enemyAttackTimer=0;
+let playerAttackAnim=0;
+let enemyAttackAnim=0;
+let potionCooldown=0;
+let combatFx=[];
+let bossMob=null;
+
 function fresh(){
   return {
     x:6*TILE+TILE/2,
@@ -755,9 +830,28 @@ function fresh(){
   };
 }
 
+function mobScaledStats(template){
+  const levelBoost=Math.max(0,state.level-1);
+  return {
+    maxHp:template.hp+levelBoost*2,
+    atk:template.atk+Math.floor(levelBoost*.55),
+    def:template.def
+  };
+}
+
+function restoreMobStats(mob){
+  const stats=mobScaledStats(mob.template);
+  mob.maxHp=stats.maxHp;
+  mob.hp=stats.maxHp;
+  mob.atk=stats.atk;
+  mob.def=stats.def;
+  mob.attackAnim=0;
+}
+
 function spawnMobs(){
   mobs=[];
   nextMobId=1;
+  bossMob=null;
 
   const spawnDefs = [
     ["slime",10,8],["slime",8,11],["slime",11,12],["slime",17,8],
@@ -770,7 +864,7 @@ function spawnMobs(){
     const template=enemyTemplates.find(e=>e.kind===kind);
     if(!template) continue;
     if(!tile[world[ty][tx]].walk) continue;
-    mobs.push({
+    const mob={
       id:nextMobId++,
       kind,
       template,
@@ -785,8 +879,11 @@ function spawnMobs(){
       moveTimer:Math.random()*2,
       alive:true,
       respawnTimer:0,
-      aggro:false
-    });
+      aggro:false,
+      boss:false
+    };
+    restoreMobStats(mob);
+    mobs.push(mob);
   }
 }
 
@@ -797,10 +894,16 @@ function reset(){
   currentMob=null;
   defending=false;
   battleLocked=false;
+  combatTarget=null;
+  playerAttackTimer=0;
+  enemyAttackTimer=0;
+  playerAttackAnim=0;
+  enemyAttackAnim=0;
+  combatFx=[];
   input={up:false,down:false,left:false,right:false};
   spawnMobs();
   closeAll();
-  toast("Hold a direction to move. Mobs are visible now.");
+  toast("Tap a mob or use ATTACK to engage.");
   updateUI();
 }
 
@@ -901,8 +1004,11 @@ function updateUI(){
     document.getElementById("bHeroHpFill").style.width=`${Math.max(0,100*heroHp/state.maxHp)}%`;
     document.getElementById("bEnemyHpFill").style.width=`${Math.max(0,100*enemyHp/enemy.maxHp)}%`;
     document.getElementById("potionCount").textContent=`(${state.potions})`;
-    drawBattleSprites();
   }
+
+  const quickPotion=document.getElementById("quickPotion");
+  if(quickPotion) quickPotion.textContent=`POTION ${state.potions}`;
+  updateCombatHud();
 }
 
 function roundedRect(c,x,y,w,h,r,fill){
@@ -1387,6 +1493,8 @@ function drawMob(c,mob,sx,sy){
     drawGoblinSprite(c,sx,sy,0.23,mob.facing||"down",mob.animTime||0,true);
   } else if(mob.kind==="wolf") {
     drawWolfSprite(c,sx,sy,0.23,mob.facing||"down",mob.animTime||0,true);
+  } else if(mob.kind==="boss") {
+    drawBoss(c,sx,sy,1.15);
   }
 }
 
@@ -1402,6 +1510,32 @@ function drawBattleSprites(){
 }
 
 const CAMERA_ZOOM = 1.85; // protected camera setting: closer, character-focused POV
+
+function drawWorldHpBar(x,y,value,maxValue,width=38){
+  const ratio=Math.max(0,Math.min(1,value/Math.max(1,maxValue)));
+  ctx.fillStyle="rgba(0,0,0,.68)";
+  ctx.fillRect(Math.round(x-width/2-1),Math.round(y-1),width+2,6);
+  ctx.fillStyle=ratio>.5?"#65d978":ratio>.25?"#e2c855":"#e65b5b";
+  ctx.fillRect(Math.round(x-width/2),Math.round(y),Math.round(width*ratio),4);
+}
+
+function drawWorldCombatFx(camX,camY){
+  ctx.textAlign="center";
+  ctx.font="800 11px system-ui";
+  for(const fx of combatFx){
+    const progress=1-fx.life/fx.maxLife;
+    const sx=fx.x-camX;
+    const sy=fx.y-camY-progress*26;
+    ctx.globalAlpha=Math.max(0,1-progress*.82);
+    ctx.fillStyle=fx.kind==="heal"?"#72ef9a":fx.kind==="crit"?"#ffd15a":"#fff1e2";
+    ctx.strokeStyle="rgba(0,0,0,.75)";
+    ctx.lineWidth=3;
+    ctx.strokeText(fx.text,sx,sy);
+    ctx.fillText(fx.text,sx,sy);
+  }
+  ctx.globalAlpha=1;
+  ctx.textAlign="start";
+}
 
 function drawWorld(){
   const vw=innerWidth, vh=innerHeight;
@@ -1487,18 +1621,43 @@ function drawWorld(){
       drawSignObject(item.obj,camX,camY);
     }else if(item.kind==="mob"){
       const mob=item.obj;
-      const sx=mob.x-camX, sy=mob.y-camY;
+      let sx=mob.x-camX, sy=mob.y-camY;
+
+      if(mob===combatTarget){
+        ctx.strokeStyle="rgba(255,208,88,.92)";
+        ctx.lineWidth=2;
+        ctx.beginPath();ctx.ellipse(sx,sy+12,mob.boss?25:18,mob.boss?10:7,0,0,Math.PI*2);ctx.stroke();
+      }
+
+      if((mob.attackAnim||0)>0 && mob===combatTarget){
+        const phase=Math.sin((1-mob.attackAnim/.20)*Math.PI);
+        const dx=state.x-mob.x,dy=state.y-mob.y,len=Math.max(1,Math.hypot(dx,dy));
+        sx+=dx/len*8*phase; sy+=dy/len*8*phase;
+      }
+
       ctx.fillStyle="rgba(0,0,0,.20)";
       ctx.beginPath();ctx.ellipse(sx,sy+12,13,5,0,0,Math.PI*2);ctx.fill();
       drawMob(ctx,mob,sx,sy);
-      if(mob.aggro){
+
+      if(mob===combatTarget || mob.hp<mob.maxHp){
+        drawWorldHpBar(sx,sy-(mob.boss?38:29),mob.hp,mob.maxHp,mob.boss?52:38);
+      }else if(mob.aggro){
         ctx.fillStyle="#f2d15f";
         ctx.beginPath();ctx.arc(sx,sy-26,4,0,Math.PI*2);ctx.fill();
       }
     }else{
-      drawHero(ctx,viewW/2,viewH/2,0.055,isHeroMoving,moveAnimTime,heroFacing);
+      let hx=viewW/2,hy=viewH/2;
+      if(playerAttackAnim>0 && combatTarget && combatTarget.alive){
+        const phase=Math.sin((1-playerAttackAnim/.20)*Math.PI);
+        const dx=combatTarget.x-state.x,dy=combatTarget.y-state.y,len=Math.max(1,Math.hypot(dx,dy));
+        hx+=dx/len*9*phase; hy+=dy/len*9*phase;
+      }
+      drawHero(ctx,hx,hy,0.055,isHeroMoving,moveAnimTime,heroFacing);
+      if(combatTarget || state.hp<state.maxHp) drawWorldHpBar(hx,hy-31,state.hp,state.maxHp,42);
     }
   }
+
+  drawWorldCombatFx(camX,camY);
 
   function label(wx,wy,text){
     const sx=wx*TILE-camX;
@@ -1518,148 +1677,181 @@ function drawWorld(){
   ctx.restore();
 }
 
+function manualInputVector(){
+  return {
+    dx:(input.right?1:0)-(input.left?1:0),
+    dy:(input.down?1:0)-(input.up?1:0)
+  };
+}
+
+function moveHeroVector(dx,dy,amount){
+  if(dx===0&&dy===0) return false;
+  const len=Math.max(.001,Math.hypot(dx,dy));
+  dx/=len; dy/=len;
+  const nx=state.x+dx*amount;
+  const ny=state.y+dy*amount;
+  let moved=false;
+  if(canStand(nx,state.y)){state.x=nx;moved=true}
+  if(canStand(state.x,ny)){state.y=ny;moved=true}
+  if(moved) lastSafePos={x:state.x,y:state.y};
+  return moved;
+}
+
 function updateMovement(dt){
-  if(enemy || document.getElementById("menu").classList.contains("show")) {
+  if(document.getElementById("menu").classList.contains("show")) {
     isHeroMoving=false;
     return;
   }
 
-  let dx=(input.right?1:0)-(input.left?1:0);
-  let dy=(input.down?1:0)-(input.up?1:0);
+  const manual=manualInputVector();
+  let dx=manual.dx, dy=manual.dy;
+  const hasManual=dx!==0||dy!==0;
 
-  isHeroMoving = (dx!==0 || dy!==0);
-
-  if(dx!==0 || dy!==0){
-    if(Math.abs(dx) > Math.abs(dy)){
-      heroFacing = dx > 0 ? "right" : "left";
-    } else {
-      heroFacing = dy > 0 ? "down" : "up";
+  // RuneScape-like behavior: after selecting a target, walk into melee range automatically
+  // unless the player is manually steering.
+  if(!hasManual && combatTarget && combatTarget.alive){
+    const d=dist(state.x,state.y,combatTarget.x,combatTarget.y);
+    if(d>ATTACK_RANGE-4 && d<AUTO_CHASE_RANGE){
+      dx=combatTarget.x-state.x;
+      dy=combatTarget.y-state.y;
     }
-    const len=Math.hypot(dx,dy);
-    dx/=len;dy/=len;
+  }
 
-    const amount=HERO_SPEED*dt;
-    const nx=state.x+dx*amount;
-    const ny=state.y+dy*amount;
-
-    // axis-separated movement gives smooth wall sliding
-    if(canStand(nx,state.y)){
-      state.x=nx;
-    }
-    if(canStand(state.x,ny)){
-      state.y=ny;
-    }
-
-    lastSafePos={x:state.x,y:state.y};
+  isHeroMoving=(dx!==0||dy!==0);
+  if(isHeroMoving){
+    if(Math.abs(dx)>Math.abs(dy)) heroFacing=dx>0?"right":"left";
+    else heroFacing=dy>0?"down":"up";
+    moveHeroVector(dx,dy,HERO_SPEED*dt);
+  }else if(combatTarget&&combatTarget.alive){
+    heroFacing=vectorFacing(combatTarget.x-state.x,combatTarget.y-state.y,heroFacing);
   }
 
   townCooldown=Math.max(0,townCooldown-dt);
   castleCooldown=Math.max(0,castleCooldown-dt);
+  potionCooldown=Math.max(0,potionCooldown-dt);
 
   const t=tileAtWorld(state.x,state.y);
-  if(t===4 && townCooldown<=0){
-    townCooldown=2;
-    townEvent();
-  }
-  if(t===5 && castleCooldown<=0){
-    castleCooldown=1.5;
-    castleEvent();
-  }
+  if(t===4 && townCooldown<=0){townCooldown=2;townEvent()}
+  if(t===5 && castleCooldown<=0){castleCooldown=1.5;castleEvent()}
 }
 
 function updateMobs(dt){
-  if(enemy) return;
-
   for(const mob of mobs){
     if(!mob.alive){
+      if(mob.boss) continue;
       mob.respawnTimer-=dt;
       if(mob.respawnTimer<=0){
         mob.alive=true;
-        mob.x=mob.homeX;
-        mob.y=mob.homeY;
-        mob.vx=0;mob.vy=0;
-        mob.drawVx=0; mob.drawVy=0;
-        mob.facing="down";
-        mob.aggro=false;
+        mob.x=mob.homeX; mob.y=mob.homeY;
+        mob.vx=0; mob.vy=0; mob.drawVx=0; mob.drawVy=0;
+        mob.facing="down"; mob.aggro=false;
+        restoreMobStats(mob);
       }
       continue;
     }
 
+    mob.attackAnim=Math.max(0,(mob.attackAnim||0)-dt);
     const d=dist(state.x,state.y,mob.x,mob.y);
-    mob.aggro=d<115;
+    const isTarget=mob===combatTarget;
 
-    let speed=0;
+    // Goblins and wolves are aggressive at close range. Slimes wait to be selected.
+    if(!combatTarget && !mob.boss && (mob.kind==="goblin"||mob.kind==="wolf") && d<58){
+      engageMob(mob,true);
+    }
+
+    mob.aggro=isTarget || (!combatTarget && (mob.kind==="goblin"||mob.kind==="wolf") && d<82);
+
     let vx=0,vy=0;
-
-    if(mob.aggro){
-      const dx=state.x-mob.x;
-      const dy=state.y-mob.y;
-      const len=Math.max(.001,Math.hypot(dx,dy));
-      speed=mob.kind==="wolf"?70:mob.kind==="goblin"?54:42;
-      vx=dx/len*speed;
-      vy=dy/len*speed;
-      mob.moveTimer=.4;
+    if(isTarget){
+      const desired=ATTACK_RANGE-8;
+      if(d>desired){
+        const dx=state.x-mob.x, dy=state.y-mob.y;
+        const len=Math.max(.001,Math.hypot(dx,dy));
+        const speed=mob.kind==="wolf"?72:mob.kind==="goblin"?58:mob.kind==="boss"?48:45;
+        vx=dx/len*speed; vy=dy/len*speed;
+      }
+    }else if(mob.boss){
+      vx=0; vy=0;
     }else{
       mob.moveTimer-=dt;
       if(mob.moveTimer<=0){
-        mob.moveTimer=1.1+Math.random()*2.6;
+        mob.moveTimer=1.2+Math.random()*2.8;
         const ang=Math.random()*Math.PI*2;
-        const wanderSpeed=mob.kind==="wolf"?32:22;
-        mob.vx=Math.cos(ang)*wanderSpeed;
-        mob.vy=Math.sin(ang)*wanderSpeed;
+        const speed=mob.kind==="wolf"?30:20;
+        mob.vx=Math.cos(ang)*speed; mob.vy=Math.sin(ang)*speed;
       }
-      vx=mob.vx;
-      vy=mob.vy;
-
+      vx=mob.vx; vy=mob.vy;
       const homeDist=dist(mob.x,mob.y,mob.homeX,mob.homeY);
       if(homeDist>120){
-        const dx=mob.homeX-mob.x;
-        const dy=mob.homeY-mob.y;
+        const dx=mob.homeX-mob.x, dy=mob.homeY-mob.y;
         const len=Math.max(.001,Math.hypot(dx,dy));
-        vx=dx/len*34;
-        vy=dy/len*34;
+        vx=dx/len*34; vy=dy/len*34;
       }
     }
 
-    mob.drawVx=vx;
-    mob.drawVy=vy;
-    mob.facing=vectorFacing(vx,vy,mob.facing||"down");
-    if(Math.hypot(vx,vy)>1) mob.animTime=(mob.animTime||0)+dt;
-
-    let nx=mob.x+vx*dt;
-    let ny=mob.y+vy*dt;
-
-    if(canStand(nx,mob.y,10)) mob.x=nx;
-    else mob.vx*=-1;
-
-    if(canStand(mob.x,ny,10)) mob.y=ny;
-    else mob.vy*=-1;
-
-    // don't let mobs roam into town
-    if(tileAtWorld(mob.x,mob.y)===4){
-      mob.x=mob.homeX;
-      mob.y=mob.homeY;
+    mob.drawVx=vx; mob.drawVy=vy;
+    if(Math.hypot(vx,vy)>1){
+      mob.facing=vectorFacing(vx,vy,mob.facing||"down");
+      mob.animTime=(mob.animTime||0)+dt;
+    }else if(isTarget){
+      mob.facing=vectorFacing(state.x-mob.x,state.y-mob.y,mob.facing||"down");
     }
 
-    if(dist(state.x,state.y,mob.x,mob.y)<MOB_TRIGGER_DISTANCE){
-      startMobBattle(mob);
-      break;
+    const nx=mob.x+vx*dt, ny=mob.y+vy*dt;
+    if(canStand(nx,mob.y,10)) mob.x=nx; else mob.vx*=-1;
+    if(canStand(mob.x,ny,10)) mob.y=ny; else mob.vy*=-1;
+
+    if(!mob.boss && tileAtWorld(mob.x,mob.y)===4){
+      mob.x=mob.homeX; mob.y=mob.homeY;
     }
   }
 }
 
+function updateOpenCombat(dt){
+  playerAttackAnim=Math.max(0,playerAttackAnim-dt);
+  enemyAttackAnim=Math.max(0,enemyAttackAnim-dt);
+  for(const fx of combatFx) fx.life-=dt;
+  combatFx=combatFx.filter(fx=>fx.life>0);
+
+  if(!combatTarget){updateCombatHud();return}
+  if(!combatTarget.alive){disengageCombat(false);return}
+
+  const d=dist(state.x,state.y,combatTarget.x,combatTarget.y);
+  if(d>DISENGAGE_RANGE){
+    disengageCombat(false);
+    toast("You left combat.");
+    return;
+  }
+
+  if(d>ATTACK_RANGE){
+    playerAttackTimer=Math.min(playerAttackTimer,.18);
+    enemyAttackTimer=Math.min(enemyAttackTimer,.35);
+    updateCombatHud();
+    return;
+  }
+
+  playerAttackTimer-=dt;
+  enemyAttackTimer-=dt;
+
+  if(playerAttackTimer<=0 && combatTarget && combatTarget.alive){
+    performPlayerAutoAttack(combatTarget);
+    playerAttackTimer=PLAYER_ATTACK_INTERVAL;
+  }
+
+  if(enemyAttackTimer<=0 && combatTarget && combatTarget.alive){
+    performEnemyAutoAttack(combatTarget);
+    enemyAttackTimer=ENEMY_ATTACK_INTERVAL + (combatTarget.kind==="wolf"?-.12:combatTarget.kind==="boss"?.18:0);
+  }
+  updateCombatHud();
+}
 
 function frame(now){
   const dt=Math.min(.033,(now-lastFrame)/1000);
   lastFrame=now;
-
   updateMovement(dt);
   updateMobs(dt);
-
-  if(isHeroMoving){
-    moveAnimTime += dt;
-  }
-
+  updateOpenCombat(dt);
+  if(isHeroMoving) moveAnimTime+=dt;
   drawWorld();
   requestAnimationFrame(frame);
 }
@@ -1667,6 +1859,7 @@ requestAnimationFrame(frame);
 
 function townEvent(){
   if(enemy)return;
+  if(combatTarget) disengageCombat(false);
   if(state.hp<state.maxHp){
     state.hp=state.maxHp;
     toast("Oakrest inn restored your HP.");
@@ -1684,7 +1877,170 @@ function townEvent(){
 function castleEvent(){
   if(state.bossDefeated){toast("The throne room is quiet.");return}
   if(!state.questComplete){toast("The castle is sealed. Defeat 3 Slimes.");return}
-  startBattle({...bossTemplate},null);
+  if(bossMob && bossMob.alive){
+    engageMob(bossMob);
+    return;
+  }
+
+  const tx=24, ty=15;
+  const mob={
+    id:nextMobId++,kind:"boss",template:bossTemplate,boss:true,
+    x:tx*TILE+TILE/2,y:ty*TILE+TILE/2,
+    homeX:tx*TILE+TILE/2,homeY:ty*TILE+TILE/2,
+    vx:0,vy:0,drawVx:0,drawVy:0,facing:"down",animTime:0,moveTimer:0,
+    alive:true,respawnTimer:0,aggro:true
+  };
+  restoreMobStats(mob);
+  bossMob=mob; mobs.push(mob);
+  toast("The Stone King enters the courtyard!");
+  engageMob(mob);
+}
+
+function updateCombatHud(){
+  const hud=document.getElementById("targetHud");
+  const action=document.getElementById("actionHint");
+  if(!hud||!action) return;
+
+  action.classList.remove("ready","engaged");
+  if(combatTarget && combatTarget.alive){
+    hud.classList.add("show");
+    document.getElementById("targetName").textContent=combatTarget.template.name;
+    document.getElementById("targetHpText").textContent=`${Math.max(0,Math.ceil(combatTarget.hp))}/${combatTarget.maxHp}`;
+    document.getElementById("targetHpFill").style.width=`${Math.max(0,100*combatTarget.hp/combatTarget.maxHp)}%`;
+    const d=dist(state.x,state.y,combatTarget.x,combatTarget.y);
+    document.getElementById("combatHint").textContent=d>ATTACK_RANGE?"Moving into range…":"Auto-attacking • move away to escape";
+    action.innerHTML="LEAVE<br>COMBAT";
+    action.classList.add("engaged");
+  }else{
+    hud.classList.remove("show");
+    const near=findNearestMob(125);
+    action.innerHTML=near?"ATTACK<br>MOB":"TAP MOB<br>TO FIGHT";
+    if(near) action.classList.add("ready");
+  }
+}
+
+function findNearestMob(maxDistance=Infinity){
+  let best=null,bestD=maxDistance;
+  for(const mob of mobs){
+    if(!mob.alive) continue;
+    const d=dist(state.x,state.y,mob.x,mob.y);
+    if(d<bestD){best=mob;bestD=d}
+  }
+  return best;
+}
+
+function engageMob(mob,forced=false){
+  if(!mob||!mob.alive) return;
+  if(combatTarget===mob) return;
+  combatTarget=mob;
+  currentMob=mob;
+  mob.aggro=true;
+  playerAttackTimer=.16;
+  enemyAttackTimer=.72;
+  heroFacing=vectorFacing(mob.x-state.x,mob.y-state.y,heroFacing);
+  updateCombatHud();
+  if(!forced) toast(`Engaged ${mob.template.name}.`);
+}
+
+function disengageCombat(showToast=true){
+  if(combatTarget) combatTarget.aggro=false;
+  combatTarget=null; currentMob=null;
+  playerAttackTimer=0; enemyAttackTimer=0;
+  updateCombatHud();
+  if(showToast) toast("Combat disengaged.");
+}
+
+function addCombatFx(x,y,text,kind="damage"){
+  combatFx.push({x,y,text,kind,life:.8,maxLife:.8});
+}
+
+function performPlayerAutoAttack(mob){
+  if(!mob||!mob.alive) return;
+  const crit=Math.random()<.10;
+  let dmg=Math.max(1,state.atk+rand(0,3)-mob.def);
+  if(crit) dmg*=2;
+  mob.hp-=dmg;
+  playerAttackAnim=.20;
+  addCombatFx(mob.x,mob.y-18,crit?`★ ${dmg}`:`${dmg}`,crit?"crit":"damage");
+  if(mob.hp<=0){
+    mob.hp=0;
+    defeatWorldMob(mob);
+  }
+}
+
+function performEnemyAutoAttack(mob){
+  if(!mob||!mob.alive) return;
+  let dmg=Math.max(1,mob.atk+rand(0,2)-state.def);
+  state.hp=Math.max(0,state.hp-dmg);
+  mob.attackAnim=.20;
+  enemyAttackAnim=.20;
+  addCombatFx(state.x,state.y-20,`${dmg}`,"damage");
+  updateUI();
+  if(state.hp<=0) worldCombatDeath();
+}
+
+function defeatWorldMob(mob){
+  if(!mob||!mob.alive) return;
+  const e=mob.template;
+  const gold=rand(e.gold[0],e.gold[1]);
+  state.xp+=e.xp; state.gold+=gold; state.kills++;
+
+  if(e.name==="Slime"){
+    state.slimeKills++;
+    if(state.slimeKills>=3&&!state.questComplete){
+      state.questComplete=true;
+      setTimeout(()=>toast("Quest complete! The castle is open."),550);
+    }
+  }
+  if(mob.boss||e.boss) state.bossDefeated=true;
+
+  mob.alive=false; mob.aggro=false; mob.respawnTimer=mob.boss?999999:18+Math.random()*10;
+  levelCheck();
+  disengageCombat(false);
+  toast(mob.boss?"You defeated the Stone King!":`Defeated ${e.name}: +${e.xp} XP, +${gold} gold`);
+  updateUI();
+}
+
+function worldCombatDeath(){
+  state.gold=Math.floor(state.gold*.75);
+  state.hp=state.maxHp;
+  state.x=6*TILE+TILE/2; state.y=7*TILE+TILE/2;
+  lastSafePos={x:state.x,y:state.y};
+  if(combatTarget && !combatTarget.boss){
+    combatTarget.x=combatTarget.homeX; combatTarget.y=combatTarget.homeY;
+  }
+  disengageCombat(false);
+  toast("You wake up back in Oakrest.");
+  updateUI();
+}
+
+function useQuickPotion(){
+  if(potionCooldown>0) return;
+  if(state.potions<=0){toast("Your potion pouch is empty.");return}
+  if(state.hp>=state.maxHp){toast("Your HP is already full.");return}
+  state.potions--;
+  const before=state.hp;
+  state.hp=Math.min(state.maxHp,state.hp+14);
+  potionCooldown=.85;
+  addCombatFx(state.x,state.y-20,`+${state.hp-before}`,"heal");
+  toast(`Potion restored ${state.hp-before} HP.`);
+  updateUI();
+}
+
+function handleWorldTap(ev){
+  if(document.getElementById("menu").classList.contains("show")) return;
+  const rect=game.getBoundingClientRect();
+  const sx=ev.clientX-rect.left, sy=ev.clientY-rect.top;
+  const viewW=innerWidth/CAMERA_ZOOM, viewH=innerHeight/CAMERA_ZOOM;
+  const camX=state.x-viewW/2, camY=state.y-viewH/2;
+  const wx=camX+sx/CAMERA_ZOOM, wy=camY+sy/CAMERA_ZOOM;
+  let best=null,bestD=30;
+  for(const mob of mobs){
+    if(!mob.alive) continue;
+    const d=dist(wx,wy,mob.x,mob.y);
+    if(d<bestD){best=mob;bestD=d}
+  }
+  if(best) engageMob(best);
 }
 
 function battleMessage(msg){
@@ -1960,6 +2316,8 @@ function load(){
     state={...fresh(),...JSON.parse(raw)};
     enemy=null;
     currentMob=null;
+    combatTarget=null;
+    combatFx=[];
     input={up:false,down:false,left:false,right:false};
     spawnMobs();
     closeAll();
@@ -2020,8 +2378,15 @@ window.addEventListener("keyup",e=>{
   if(k==="arrowright"||k==="d")input.right=false;
 });
 
-document.getElementById("actionHint").innerHTML="CUTE<br>QUEST";
-setTimeout(()=>{document.getElementById("actionHint").innerHTML="HOLD<br>TO MOVE";}, 1800);
+document.getElementById("actionHint").innerHTML="TAP MOB<br>TO FIGHT";
+document.getElementById("actionHint").onclick=()=>{
+  if(combatTarget){disengageCombat();return}
+  const near=findNearestMob(135);
+  if(near) engageMob(near);
+  else toast("Move closer or tap a mob.");
+};
+document.getElementById("quickPotion").onclick=useQuickPotion;
+game.addEventListener("pointerdown",handleWorldTap);
 document.getElementById("menuBtn").onclick=()=>{
   input={up:false,down:false,left:false,right:false};
   isHeroMoving=false;
