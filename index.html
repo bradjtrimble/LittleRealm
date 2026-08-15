@@ -382,15 +382,26 @@ let environmentAtlasReady = environmentAtlas.complete && environmentAtlas.natura
 environmentAtlas.onload = () => { environmentAtlasReady = true; };
 const ENV_ATLAS_CELL = 128;
 
-const houseAtlas = new Image();
-houseAtlas.src = "./house-atlas.png";
-let houseAtlasReady = houseAtlas.complete && houseAtlas.naturalWidth > 0;
-houseAtlas.onload = () => { houseAtlasReady = true; };
+const terrainTexture = new Image();
+terrainTexture.src = "./terrain-seamless.png";
+let terrainTextureReady = terrainTexture.complete && terrainTexture.naturalWidth > 0;
+terrainTexture.onload = () => { terrainTextureReady = true; };
 
-const HOUSE_SPRITES = {
-  cottageA:{sx:26, sy:880, sw:520, sh:398, drawW:172, drawH:132, collider:{x:34,y:94,w:100,h:28}},
-  cottageB:{sx:566, sy:914, sw:592, sh:318, drawW:184, drawH:102, collider:{x:22,y:74,w:132,h:22}}
+const houseAImage = new Image();
+houseAImage.src = "./house-a.png";
+let houseAReady = houseAImage.complete && houseAImage.naturalWidth > 0;
+houseAImage.onload = () => { houseAReady = true; };
+
+const houseBImage = new Image();
+houseBImage.src = "./house-b.png";
+let houseBReady = houseBImage.complete && houseBImage.naturalWidth > 0;
+houseBImage.onload = () => { houseBReady = true; };
+
+const HOUSE_SPECS = {
+  A:{image:houseAImage, ready:()=>houseAReady, w:118, h:91, footprint:{x:12,y:66,w:94,h:23}},
+  B:{image:houseBImage, ready:()=>houseBReady, w:128, h:89, footprint:{x:8,y:67,w:112,h:20}}
 };
+
 
 
 
@@ -446,8 +457,8 @@ const MOB_SPAWN_TILES = new Set([
   "17,4","19,11","11,15","23,12","5,14","8,16","20,5","16,14"
 ]);
 
-function addSolidRect(x,y,w,h){
-  solidRects.push({x,y,w,h});
+function addSolidRect(x,y,w,h,type="solid"){
+  solidRects.push({x,y,w,h,type});
 }
 
 function buildScenery(){
@@ -455,41 +466,42 @@ function buildScenery(){
   sceneryHouses.length=0;
   solidRects=[];
 
+  // Oakrest: houses sit beside the road rather than occupying every town tile.
   const houses=[
-    {type:"cottageA", x:4*TILE-18, y:6*TILE-42},
-    {type:"cottageB", x:6*TILE+6, y:6*TILE-14},
-    {type:"cottageB", x:3*TILE-8, y:8*TILE-14},
-    {type:"cottageB", x:7*TILE+8, y:8*TILE-14}
+    {type:"A", x:4*TILE-12, y:6*TILE-69},
+    {type:"B", x:7*TILE,    y:6*TILE-56},
+    {type:"B", x:4*TILE-18, y:8*TILE-67},
+    {type:"A", x:7*TILE,    y:8*TILE-76}
   ];
 
   for(const placement of houses){
-    const spec=HOUSE_SPRITES[placement.type];
+    const spec=HOUSE_SPECS[placement.type];
     const obj={...placement,spec};
     sceneryHouses.push(obj);
-    addSolidRect(placement.x+spec.collider.x, placement.y+spec.collider.y, spec.collider.w, spec.collider.h);
+    const f=spec.footprint;
+    addSolidRect(placement.x+f.x,placement.y+f.y,f.w,f.h,"house");
   }
 
-  const reservedTreeTiles = new Set([
+  // Real tree objects. Only trunks are solid; canopies are visual.
+  const reserved = new Set([
     ...MOB_SPAWN_TILES,
     "4,6","5,6","6,6","7,6","8,6",
     "4,7","5,7","6,7","7,7","8,7",
     "3,8","4,8","5,8","6,8","7,8","8,8",
-    "3,9","4,9","5,9","6,9","7,9","8,9",
-    "12,8","13,8","14,8","15,8","16,8",
-    "22,10","22,11","22,12","22,13","22,14","22,15"
+    "3,9","4,9","5,9","6,9","7,9","8,9"
   ]);
 
-  for(let y=0;y<WORLD_H;y++){
-    for(let x=0;x<WORLD_W;x++){
-      if(world[y][x]!==2) continue;
-      if(reservedTreeTiles.has(`,`)) continue;
-      if(worldHash(x,y)%100 >= 60) continue;
+  for(let ty=0;ty<WORLD_H;ty++){
+    for(let tx=0;tx<WORLD_W;tx++){
+      if(world[ty][tx]!==2) continue;
+      if(reserved.has(`${tx},${ty}`)) continue;
+      if(worldHash(tx,ty)%100 >= 66) continue;
 
-      const ox=(worldHash(x+31,y+11)%15)-7;
-      const oy=(worldHash(x+7,y+41)%11)-5;
-      const obj={x:x*TILE+ox,y:y*TILE+oy,variant:worldHash(x,y)%6};
+      const ox=(worldHash(tx+31,ty+11)%15)-7;
+      const oy=(worldHash(tx+7,ty+41)%11)-5;
+      const obj={x:tx*TILE+ox,y:ty*TILE+oy,variant:worldHash(tx,ty)%6};
       sceneryTrees.push(obj);
-      addSolidRect(obj.x+23,obj.y+35,18,22);
+      addSolidRect(obj.x+24,obj.y+38,16,19,"tree");
     }
   }
 }
@@ -627,15 +639,15 @@ function tileAtWorld(px,py){
 }
 
 function circleIntersectsRect(px,py,radius,rect){
-  const nearestX = Math.max(rect.x, Math.min(px, rect.x + rect.w));
-  const nearestY = Math.max(rect.y, Math.min(py, rect.y + rect.h));
-  const dx = px - nearestX;
-  const dy = py - nearestY;
-  return dx*dx + dy*dy < radius*radius;
+  const nearestX=Math.max(rect.x,Math.min(px,rect.x+rect.w));
+  const nearestY=Math.max(rect.y,Math.min(py,rect.y+rect.h));
+  const dx=px-nearestX;
+  const dy=py-nearestY;
+  return dx*dx+dy*dy < radius*radius;
 }
 
 function hitsSolidScenery(px,py,radius=HERO_RADIUS){
-  return solidRects.some(rect => circleIntersectsRect(px,py,radius,rect));
+  return solidRects.some(rect=>circleIntersectsRect(px,py,radius,rect));
 }
 
 function canStand(px,py,radius=HERO_RADIUS){
@@ -650,8 +662,7 @@ function canStand(px,py,radius=HERO_RADIUS){
     [px+radius,py]
   ];
   if(!points.every(([x,y])=>tile[tileAtWorld(x,y)].walk)) return false;
-  if(hitsSolidScenery(px,py,radius)) return false;
-  return true;
+  return !hitsSolidScenery(px,py,radius);
 }
 
 function updateUI(){
@@ -712,21 +723,34 @@ function worldHash(x,y){
   return Math.abs((x*928371 + y*364479 + x*y*31) % 10007);
 }
 
-function drawGrassTile(x,y,variant=0,tx=0,ty=0){
-  if(environmentAtlasReady){
-    const grassCol = (worldHash(tx,ty)+variant)%4;
-    drawAtlasCell(grassCol,0,x,y,TILE,TILE);
+function drawContinuousTerrain(kind,x,y,tx=0,ty=0){
+  if(!terrainTextureReady) return false;
+  ctx.imageSmoothingEnabled=false;
+  const baseX=kind==="dirt" ? 256 : 0;
+  const sx=baseX + (((tx*TILE)%256)+256)%256;
+  const sy=(((ty*TILE)%256)+256)%256;
 
-    // sparse environment decoration, using the user's art
-    const h=worldHash(tx+21,ty+9)%17;
-    if(h===0) drawAtlasCell(0,2,x+6,y+TILE-23,28,28);       // bush
-    else if(h===1) drawAtlasCell(1,2,x+8,y+TILE-21,25,25);  // berry bush
-    else if(h===2) drawAtlasCell(0,3,x+12,y+TILE-17,18,18); // rock
-    else if(h===3) drawAtlasCell(3,3,x+36,y+TILE-15,15,15); // flower/mushroom
-    return;
+  // Overlap by one pixel so the 1.35x camera transform never exposes seams.
+  ctx.drawImage(
+    terrainTexture,
+    sx,sy,TILE,TILE,
+    Math.floor(x)-1,Math.floor(y)-1,TILE+2,TILE+2
+  );
+  return true;
+}
+
+function drawGrassTile(x,y,variant=0,tx=0,ty=0){
+  if(!drawContinuousTerrain("grass",x,y,tx,ty)){
+    ctx.fillStyle="#718f45";
+    ctx.fillRect(Math.floor(x)-1,Math.floor(y)-1,TILE+2,TILE+2);
   }
-  ctx.fillStyle="#98d77b";
-  ctx.fillRect(x,y,TILE+1,TILE+1);
+
+  // Sparse decoration only, so the underlying tile grid stays invisible.
+  if(environmentAtlasReady){
+    const h=worldHash(tx+21,ty+9)%43;
+    if(h===0) drawAtlasCell(0,3,x+13,y+TILE-17,18,18);
+    else if(h===1) drawAtlasCell(3,3,x+37,y+TILE-15,15,15);
+  }
 }
 
 function drawForestTile(x,y,variant=0,tx=0,ty=0){
@@ -734,30 +758,25 @@ function drawForestTile(x,y,variant=0,tx=0,ty=0){
 }
 
 function drawWaterTile(x,y,variant=0){
-  // Water stays procedural until we have matching water art.
   ctx.fillStyle="#68addd";
-  ctx.fillRect(x,y,TILE+1,TILE+1);
-
+  ctx.fillRect(Math.floor(x)-1,Math.floor(y)-1,TILE+2,TILE+2);
   ctx.fillStyle="#85c6ed";
-  ctx.fillRect(x,y,TILE,5);
+  ctx.fillRect(x,y,TILE,4);
   ctx.fillStyle="#4f96c9";
-  ctx.fillRect(x,y+TILE-8,TILE,8);
-
-  ctx.strokeStyle="rgba(255,255,255,.20)";
+  ctx.fillRect(x,y+TILE-7,TILE,8);
+  ctx.strokeStyle="rgba(255,255,255,.18)";
   ctx.beginPath();
-  ctx.moveTo(x+9,y+18);ctx.lineTo(x+28,y+18);
+  ctx.moveTo(x+9,y+18);ctx.lineTo(x+29,y+18);
   ctx.moveTo(x+35,y+31);ctx.lineTo(x+54,y+31);
-  ctx.moveTo(x+15,y+46);ctx.lineTo(x+37,y+46);
+  ctx.moveTo(x+15,y+46);ctx.lineTo(x+38,y+46);
   ctx.stroke();
 }
 
 function drawRoadTile(x,y,variant=0,tx=0,ty=0){
-  if(environmentAtlasReady){
-    drawAtlasCell(4,0,x,y,TILE,TILE);
-    return;
+  if(!drawContinuousTerrain("dirt",x,y,tx,ty)){
+    ctx.fillStyle="#a97442";
+    ctx.fillRect(Math.floor(x)-1,Math.floor(y)-1,TILE+2,TILE+2);
   }
-  ctx.fillStyle="#c38a50";
-  ctx.fillRect(x,y,TILE+1,TILE+1);
 }
 
 function drawTownTile(x,y,variant=0,tx=0,ty=0){
@@ -765,16 +784,13 @@ function drawTownTile(x,y,variant=0,tx=0,ty=0){
 }
 
 function drawCastleGroundTile(x,y,tx=0,ty=0){
-  if(environmentAtlasReady){
-    drawAtlasCell(4,0,x,y,TILE,TILE);
-    return;
-  }
   drawRoadTile(x,y,0,tx,ty);
 }
 
 function drawTree(x,y,variant=0){
   if(environmentAtlasReady){
     const col=variant%6;
+    // Trees intentionally overlap beyond their 64px tile footprint.
     drawAtlasCell(col,1,x-18,y-42,100,108);
     return;
   }
@@ -784,62 +800,28 @@ function drawTree(x,y,variant=0){
   ctx.beginPath();ctx.arc(x+32,y+23,22,0,Math.PI*2);ctx.fill();
 }
 
-function drawTreeObject(obj,camX,camY){
-  const sx=obj.x-camX;
-  const sy=obj.y-camY;
-  drawTree(sx,sy,obj.variant||0);
-}
-
-function drawHouseSprite(obj,camX,camY){
+function drawHouseObject(obj,camX,camY){
   const sx=obj.x-camX;
   const sy=obj.y-camY;
   const spec=obj.spec;
 
-  if(houseAtlasReady){
+  if(spec.ready()){
     ctx.imageSmoothingEnabled=false;
-    ctx.drawImage(houseAtlas,spec.sx,spec.sy,spec.sw,spec.sh,Math.round(sx),Math.round(sy),spec.drawW,spec.drawH);
+    ctx.drawImage(spec.image,Math.round(sx),Math.round(sy),spec.w,spec.h);
     return;
   }
 
-  drawHouseFallback(sx,sy,spec.drawW,spec.drawH);
+  // Simple loading fallback.
+  ctx.fillStyle="#d8c7a0";
+  ctx.fillRect(sx+14,sy+38,spec.w-28,spec.h-45);
+  ctx.fillStyle="#9a4837";
+  ctx.fillRect(sx+5,sy+22,spec.w-10,22);
+  ctx.fillStyle="#70472c";
+  ctx.fillRect(sx+spec.w*.47,sy+spec.h-32,14,32);
 }
 
-function drawHouseFallback(x,y,w=172,h=132){
-  ctx.imageSmoothingEnabled=false;
-  const scaleW=w/172;
-  const scaleH=h/132;
-  const rx=v=>Math.round(x+v*scaleW);
-  const ry=v=>Math.round(y+v*scaleH);
-  const rw=v=>Math.round(v*scaleW);
-  const rh=v=>Math.round(v*scaleH);
-
-  ctx.fillStyle="#68452f";
-  ctx.fillRect(rx(8),ry(108),rw(152),rh(10));
-  ctx.fillStyle="#a96d3f";
-  ctx.fillRect(rx(20),ry(52),rw(132),rh(58));
-  ctx.fillStyle="#d8c7a0";
-  ctx.fillRect(rx(28),ry(58),rw(116),rh(46));
-  ctx.fillStyle="#6e3927";
-  ctx.fillRect(rx(14),ry(42),rw(144),rh(12));
-  ctx.fillStyle="#9a4837";
-  ctx.fillRect(rx(24),ry(30),rw(124),rh(12));
-  ctx.fillStyle="#c6654c";
-  ctx.fillRect(rx(40),ry(18),rw(92),rh(12));
-  ctx.fillRect(rx(56),ry(8),rw(60),rh(12));
-  ctx.fillRect(rx(70),ry(0),rw(32),rh(10));
-  ctx.fillStyle="#70472c";
-  ctx.fillRect(rx(78),ry(70),rw(22),rh(40));
-  ctx.fillStyle="#d4a65f";
-  ctx.fillRect(rx(82),ry(74),rw(14),rh(36));
-  ctx.fillStyle="#41637c";
-  ctx.fillRect(rx(42),ry(68),rw(16),rh(16));
-  ctx.fillRect(rx(116),ry(68),rw(16),rh(16));
-  ctx.fillStyle="#88c5e5";
-  ctx.fillRect(rx(44),ry(70),rw(12),rh(10));
-  ctx.fillRect(rx(118),ry(70),rw(12),rh(10));
-  ctx.fillStyle="#7d4d30";
-  ctx.fillRect(rx(24),ry(54),rw(6),rh(54));
-  ctx.fillRect(rx(142),ry(54),rw(6),rh(54));
+function drawTreeObject(obj,camX,camY){
+  drawTree(obj.x-camX,obj.y-camY,obj.variant||0);
 }
 
 function drawCastle(x,y){
@@ -1127,64 +1109,84 @@ function drawBattleSprites(){
 
 function drawWorld(){
   const vw=innerWidth, vh=innerHeight;
-  const zoom=1.35; // closer camera
+  const zoom=1.35;
   const viewW=vw/zoom, viewH=vh/zoom;
   const camX=state.x-viewW/2;
   const camY=state.y-viewH/2;
 
-  ctx.fillStyle="#cde7fb";
+  ctx.fillStyle="#718f45";
   ctx.fillRect(0,0,vw,vh);
 
   ctx.save();
-  ctx.scale(zoom, zoom);
+  ctx.scale(zoom,zoom);
 
   const minX=Math.max(0,Math.floor(camX/TILE)-1);
   const maxX=Math.min(WORLD_W-1,Math.ceil((camX+viewW)/TILE)+1);
   const minY=Math.max(0,Math.floor(camY/TILE)-1);
   const maxY=Math.min(WORLD_H-1,Math.ceil((camY+viewH)/TILE)+1);
 
+  // Ground only. Tiles still exist for gameplay, but not as visible bordered squares.
   for(let y=minY;y<=maxY;y++){
     for(let x=minX;x<=maxX;x++){
       const sx=x*TILE-camX;
       const sy=y*TILE-camY;
       const t=world[y][x];
-
       const variant=(x+y)%3;
-      if(t===1){
-        drawWaterTile(sx,sy,variant);
-      }else if(t===2){
-        drawForestTile(sx,sy,variant,x,y);
-      }else if(t===3){
-        drawRoadTile(sx,sy,variant,x,y);
-      }else if(t===4){
-        drawTownTile(sx,sy,variant,x,y);
-      }else if(t===5){
+
+      if(t===1) drawWaterTile(sx,sy,variant);
+      else if(t===3) drawRoadTile(sx,sy,variant,x,y);
+      else if(t===4) drawTownTile(sx,sy,variant,x,y);
+      else if(t===5){
         drawCastleGroundTile(sx,sy,x,y);
         drawCastle(sx,sy);
-      }else{
-        drawGrassTile(sx,sy,variant,x,y);
-      }
+      }else if(t===2) drawForestTile(sx,sy,variant,x,y);
+      else drawGrassTile(sx,sy,variant,x,y);
     }
   }
 
-  const visibleScenery = [];
+  // Y-sort scenery, mobs, and the player so overlap feels like an RPG world.
+  const renderables=[];
+
   for(const tree of sceneryTrees){
-    const sx=tree.x-camX;
-    const sy=tree.y-camY;
-    if(sx<-120||sy<-130||sx>viewW+120||sy>viewH+80) continue;
-    visibleScenery.push({kind:"tree", y:tree.y+58, obj:tree});
+    const sx=tree.x-camX, sy=tree.y-camY;
+    if(sx<-120||sy<-130||sx>viewW+120||sy>viewH+90) continue;
+    renderables.push({kind:"tree",depth:tree.y+58,obj:tree});
   }
+
   for(const house of sceneryHouses){
-    const sx=house.x-camX;
-    const sy=house.y-camY;
-    const spec=house.spec;
-    if(sx<-spec.drawW||sy<-spec.drawH||sx>viewW+40||sy>viewH+40) continue;
-    visibleScenery.push({kind:"house", y:house.y+spec.drawH, obj:house});
+    const sx=house.x-camX, sy=house.y-camY;
+    if(sx<-house.spec.w||sy<-house.spec.h||sx>viewW+60||sy>viewH+60) continue;
+    renderables.push({kind:"house",depth:house.y+house.spec.h-5,obj:house});
   }
-  visibleScenery.sort((a,b)=>a.y-b.y);
-  for(const item of visibleScenery){
-    if(item.kind==="tree") drawTreeObject(item.obj,camX,camY);
-    else drawHouseSprite(item.obj,camX,camY);
+
+  for(const mob of mobs){
+    if(!mob.alive) continue;
+    const sx=mob.x-camX, sy=mob.y-camY;
+    if(sx<-60||sy<-60||sx>viewW+60||sy>viewH+60) continue;
+    renderables.push({kind:"mob",depth:mob.y,obj:mob});
+  }
+
+  renderables.push({kind:"hero",depth:state.y,obj:null});
+  renderables.sort((a,b)=>a.depth-b.depth);
+
+  for(const item of renderables){
+    if(item.kind==="tree"){
+      drawTreeObject(item.obj,camX,camY);
+    }else if(item.kind==="house"){
+      drawHouseObject(item.obj,camX,camY);
+    }else if(item.kind==="mob"){
+      const mob=item.obj;
+      const sx=mob.x-camX, sy=mob.y-camY;
+      ctx.fillStyle="rgba(0,0,0,.20)";
+      ctx.beginPath();ctx.ellipse(sx,sy+12,13,5,0,0,Math.PI*2);ctx.fill();
+      drawMob(ctx,mob,sx,sy);
+      if(mob.aggro){
+        ctx.fillStyle="#f2d15f";
+        ctx.beginPath();ctx.arc(sx,sy-26,4,0,Math.PI*2);ctx.fill();
+      }
+    }else{
+      drawHero(ctx,viewW/2,viewH/2,0.055,isHeroMoving,moveAnimTime,heroFacing);
+    }
   }
 
   function label(wx,wy,text){
@@ -1202,27 +1204,8 @@ function drawWorld(){
   label(5,6,"Oakrest");
   label(24,15,"Stone Castle");
 
-  for(const mob of mobs){
-    if(!mob.alive) continue;
-    const sx=mob.x-camX;
-    const sy=mob.y-camY;
-    if(sx<-50||sy<-50||sx>viewW+50||sy>viewH+50) continue;
-
-    ctx.fillStyle="rgba(0,0,0,.22)";
-    ctx.beginPath();ctx.ellipse(sx,sy+12,13,5,0,0,Math.PI*2);ctx.fill();
-
-    drawMob(ctx,mob,sx,sy);
-
-    if(mob.aggro){
-      ctx.fillStyle="#f2d15f";
-      ctx.beginPath();ctx.arc(sx,sy-26,4,0,Math.PI*2);ctx.fill();
-    }
-  }
-
-  drawHero(ctx,viewW/2,viewH/2,0.055,isHeroMoving,moveAnimTime,heroFacing);
   ctx.restore();
 }
-
 
 function updateMovement(dt){
   if(enemy || document.getElementById("menu").classList.contains("show")) {

@@ -1,11 +1,13 @@
-const CACHE_NAME = "little-realm-phone-v3";
+const CACHE_NAME = "little-realm-phone-v4";
 const FILES = [
   "./",
   "./index.html",
   "./manifest.webmanifest",
   "./icon-192.png",
   "./icon-512.png",
-  "./house-atlas.png"
+  "./terrain-seamless.png",
+  "./house-a.png",
+  "./house-b.png"
 ];
 
 self.addEventListener("install", event => {
@@ -29,27 +31,18 @@ self.addEventListener("activate", event => {
 self.addEventListener("fetch", event => {
   if (event.request.method !== "GET") return;
 
-  if (event.request.mode === "navigate") {
-    event.respondWith(
-      fetch(event.request)
-        .then(response => {
-          const copy = response.clone();
-          caches.open(CACHE_NAME).then(cache => cache.put("./index.html", copy));
-          return response;
-        })
-        .catch(() => caches.match("./index.html"))
-    );
-    return;
-  }
-
+  // Network first: new GitHub Pages builds replace cached versions immediately.
   event.respondWith(
-    caches.match(event.request).then(cached => {
-      if (cached) return cached;
-      return fetch(event.request).then(response => {
-        const copy = response.clone();
-        caches.open(CACHE_NAME).then(cache => cache.put(event.request, copy));
+    fetch(event.request)
+      .then(response => {
+        const copy=response.clone();
+        caches.open(CACHE_NAME).then(cache => cache.put(event.request,copy));
         return response;
-      });
-    })
+      })
+      .catch(() =>
+        caches.match(event.request).then(cached =>
+          cached || (event.request.mode === "navigate" ? caches.match("./index.html") : Response.error())
+        )
+      )
   );
 });
