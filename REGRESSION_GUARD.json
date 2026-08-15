@@ -48,7 +48,7 @@
     "respawn_cleanup": "movement input, attack timers, attack animations, and combat FX reset before Oakrest respawn",
     "v10_balance_preserved": true
   },
-  "architecture_update": "v20 backpack inventory foundation on top of v19 water texture",
+  "architecture_update": "v21 expanded starter zone on top of v20 backpack inventory",
   "source_modules": [
     "core.js",
     "inventory.js",
@@ -115,5 +115,27 @@
     "controls": "HUD backpack button plus I/B keyboard toggle",
     "drops_enabled": false,
     "protected_world_changed": false
+  },
+  "world_update": {
+    "version": "v21",
+    "dimensions": "44x32 tiles",
+    "player_spawn": "Starter Town at tile 7,7",
+    "regions": [
+      "Starter Town",
+      "Farm",
+      "Slime Spawns",
+      "Goblin Camp",
+      "Wilderness",
+      "Blocked Next Zone Entrance"
+    ],
+    "npc_placeholders": "5 town/farm NPC anchors for future vendors and quest givers",
+    "passive_farm_mobs": [
+      "Cow",
+      "Pig",
+      "Chicken"
+    ],
+    "regional_spawns": "slimes north-central, goblins northeast camp, wolves wilderness",
+    "protected_renderer_changes": false,
+    "camera_changed": false
   }
 }

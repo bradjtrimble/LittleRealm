@@ -1,7 +1,7 @@
 function fresh(){
   return {
-    x:6*TILE+TILE/2,
-    y:7*TILE+TILE/2,
+    x:START_X,
+    y:START_Y,
     level:1,xp:0,xpNext:numberOr(BALANCE.progression?.startingXpToLevel,25),
     hp:numberOr(BALANCE.player?.maxHp,30),maxHp:numberOr(BALANCE.player?.maxHp,30),
     atk:numberOr(BALANCE.player?.attack,5),def:numberOr(BALANCE.player?.defense,1),

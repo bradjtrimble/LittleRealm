@@ -1,45 +1,95 @@
-// 0 grass, 1 water, 2 forest, 3 road, 4 town, 5 castle
+// 0 grass, 1 water, 2 forest, 3 road, 4 town, 5 legacy castle, 6 blocked forest, 7 dirt clearing
 const world = Array.from({length:WORLD_H}, () => Array(WORLD_W).fill(0));
 
+function paintWorldRect(x1,y1,x2,y2,type){
+  for(let y=Math.max(0,y1);y<=Math.min(WORLD_H-1,y2);y++){
+    for(let x=Math.max(0,x1);x<=Math.min(WORLD_W-1,x2);x++) world[y][x]=type;
+  }
+}
+function paintWorldH(y,x1,x2,type,width=1){
+  for(let yy=y;yy<y+width;yy++) for(let x=x1;x<=x2;x++) if(yy>=0&&yy<WORLD_H&&x>=0&&x<WORLD_W) world[yy][x]=type;
+}
+function paintWorldV(x,y1,y2,type,width=1){
+  for(let xx=x;xx<x+width;xx++) for(let y=y1;y<=y2;y++) if(xx>=0&&xx<WORLD_W&&y>=0&&y<WORLD_H) world[y][xx]=type;
+}
+
 function buildWorld(){
+  // Large starter region. The outer forest is deliberately non-walkable so the
+  // zone feels enclosed without surrounding everything with water.
   for(let y=0;y<WORLD_H;y++){
-    for(let x=0;x<WORLD_W;x++){
-      world[y][x]=(x===0||y===0||x===WORLD_W-1||y===WORLD_H-1)?1:0;
+    for(let x=0;x<WORLD_W;x++) world[y][x]=(x<=1||y<=1||x>=WORLD_W-2||y>=WORLD_H-2)?6:0;
+  }
+
+  // Starter Town: open, safe, and spaced out enough for future vendors/quests.
+  paintWorldRect(2,2,12,10,4);
+
+  // Main road spine and branches. Two tiles wide where possible so it reads as
+  // the route between future zones rather than a thin village footpath.
+  paintWorldV(6,8,14,3,2);          // town -> main road
+  paintWorldH(13,5,38,3,2);         // west/east spine
+  paintWorldV(6,14,18,3,2);         // farm branch
+  paintWorldV(18,8,13,3,2);         // slime branch
+  paintWorldV(35,10,13,3,2);        // goblin branch
+  paintWorldV(36,14,29,3,2);        // road to next zone
+
+  // Farm meadow outside town.
+  paintWorldRect(2,17,10,24,0);
+
+  // Slime habitat: mottled dirt/grass with a small pond.
+  for(let y=3;y<=10;y++) for(let x=16;x<=27;x++){
+    if(worldHash(x+71,y+29)%100<42) world[y][x]=7;
+  }
+  paintWorldRect(23,7,25,8,1);
+  world[7][22]=1; // irregular pond shoulders
+  world[8][26]=1;
+
+  // Goblin camp clearing. Dirt is separate from roads so its edges stay broad
+  // and camp-like rather than receiving road corner masks.
+  paintWorldRect(32,4,41,10,7);
+  paintWorldV(35,10,13,3,2);
+
+  // Wilderness forest clusters. Large open corridors remain for roaming wolves.
+  const forestAreas=[
+    [12,15,17,20],[27,15,33,20],[38,15,41,24],
+    [11,24,18,29],[22,23,29,29],[30,25,35,29],
+    [13,3,15,10],[28,3,31,11]
+  ];
+  for(const [x1,y1,x2,y2] of forestAreas){
+    for(let y=y1;y<=y2;y++) for(let x=x1;x<=x2;x++){
+      if(world[y][x]===0 && worldHash(x*5+11,y*7+3)%100<68) world[y][x]=2;
     }
   }
 
-  for(let y=2;y<=6;y++) for(let x=12;x<=16;x++) world[y][x]=1;
-  for(let y=10;y<=15;y++) world[y][22]=1;
-  for(let y=15;y<=17;y++) for(let x=21;x<=25;x++) world[y][x]=1;
+  // Keep important travel / encounter spaces clear after forest painting.
+  paintWorldRect(2,2,12,10,4);
+  paintWorldV(6,8,14,3,2);
+  paintWorldH(13,5,38,3,2);
+  paintWorldV(6,14,18,3,2);
+  paintWorldV(18,8,13,3,2);
+  paintWorldV(35,10,13,3,2);
+  paintWorldV(36,14,29,3,2);
 
-  const forestAreas = [
-    [3,2,8,6],[18,2,24,6],[3,12,9,17],[14,10,19,15]
-  ];
-  forestAreas.forEach(([x1,y1,x2,y2])=>{
-    for(let y=y1;y<=y2;y++) for(let x=x1;x<=x2;x++){
-      if(world[y][x]!==1 && Math.random()<.78) world[y][x]=2;
-    }
-  });
-
-  for(let x=4;x<=24;x++) world[9][x]=3;
-  for(let y=6;y<=9;y++) world[y][6]=3;
-  for(let y=9;y<=15;y++) world[y][24]=3;
-
-  for(let y=6;y<=8;y++) for(let x=4;x<=7;x++) world[y][x]=4;
-  world[7][6]=3;
-  world[8][6]=3;
-
-  world[15][24]=5;
+  // Restore the two encounter clearings after the road pass.
+  for(let y=3;y<=10;y++) for(let x=16;x<=27;x++){
+    if((x===18||x===19) && y>=8) continue;
+    world[y][x]=worldHash(x+71,y+29)%100<42?7:0;
+  }
+  paintWorldRect(23,7,25,8,1); world[7][22]=1; world[8][26]=1;
+  paintWorldRect(32,4,41,10,7); paintWorldV(35,10,13,3,2);
 }
 
 const sceneryTrees=[];
 const sceneryHouses=[];
 const sceneryFences=[];
 const scenerySigns=[];
+const sceneryNPCs=[];
+const sceneryProps=[];
 let solidRects=[];
 const MOB_SPAWN_TILES = new Set([
-  "10,8","8,11","11,12","17,8","18,13","9,5","20,7",
-  "17,4","19,11","11,15","23,12","5,14","8,16","20,5","16,14"
+  "18,5","21,4","24,6","19,8","22,9","26,5",
+  "34,6","37,5","39,8","35,9","40,6",
+  "15,17","21,16","27,19","32,23","18,26","25,27","33,18","39,21",
+  "4,20","8,22","6,21","9,20","5,23","7,19","9,23"
 ]);
 
 function addSolidRect(x,y,w,h,type="solid"){
@@ -51,16 +101,19 @@ function buildScenery(){
   sceneryHouses.length=0;
   sceneryFences.length=0;
   scenerySigns.length=0;
+  sceneryNPCs.length=0;
+  sceneryProps.length=0;
   solidRects=[];
 
-  // Oakrest: houses sit beside the road rather than occupying every town tile.
+  // ----- Starter Town -----
   const houses=[
-    {type:"A", x:4*TILE-12, y:6*TILE-69},
-    {type:"B", x:7*TILE,    y:6*TILE-56},
-    {type:"B", x:4*TILE-18, y:8*TILE-67},
-    {type:"A", x:7*TILE,    y:8*TILE-76}
+    {type:"A",x:3*TILE+4, y:3*TILE-18},
+    {type:"B",x:7*TILE+12,y:3*TILE-12},
+    {type:"B",x:3*TILE-2, y:7*TILE-22},
+    {type:"A",x:9*TILE-8, y:7*TILE-26},
+    // Farm barn / farmhouse.
+    {type:"A",x:3*TILE+4, y:18*TILE-24}
   ];
-
   for(const placement of houses){
     const spec=HOUSE_SPECS[placement.type];
     const obj={...placement,spec};
@@ -69,36 +122,79 @@ function buildScenery(){
     addSolidRect(placement.x+f.x,placement.y+f.y,f.w,f.h,"house");
   }
 
-  // Decorative town fencing and signs. These do not alter the proven collision model.
-  const fences=[
-    {x:3*TILE+8,y:5*TILE+34,dir:"h",len:2},
-    {x:8*TILE+8,y:5*TILE+34,dir:"h",len:2},
-    {x:3*TILE+8,y:9*TILE+18,dir:"h",len:2},
-    {x:8*TILE+8,y:9*TILE+18,dir:"h",len:2},
-    {x:3*TILE+8,y:6*TILE+18,dir:"v",len:2},
-    {x:10*TILE+10,y:6*TILE+18,dir:"v",len:2}
-  ];
-  sceneryFences.push(...fences);
-  scenerySigns.push(
-    {x:5*TILE+13,y:8*TILE+13,text:"Oakrest"},
-    {x:23*TILE+10,y:14*TILE+12,text:"Castle"}
+  // Town decorations / future interaction anchors.
+  sceneryProps.push(
+    {type:"well",x:6*TILE+12,y:5*TILE+20},
+    {type:"notice",x:10*TILE+18,y:9*TILE+2},
+    {type:"stall",x:3*TILE+16,y:5*TILE+18},
+    {type:"crate",x:8*TILE+8,y:6*TILE+26},
+    // Farm props.
+    {type:"hay",x:5*TILE+4,y:19*TILE+16},
+    {type:"hay",x:5*TILE+34,y:19*TILE+12},
+    {type:"trough",x:8*TILE+16,y:23*TILE+10},
+    {type:"crops",x:4*TILE+8,y:22*TILE+6,w:90,h:82},
+    // Goblin camp props.
+    {type:"tent",x:33*TILE+10,y:5*TILE+2},
+    {type:"tent",x:38*TILE+12,y:5*TILE+6},
+    {type:"tent",x:38*TILE+4,y:8*TILE+12},
+    {type:"campfire",x:36*TILE+18,y:7*TILE+14},
+    {type:"crate",x:34*TILE+14,y:8*TILE+18},
+    {type:"crate",x:40*TILE+12,y:7*TILE+20},
+    // Blocked next-zone entrance.
+    {type:"blockedGate",x:35*TILE+24,y:29*TILE+4}
   );
 
-  // Real tree objects. Only trunks are solid; canopies are visual.
-  const reserved = new Set([
-    ...MOB_SPAWN_TILES,
-    "4,6","5,6","6,6","7,6","8,6",
-    "4,7","5,7","6,7","7,7","8,7",
-    "3,8","4,8","5,8","6,8","7,8","8,8",
-    "3,9","4,9","5,9","6,9","7,9","8,9"
-  ]);
+  // Future vendor / quest-giver placeholders. They are intentionally simple
+  // NPCs now; interaction behavior can be added later without redesigning town.
+  sceneryNPCs.push(
+    {x:5*TILE+18,y:5*TILE+12,name:"Mara",role:"Shopkeeper",shirt:"#b85c4a"},
+    {x:8*TILE+20,y:5*TILE+24,name:"Eldon",role:"Villager",shirt:"#4e79a7"},
+    {x:5*TILE+4,y:8*TILE+18,name:"Rhea",role:"Quest Giver",shirt:"#6e9c5e"},
+    {x:10*TILE+16,y:8*TILE+10,name:"Torren",role:"Blacksmith",shirt:"#8a6651"},
+    {x:4*TILE+22,y:20*TILE+28,name:"Farmer",role:"Farmer",shirt:"#b28b43"}
+  );
+  for(const npc of sceneryNPCs) addSolidRect(npc.x-6,npc.y-7,12,14,"npc");
+  addSolidRect(6*TILE+15,5*TILE+25,30,24,"well");
 
+  // Farm perimeter. Keep a gate opening on the north side near the road.
+  sceneryFences.push(
+    {x:2*TILE+8,y:17*TILE+4,dir:"h",len:8},
+    {x:8*TILE+18,y:17*TILE+4,dir:"h",len:5},
+    {x:2*TILE+8,y:24*TILE+28,dir:"h",len:19},
+    {x:2*TILE+8,y:17*TILE+4,dir:"v",len:18},
+    {x:10*TILE+18,y:17*TILE+4,dir:"v",len:18}
+  );
+
+  // Crude camp palisades; intentionally decorative for now so combat movement
+  // stays fluid inside the camp.
+  sceneryFences.push(
+    {x:32*TILE+6,y:4*TILE+6,dir:"h",len:21},
+    {x:32*TILE+6,y:10*TILE+16,dir:"h",len:21},
+    {x:32*TILE+6,y:4*TILE+6,dir:"v",len:14},
+    {x:41*TILE-6,y:4*TILE+6,dir:"v",len:14}
+  );
+
+  scenerySigns.push(
+    {x:6*TILE+8,y:10*TILE+8,text:"Starter Town"},
+    {x:7*TILE+8,y:17*TILE+10,text:"Farm"},
+    {x:18*TILE+8,y:10*TILE+5,text:"Slimes"},
+    {x:35*TILE+8,y:10*TILE+5,text:"Goblin Camp"},
+    {x:36*TILE+4,y:28*TILE+12,text:"Next Zone"}
+  );
+
+  // The blocked next-zone gate is real collision, not just a picture.
+  addSolidRect(35*TILE+24,29*TILE+14,2*TILE+40,24,"zone-gate");
+
+  // Forest object placement. Boundary forest is deliberately denser than the
+  // interior clusters; only the trunk remains solid, as in the stable build.
+  const reserved=new Set([...MOB_SPAWN_TILES]);
   for(let ty=0;ty<WORLD_H;ty++){
     for(let tx=0;tx<WORLD_W;tx++){
-      if(world[ty][tx]!==2) continue;
+      const wt=world[ty][tx];
+      if(wt!==2 && wt!==6) continue;
       if(reserved.has(`${tx},${ty}`)) continue;
-      if(worldHash(tx,ty)%100 >= 66) continue;
-
+      const threshold=wt===6?82:48;
+      if(worldHash(tx,ty)%100>=threshold) continue;
       const ox=(worldHash(tx+31,ty+11)%15)-7;
       const oy=(worldHash(tx+7,ty+41)%11)-5;
       const obj={x:tx*TILE+ox,y:ty*TILE+oy,variant:worldHash(tx,ty)%6};
@@ -114,7 +210,9 @@ const tile = {
   2:{walk:true},
   3:{walk:true},
   4:{walk:true},
-  5:{walk:true}
+  5:{walk:true},
+  6:{walk:false},
+  7:{walk:true}
 };
 
 function tileAtWorld(px,py){
@@ -428,6 +526,73 @@ function drawCastle(x,y){
   ctx.fillRect(x+44,y+31,3,7);
 }
 
+function drawNpcObject(obj,camX,camY){
+  const x=Math.round(obj.x-camX), y=Math.round(obj.y-camY);
+  ctx.save(); ctx.imageSmoothingEnabled=false;
+  ctx.fillStyle="rgba(0,0,0,.18)"; ctx.fillRect(x-6,y+8,12,3);
+  ctx.fillStyle="#d9ad84"; ctx.fillRect(x-5,y-11,10,9);
+  ctx.fillStyle="#5a3d2d"; ctx.fillRect(x-6,y-13,12,4); ctx.fillRect(x-6,y-9,2,5);
+  ctx.fillStyle=obj.shirt||"#627e9b"; ctx.fillRect(x-6,y-2,12,10);
+  ctx.fillStyle="#3b2e29"; ctx.fillRect(x-5,y+8,4,7); ctx.fillRect(x+1,y+8,4,7);
+  ctx.fillStyle="#202020"; ctx.fillRect(x-3,y-7,1,1); ctx.fillRect(x+2,y-7,1,1);
+  if(obj.role==="Quest Giver"){
+    ctx.fillStyle="#ffd45b"; ctx.font="900 12px system-ui"; ctx.textAlign="center"; ctx.fillText("!",x,y-18); ctx.textAlign="start";
+  }
+  ctx.restore();
+}
+
+function drawPropObject(obj,camX,camY){
+  const x=Math.round(obj.x-camX), y=Math.round(obj.y-camY);
+  ctx.save(); ctx.imageSmoothingEnabled=false;
+  if(obj.type==="well"){
+    ctx.fillStyle="#6f7276"; ctx.fillRect(x,y+7,40,18);
+    ctx.fillStyle="#a2a5a6"; ctx.fillRect(x+3,y+4,34,6);
+    ctx.fillStyle="#2e5360"; ctx.fillRect(x+8,y+9,24,10);
+    ctx.fillStyle="#775238"; ctx.fillRect(x+3,y-10,4,18); ctx.fillRect(x+33,y-10,4,18); ctx.fillRect(x+2,y-11,36,4);
+  }else if(obj.type==="notice"){
+    ctx.fillStyle="#6a472b"; ctx.fillRect(x+13,y+12,5,26);
+    ctx.fillStyle="#95653b"; ctx.fillRect(x,y,31,18);
+    ctx.fillStyle="#d5c08e"; ctx.fillRect(x+4,y+4,23,10);
+    ctx.fillStyle="#75562e"; ctx.fillRect(x+7,y+7,16,2);
+  }else if(obj.type==="stall"){
+    ctx.fillStyle="#795234"; ctx.fillRect(x+2,y+12,34,18);
+    ctx.fillStyle="#b94445"; ctx.fillRect(x,y,40,9);
+    ctx.fillStyle="#efe4c7"; for(let i=4;i<40;i+=10)ctx.fillRect(x+i,y,5,9);
+    ctx.fillStyle="#765034"; ctx.fillRect(x+3,y+8,4,25); ctx.fillRect(x+33,y+8,4,25);
+  }else if(obj.type==="crate"){
+    ctx.fillStyle="#6a4527"; ctx.fillRect(x,y,22,20); ctx.fillStyle="#9a6939"; ctx.fillRect(x+2,y+2,18,16);
+    ctx.fillStyle="#6a4527"; ctx.fillRect(x+3,y+8,16,3); ctx.fillRect(x+9,y+2,3,16);
+  }else if(obj.type==="hay"){
+    ctx.fillStyle="#c99c3e"; ctx.fillRect(x,y+4,25,16); ctx.fillStyle="#e1bd58"; ctx.fillRect(x+3,y,18,18);
+    ctx.fillStyle="#9b742e"; ctx.fillRect(x+4,y+7,16,2); ctx.fillRect(x+8,y+14,12,2);
+  }else if(obj.type==="trough"){
+    ctx.fillStyle="#65472f"; ctx.fillRect(x,y+6,34,13); ctx.fillStyle="#8e6848"; ctx.fillRect(x+2,y+3,30,7);
+    ctx.fillStyle="#5a9ab3"; ctx.fillRect(x+5,y+6,24,5);
+  }else if(obj.type==="crops"){
+    const w=obj.w||90,h=obj.h||70;
+    ctx.fillStyle="rgba(92,62,38,.42)"; ctx.fillRect(x,y,w,h);
+    for(let yy=8;yy<h-4;yy+=18){
+      for(let xx=7;xx<w-4;xx+=18){
+        const alt=((xx+yy)/18)%2;
+        ctx.fillStyle=alt?"#5f9d45":"#7aae4c"; ctx.fillRect(x+xx,y+yy,8,4); ctx.fillRect(x+xx+2,y+yy-4,4,8);
+      }
+    }
+  }else if(obj.type==="tent"){
+    ctx.fillStyle="#6c3828"; ctx.beginPath();ctx.moveTo(x+2,y+34);ctx.lineTo(x+26,y);ctx.lineTo(x+50,y+34);ctx.closePath();ctx.fill();
+    ctx.fillStyle="#9a4d35"; ctx.beginPath();ctx.moveTo(x+8,y+31);ctx.lineTo(x+26,y+5);ctx.lineTo(x+26,y+31);ctx.closePath();ctx.fill();
+    ctx.fillStyle="#3d281f"; ctx.fillRect(x+24,y+20,5,14);
+  }else if(obj.type==="campfire"){
+    ctx.fillStyle="#5b4637"; ctx.fillRect(x,y+17,30,5); ctx.fillRect(x+5,y+12,20,14);
+    ctx.fillStyle="#ef7a2c"; ctx.fillRect(x+10,y+3,11,16); ctx.fillStyle="#ffd25c"; ctx.fillRect(x+13,y+6,6,10);
+  }else if(obj.type==="blockedGate"){
+    ctx.fillStyle="#4f3827"; ctx.fillRect(x,y,8,62); ctx.fillRect(x+142,y,8,62);
+    ctx.fillStyle="#755137"; ctx.fillRect(x+5,y+8,140,8); ctx.fillRect(x+5,y+42,140,8);
+    ctx.fillStyle="#8e633e"; ctx.fillRect(x+38,y+13,12,44); ctx.fillRect(x+100,y+13,12,44);
+    ctx.fillStyle="#6e2e25"; ctx.fillRect(x+59,y+17,33,29); ctx.fillStyle="#e7c064"; ctx.font="900 22px system-ui"; ctx.textAlign="center"; ctx.fillText("×",x+75,y+40); ctx.textAlign="start";
+  }
+  ctx.restore();
+}
+
 const CAMERA_ZOOM = 1.85; // protected camera setting: closer, character-focused POV
 
 function drawWorldHpBar(x,y,value,maxValue,width=38){
@@ -485,6 +650,8 @@ function drawWorld(){
       if(t===1){ drawWaterTile(sx,sy,variant,x,y); drawWaterEdgeOverlay(sx,sy,x,y); }
       else if(t===3){ drawRoadTile(sx,sy,variant,x,y); drawRoadShapeOverlay(sx,sy,x,y); }
       else if(t===4) drawTownTile(sx,sy,variant,x,y);
+      else if(t===6) drawForestTile(sx,sy,variant,x,y);
+      else if(t===7) drawRoadTile(sx,sy,variant,x,y);
       else if(t===5){
         drawCastleGroundTile(sx,sy,x,y);
         drawCastle(sx,sy);
@@ -518,6 +685,16 @@ function drawWorld(){
     if(sx<-80||sy<-80||sx>viewW+80||sy>viewH+80) continue;
     renderables.push({kind:"sign",depth:sign.y+40,obj:sign});
   }
+  for(const prop of sceneryProps){
+    const sx=prop.x-camX, sy=prop.y-camY;
+    if(sx<-180||sy<-100||sx>viewW+180||sy>viewH+120) continue;
+    renderables.push({kind:"prop",depth:prop.y+(prop.type==="blockedGate"?62:36),obj:prop});
+  }
+  for(const npc of sceneryNPCs){
+    const sx=npc.x-camX, sy=npc.y-camY;
+    if(sx<-60||sy<-80||sx>viewW+60||sy>viewH+60) continue;
+    renderables.push({kind:"npc",depth:npc.y+15,obj:npc});
+  }
 
   for(const mob of mobs){
     if(!mob.alive) continue;
@@ -538,6 +715,10 @@ function drawWorld(){
       drawFenceObject(item.obj,camX,camY);
     }else if(item.kind==="sign"){
       drawSignObject(item.obj,camX,camY);
+    }else if(item.kind==="prop"){
+      drawPropObject(item.obj,camX,camY);
+    }else if(item.kind==="npc"){
+      drawNpcObject(item.obj,camX,camY);
     }else if(item.kind==="mob"){
       const mob=item.obj;
       let sx=mob.x-camX, sy=mob.y-camY;
@@ -590,8 +771,11 @@ function drawWorld(){
     ctx.fillText(text,sx+24,sy-12);
     ctx.textAlign="start";
   }
-  label(5,6,"Oakrest");
-  label(24,15,"Stone Castle");
+  label(7,2.5,"Starter Town");
+  label(6,17,"Farm");
+  label(22,3,"Slime Spawns");
+  label(37,4,"Goblin Camp");
+  label(37,29,"Next Zone Entrance");
 
   ctx.restore();
 }
@@ -601,38 +785,13 @@ function townEvent(){
   if(combatTarget) disengageCombat(false);
   if(state.hp<state.maxHp){
     state.hp=state.maxHp;
-    toast("Oakrest inn restored your HP.");
-  }else{
-    toast("Oakrest Town");
+    toast("Starter Town restored your HP.");
+    updateUI();
   }
-  const potionPrice=Math.max(0,Math.floor(numberOr(BALANCE.shop?.potionPrice,5)));
-  const potionCap=Math.max(0,Math.floor(numberOr(BALANCE.shop?.autoBuyUntilPotions,3)));
-  if(state.gold>=potionPrice && state.potions<potionCap){
-    state.gold-=potionPrice;
-    state.potions++;
-    setTimeout(()=>toast(`Bought 1 potion for ${potionPrice} gold.`),700);
-  }
-  updateUI();
 }
 
 function castleEvent(){
-  if(state.bossDefeated){toast("The throne room is quiet.");return}
-  if(!state.questComplete){toast(`The castle is sealed. Defeat ${SLIMES_REQUIRED} Slimes.`);return}
-  if(bossMob && bossMob.alive){
-    engageMob(bossMob);
-    return;
-  }
-
-  const tx=24, ty=15;
-  const mob={
-    id:nextMobId++,kind:"boss",template:bossTemplate,boss:true,
-    x:tx*TILE+TILE/2,y:ty*TILE+TILE/2,
-    homeX:tx*TILE+TILE/2,homeY:ty*TILE+TILE/2,
-    vx:0,vy:0,drawVx:0,drawVy:0,facing:"down",animTime:0,moveTimer:0,
-    alive:true,respawnTimer:0,aggro:true
-  };
-  restoreMobStats(mob);
-  bossMob=mob; mobs.push(mob);
-  toast("The Stone King enters the courtyard!");
-  engageMob(mob);
+  // Legacy hook retained for save/runtime compatibility. The starter zone's
+  // next-area road is physically blocked until a later zone update.
+  toast("The next zone is not open yet.");
 }

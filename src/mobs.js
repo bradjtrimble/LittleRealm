@@ -28,7 +28,10 @@ function createMobTemplate(name,kind,configKey,fallback,boss=false){
 const enemyTemplates = [
   createMobTemplate("Slime","slime","slime",{hp:14,atk:4,def:0,xp:8,gold:[2,5],attackInterval:1.45,aggressive:false,chaseSpeed:45,wanderSpeed:20}),
   createMobTemplate("Goblin","goblin","goblin",{hp:20,atk:6,def:1,xp:13,gold:[4,8],attackInterval:1.45,aggressive:true,chaseSpeed:58,wanderSpeed:20}),
-  createMobTemplate("Wolf","wolf","wolf",{hp:18,atk:7,def:1,xp:14,gold:[3,7],attackInterval:1.33,aggressive:true,chaseSpeed:72,wanderSpeed:30})
+  createMobTemplate("Wolf","wolf","wolf",{hp:18,atk:7,def:1,xp:14,gold:[3,7],attackInterval:1.33,aggressive:true,chaseSpeed:72,wanderSpeed:30}),
+  createMobTemplate("Cow","cow","cow",{hp:12,atk:1,def:0,xp:4,gold:[0,0],attackInterval:1.8,aggressive:false,chaseSpeed:28,wanderSpeed:12}),
+  createMobTemplate("Pig","pig","pig",{hp:8,atk:1,def:0,xp:3,gold:[0,0],attackInterval:1.8,aggressive:false,chaseSpeed:30,wanderSpeed:14}),
+  createMobTemplate("Chicken","chicken","chicken",{hp:4,atk:1,def:0,xp:2,gold:[0,0],attackInterval:1.7,aggressive:false,chaseSpeed:34,wanderSpeed:18})
 ];
 const bossTemplate = createMobTemplate("Stone King","boss","stoneKing",{hp:50,atk:10,def:3,xp:45,gold:[20,30],attackInterval:1.63,aggressive:false,chaseSpeed:48,wanderSpeed:0},true);
 
@@ -58,10 +61,16 @@ function spawnMobs(){
   bossMob=null;
 
   const spawnDefs = [
-    ["slime",10,8],["slime",8,11],["slime",11,12],["slime",17,8],
-    ["slime",18,13],["slime",9,5],["slime",20,7],
-    ["goblin",17,4],["goblin",19,11],["goblin",11,15],["goblin",23,12],
-    ["wolf",5,14],["wolf",8,16],["wolf",20,5],["wolf",16,14]
+    // Slime habitat — north-central marsh/clearing.
+    ["slime",18,5],["slime",21,4],["slime",24,6],["slime",19,8],["slime",22,9],["slime",26,5],
+    // Goblin camp — concentrated in the fortified northeast clearing.
+    ["goblin",34,6],["goblin",37,5],["goblin",39,8],["goblin",35,9],["goblin",40,6],
+    // Wolves roam the broad wilderness instead of spawning in town/camps.
+    ["wolf",15,17],["wolf",21,16],["wolf",27,19],["wolf",32,23],["wolf",18,26],["wolf",25,27],["wolf",33,18],["wolf",39,21],
+    // Passive starter-farm animals.
+    ["cow",4,20],["cow",8,22],
+    ["pig",6,21],["pig",9,20],
+    ["chicken",5,23],["chicken",7,19],["chicken",9,23]
   ];
 
   for(const [kind,tx,ty] of spawnDefs){
@@ -280,6 +289,34 @@ function drawBoss(c,x,y,s=1){
   c.restore();
 }
 
+function drawCow(c,x,y,s=1){
+  c.save(); c.translate(x,y); c.scale(s,s); c.imageSmoothingEnabled=false;
+  const px=(col,rx,ry,rw=1,rh=1)=>{c.fillStyle=col;c.fillRect(rx,ry,rw,rh)};
+  px("#f3eee3",-11,-5,18,12); px("#f3eee3",5,-8,9,9);
+  px("#322b28",-8,-5,6,5); px("#322b28",1,0,6,5); px("#322b28",8,-6,4,4);
+  px("#d9c8b5",10,-2,6,5); px("#2c2624",13,0,1,1);
+  px("#5e4939",-8,7,3,7); px("#5e4939",3,7,3,7); px("#5e4939",9,5,3,7);
+  px("#c8b19c",-13,-2,2,8); px("#c8b19c",-15,4,3,2);
+  c.restore();
+}
+function drawPig(c,x,y,s=1){
+  c.save(); c.translate(x,y); c.scale(s,s); c.imageSmoothingEnabled=false;
+  const px=(col,rx,ry,rw=1,rh=1)=>{c.fillStyle=col;c.fillRect(rx,ry,rw,rh)};
+  px("#e8929d",-10,-4,16,10); px("#f1a8ae",4,-6,9,8);
+  px("#c96e7c",9,-2,6,5); px("#492f32",11,-1,1,1); px("#492f32",14,-1,1,1);
+  px("#d27b88",-7,6,3,6); px("#d27b88",2,6,3,6); px("#d27b88",8,3,3,7);
+  px("#f1a8ae",5,-9,3,4); px("#f1a8ae",10,-9,3,4);
+  c.restore();
+}
+function drawChicken(c,x,y,s=1){
+  c.save(); c.translate(x,y); c.scale(s,s); c.imageSmoothingEnabled=false;
+  const px=(col,rx,ry,rw=1,rh=1)=>{c.fillStyle=col;c.fillRect(rx,ry,rw,rh)};
+  px("#f3eee5",-5,-5,10,11); px("#ffffff",1,-9,7,8);
+  px("#dc5848",4,-11,2,3); px("#dc5848",6,-10,2,2); px("#e3a33f",8,-5,4,2);
+  px("#2c2825",5,-7,1,1); px("#d6923b",-2,6,2,5); px("#d6923b",3,6,2,5);
+  c.restore();
+}
+
 function drawMob(c,mob,sx,sy){
   if(mob.kind==="slime") {
     drawSlimeSprite(c,sx,sy,0.23,mob.facing||"down",mob.animTime||0,true);
@@ -287,6 +324,12 @@ function drawMob(c,mob,sx,sy){
     drawGoblinSprite(c,sx,sy,0.23,mob.facing||"down",mob.animTime||0,true);
   } else if(mob.kind==="wolf") {
     drawWolfSprite(c,sx,sy,0.23,mob.facing||"down",mob.animTime||0,true);
+  } else if(mob.kind==="cow") {
+    drawCow(c,sx,sy,1.0);
+  } else if(mob.kind==="pig") {
+    drawPig(c,sx,sy,1.0);
+  } else if(mob.kind==="chicken") {
+    drawChicken(c,sx,sy,1.0);
   } else if(mob.kind==="boss") {
     drawBoss(c,sx,sy,1.15);
   }
@@ -300,6 +343,9 @@ function drawBattleSprites(){
   if(enemy.kind==="slime") drawSlimeSprite(enemyCtx,36,39,0.68,"down",performance.now()/1000,true);
   else if(enemy.kind==="goblin") drawGoblinSprite(enemyCtx,36,39,0.68,"down",performance.now()/1000,true);
   else if(enemy.kind==="wolf") drawWolfSprite(enemyCtx,36,39,0.68,"down",performance.now()/1000,true);
+  else if(enemy.kind==="cow") drawCow(enemyCtx,36,40,1.55);
+  else if(enemy.kind==="pig") drawPig(enemyCtx,36,40,1.65);
+  else if(enemy.kind==="chicken") drawChicken(enemyCtx,36,40,1.8);
   else drawBoss(enemyCtx,36,38,.95);
 }
 

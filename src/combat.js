@@ -239,7 +239,7 @@ function defeatWorldMob(mob){
     state.slimeKills++;
     if(state.slimeKills>=SLIMES_REQUIRED&&!state.questComplete){
       state.questComplete=true;
-      setTimeout(()=>toast("Quest complete! The castle is open."),550);
+      setTimeout(()=>toast("Starter task complete! Explore the rest of the zone."),550);
     }
   }
   if(mob.boss||e.boss) state.bossDefeated=true;
@@ -282,7 +282,7 @@ function worldCombatDeath(){
   selectedTarget=null;
 
   state.hp=state.maxHp;
-  state.x=6*TILE+TILE/2; state.y=7*TILE+TILE/2;
+  state.x=START_X; state.y=START_Y;
   lastSafePos={x:state.x,y:state.y};
   toast("You wake up back in Oakrest.");
   updateUI();
@@ -539,7 +539,7 @@ function winBattle(){
     state.slimeKills++;
     if(state.slimeKills>=SLIMES_REQUIRED&&!state.questComplete){
       state.questComplete=true;
-      setTimeout(()=>toast("Quest complete! The castle is open."),500);
+      setTimeout(()=>toast("Starter task complete! Explore the rest of the zone."),500);
     }
   }
   if(e.boss)state.bossDefeated=true;
@@ -561,8 +561,8 @@ function winBattle(){
 function loseBattle(){
   state.gold=Math.floor(state.gold*(1-DEATH_GOLD_LOSS));
   state.hp=state.maxHp;
-  state.x=6*TILE+TILE/2;
-  state.y=7*TILE+TILE/2;
+  state.x=START_X;
+  state.y=START_Y;
   lastSafePos={x:state.x,y:state.y};
   endBattle();
   toast("You wake up back in Oakrest.");

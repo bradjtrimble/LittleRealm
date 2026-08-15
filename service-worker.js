@@ -1,4 +1,4 @@
-const CACHE_NAME = "little-realm-v20-backpack";
+const CACHE_NAME = "little-realm-v21-starter-zone";
 const FILES = [
   "./",
   "./index.html",

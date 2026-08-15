@@ -86,6 +86,12 @@ except Exception as e:
     failed.append('backpack inventory test'); print('FAIL backpack inventory test',e)
 
 try:
+    zone=subprocess.run(['python3',str(ROOT/'tools'/'zone-test.py')],check=True,capture_output=True,text=True)
+    print(zone.stdout.strip())
+except Exception as e:
+    failed.append('starter zone layout test'); print('FAIL starter zone layout test',e)
+
+try:
     config_test=subprocess.run(['node',str(ROOT/'tools'/'config-test.js')],check=True,capture_output=True,text=True)
     print(config_test.stdout.strip())
 except Exception as e:

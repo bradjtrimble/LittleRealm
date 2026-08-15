@@ -134,6 +134,37 @@ window.LR_BALANCE = {
       wanderDelayMaxSeconds: 4.0
     },
 
+
+    cow: {
+      hp: 12, attack: 1, defense: 0, xp: 4,
+      goldMin: 0, goldMax: 0, goldDropChancePercent: 0,
+      potionDropChancePercent: 0, potionDropAmount: 0,
+      attackIntervalSeconds: 1.8, respawnMinSeconds: 20, respawnMaxSeconds: 30,
+      aggressive: false, aggroTriggerRange: 0, alertRange: 0,
+      chaseSpeed: 28, wanderSpeed: 12, leashDistance: 54, leashSpeed: 26,
+      wanderDelayMinSeconds: 1.8, wanderDelayMaxSeconds: 4.5
+    },
+
+    pig: {
+      hp: 8, attack: 1, defense: 0, xp: 3,
+      goldMin: 0, goldMax: 0, goldDropChancePercent: 0,
+      potionDropChancePercent: 0, potionDropAmount: 0,
+      attackIntervalSeconds: 1.8, respawnMinSeconds: 20, respawnMaxSeconds: 30,
+      aggressive: false, aggroTriggerRange: 0, alertRange: 0,
+      chaseSpeed: 30, wanderSpeed: 14, leashDistance: 48, leashSpeed: 26,
+      wanderDelayMinSeconds: 1.5, wanderDelayMaxSeconds: 4.0
+    },
+
+    chicken: {
+      hp: 4, attack: 1, defense: 0, xp: 2,
+      goldMin: 0, goldMax: 0, goldDropChancePercent: 0,
+      potionDropChancePercent: 0, potionDropAmount: 0,
+      attackIntervalSeconds: 1.7, respawnMinSeconds: 16, respawnMaxSeconds: 25,
+      aggressive: false, aggroTriggerRange: 0, alertRange: 0,
+      chaseSpeed: 34, wanderSpeed: 18, leashDistance: 46, leashSpeed: 28,
+      wanderDelayMinSeconds: 1.0, wanderDelayMaxSeconds: 3.2
+    },
+
     stoneKing: {
       hp: 50,
       attack: 10,

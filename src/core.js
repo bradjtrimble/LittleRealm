@@ -74,8 +74,12 @@ const HOUSE_SPECS = {
 
 
 const TILE = 64;
-const WORLD_W = 28;
-const WORLD_H = 20;
+const WORLD_W = 44;
+const WORLD_H = 32;
+const START_TILE_X = 7;
+const START_TILE_Y = 7;
+const START_X = START_TILE_X*TILE+TILE/2;
+const START_Y = START_TILE_Y*TILE+TILE/2;
 const HERO_SPEED = numberOr(BALANCE.player?.moveSpeed,180); // world pixels per second
 const HERO_RADIUS = 5;
 const MOB_RADIUS = 14;

@@ -19,11 +19,11 @@ function updateUI(){
 
   let q;
   if(state.bossDefeated){
-    q="Stone King defeated. You won!";
-    document.getElementById("questChip").textContent="Victory";
+    q="Starter zone complete.";
+    document.getElementById("questChip").textContent="Starter zone";
   }else if(state.questComplete){
-    q="Go southeast to Stone Castle and defeat the Stone King.";
-    document.getElementById("questChip").textContent="Go to the castle";
+    q="Starter task complete. Explore the farm, wilderness, and goblin camp.";
+    document.getElementById("questChip").textContent="Explore the zone";
   }else{
     q=`Defeat ${SLIMES_REQUIRED} Slimes (${state.slimeKills}/${SLIMES_REQUIRED}).`;
     document.getElementById("questChip").textContent=`Slimes ${state.slimeKills}/${SLIMES_REQUIRED}`;
