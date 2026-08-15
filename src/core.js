@@ -76,6 +76,11 @@ houseBImage.src = "./assets/buildings/house-b.png";
 let houseBReady = houseBImage.complete && houseBImage.naturalWidth > 0;
 houseBImage.onload = () => { houseBReady = true; };
 
+const caveEntranceImage = new Image();
+caveEntranceImage.src = "./assets/environment/cave-entrance.png";
+let caveEntranceReady = caveEntranceImage.complete && caveEntranceImage.naturalWidth > 0;
+caveEntranceImage.onload = () => { caveEntranceReady = true; };
+
 const HOUSE_SPECS = {
   A:{image:houseAImage, ready:()=>houseAReady, w:118, h:91, footprint:{x:12,y:66,w:94,h:23}},
   B:{image:houseBImage, ready:()=>houseBReady, w:128, h:89, footprint:{x:8,y:67,w:112,h:20}}

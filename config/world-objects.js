@@ -1,4 +1,7 @@
-/* Exported from Little Realm Developer Mode */
+/*
+  Little Realm world layout — integrated from the latest Developer Mode export.
+  This is now the project baseline layout for full packaged updates.
+*/
 window.LR_WORLD_OBJECTS = [
   {
     "id": "town-well",
@@ -546,19 +549,21 @@ window.LR_WORLD_OBJECTS = [
     "contents": []
   },
   {
-    "id": "next-zone-gate",
-    "type": "blockedGate",
-    "x": 2264,
-    "y": 1860,
+    "id": "snickers-cave",
+    "type": "caveEntrance",
+    "x": 2204,
+    "y": 1788,
+    "w": 244,
+    "h": 176,
     "solid": true,
     "hitbox": {
-      "x": 0,
-      "y": 14,
-      "w": 150,
-      "h": 48
+      "x": 60,
+      "y": 120,
+      "w": 124,
+      "h": 42
     },
     "interactable": true,
-    "label": "Blocked Next Zone",
+    "label": "Snickers' Cave",
     "container": false,
     "capacity": 0
   },

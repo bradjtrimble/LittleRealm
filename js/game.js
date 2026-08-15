@@ -81,6 +81,11 @@ houseBImage.src = "./assets/buildings/house-b.png";
 let houseBReady = houseBImage.complete && houseBImage.naturalWidth > 0;
 houseBImage.onload = () => { houseBReady = true; };
 
+const caveEntranceImage = new Image();
+caveEntranceImage.src = "./assets/environment/cave-entrance.png";
+let caveEntranceReady = caveEntranceImage.complete && caveEntranceImage.naturalWidth > 0;
+caveEntranceImage.onload = () => { caveEntranceReady = true; };
+
 const HOUSE_SPECS = {
   A:{image:houseAImage, ready:()=>houseAReady, w:118, h:91, footprint:{x:12,y:66,w:94,h:23}},
   B:{image:houseBImage, ready:()=>houseBReady, w:128, h:89, footprint:{x:8,y:67,w:112,h:20}}
@@ -564,7 +569,7 @@ function buildScenery(){
     {x:7*TILE+8,y:17*TILE+10,text:"Farm"},
     {x:18*TILE+8,y:10*TILE+5,text:"Slimes"},
     {x:35*TILE+8,y:10*TILE+5,text:"Goblin Camp"},
-    {x:36*TILE+4,y:28*TILE+12,text:"Snickers Cave"}
+    {x:36*TILE+4,y:27*TILE+30,text:"Snickers Cave"}
   );
 
   // Forest object placement. Boundary forest is deliberately denser than the
@@ -944,24 +949,17 @@ function drawPropObject(obj,camX,camY){
 
   ctx.save(); ctx.imageSmoothingEnabled=false;
   if(obj.type==="caveEntrance"){
-    const w=obj.w||154, h=obj.h||88;
-    const mouthW=Math.round(w*0.62), mouthH=Math.round(h*0.48);
-    const mouthX=x+Math.round((w-mouthW)/2), mouthY=y+Math.round(h*0.33);
-    const rock=(rx,ry,rw,rh,color)=>{ ctx.fillStyle=color; ctx.fillRect(Math.round(rx),Math.round(ry),Math.round(rw),Math.round(rh)); };
-    rock(x+18,y+14,w-36,16,"#6f5a48");
-    rock(x+8,y+22,18,26,"#7c6653");
-    rock(x+w-26,y+22,18,26,"#7c6653");
-    rock(x+4,y+40,22,26,"#635040");
-    rock(x+w-26,y+40,22,26,"#635040");
-    rock(x+28,y+8,w-56,10,"#8c755f");
-    rock(mouthX,mouthY,mouthW,mouthH,"#121013");
-    rock(mouthX+8,mouthY+8,mouthW-16,mouthH-8,"#1f1a20");
-    rock(x+30,y+h-14,w-60,8,"#5f4b3d");
-    ctx.fillStyle="rgba(0,0,0,.18)";
+    const w=obj.w||220, h=obj.h||160;
+    ctx.fillStyle="rgba(0,0,0,.22)";
     ctx.beginPath();
-    ctx.ellipse(x+w/2,y+h-4,w*.34,7,0,0,Math.PI*2);
+    ctx.ellipse(x + w/2, y + h - 8, Math.round(w*0.28), 10, 0, 0, Math.PI*2);
     ctx.fill();
-    for(const [ox,oy,rw,rh,col] of [[18,34,10,10,"#93806c"],[30,22,12,12,"#7b6755"],[w-40,20,12,12,"#8f7a66"],[w-28,36,10,10,"#756250"],[44,h-18,14,8,"#85705d"],[w-58,h-18,14,8,"#85705d"]]) rock(x+ox,y+oy,rw,rh,col);
+    if(caveEntranceReady && caveEntranceImage.naturalWidth){
+      ctx.drawImage(caveEntranceImage, x, y, w, h);
+    }else{
+      ctx.fillStyle="#5a4a3d"; ctx.fillRect(x+14,y+30,w-28,h-32);
+      ctx.fillStyle="#151214"; ctx.fillRect(x+40,y+56,w-80,h-46);
+    }
   }else if(obj.type==="crops") {
     const w=obj.w||90,h=obj.h||70;
     ctx.fillStyle="rgba(92,62,38,.42)"; ctx.fillRect(x,y,w,h);
@@ -1079,7 +1077,7 @@ function drawWorld(){
   for(const prop of sceneryProps){
     const sx=prop.x-camX, sy=prop.y-camY;
     if(sx<-180||sy<-100||sx>viewW+180||sy>viewH+120) continue;
-    renderables.push({kind:"prop",depth:prop.y+(prop.type==="blockedGate"?62:prop.type==="caveEntrance"?76:36),obj:prop});
+    renderables.push({kind:"prop",depth:prop.y+(prop.type==="blockedGate"?62:prop.type==="caveEntrance"?((prop.h||160)-10):36),obj:prop});
   }
   for(const npc of sceneryNPCs){
     const sx=npc.x-camX, sy=npc.y-camY;
@@ -1166,7 +1164,7 @@ function drawWorld(){
   label(6,17,"Farm");
   label(22,3,"Slime Spawns");
   label(37,4,"Goblin Camp");
-  label(36.8,28.5,"Snickers' Cave");
+  label(36.35,27.75,"Snickers' Cave");
 
   if(devModeActive) drawDeveloperOverlay(camX,camY,viewW,viewH);
   ctx.restore();
@@ -1251,7 +1249,7 @@ function worldObjectSpec(obj){
   if(!obj) return null;
   if(obj.type==="crops") return {w:obj.w||90,h:obj.h||70};
   if(obj.type==="blockedGate") return {w:150,h:62};
-  if(obj.type==="caveEntrance") return {w:obj.w||154,h:obj.h||88};
+  if(obj.type==="caveEntrance") return {w:obj.w||220,h:obj.h||160};
   return PROP_SPECS[obj.type]||null;
 }
 
@@ -1923,10 +1921,10 @@ function spawnMobs(){
     id:nextMobId++,
     kind:"boss",
     template:bossTemplate,
-    x:36*TILE+TILE/2,
-    y:27*TILE+TILE/2,
-    homeX:36*TILE+TILE/2,
-    homeY:27*TILE+TILE/2,
+    x:2326,
+    y:1750,
+    homeX:2326,
+    homeY:1750,
     vx:0,vy:0,
     drawVx:0,drawVy:0,
     facing:"down",
@@ -2189,7 +2187,7 @@ function drawMob(c,mob,sx,sy){
   } else if(mob.kind==="chicken") {
     drawChicken(c,sx,sy,1.0);
   } else if(mob.kind==="boss") {
-    drawBearSprite(c,sx,sy,0.18,mob.facing||"down",mob.animTime||0,Math.hypot(mob.drawVx||0,mob.drawVy||0)>1 || mob===combatTarget);
+    drawBearSprite(c,sx,sy,0.145,mob.facing||"down",mob.animTime||0,Math.hypot(mob.drawVx||0,mob.drawVy||0)>1 || mob===combatTarget);
   }
 }
 
@@ -2204,7 +2202,7 @@ function drawBattleSprites(){
   else if(enemy.kind==="cow") drawCow(enemyCtx,36,40,1.55);
   else if(enemy.kind==="pig") drawPig(enemyCtx,36,40,1.65);
   else if(enemy.kind==="chicken") drawChicken(enemyCtx,36,40,1.8);
-  else if(enemy.kind==="boss") drawBearSprite(enemyCtx,36,54,0.15,"down",performance.now()/1000,true);
+  else if(enemy.kind==="boss") drawBearSprite(enemyCtx,36,56,0.13,"down",performance.now()/1000,true);
   else drawBoss(enemyCtx,36,38,.95);
 }
 

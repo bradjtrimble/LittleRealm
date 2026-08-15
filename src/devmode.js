@@ -61,7 +61,7 @@ function worldObjectSpec(obj){
   if(!obj) return null;
   if(obj.type==="crops") return {w:obj.w||90,h:obj.h||70};
   if(obj.type==="blockedGate") return {w:150,h:62};
-  if(obj.type==="caveEntrance") return {w:obj.w||154,h:obj.h||88};
+  if(obj.type==="caveEntrance") return {w:obj.w||220,h:obj.h||160};
   return PROP_SPECS[obj.type]||null;
 }
 

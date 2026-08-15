@@ -1,4 +1,4 @@
-const CACHE_NAME = "little-realm-v26-clean-prop-sheet";
+const CACHE_NAME = "little-realm-v30-custom-world";
 const FILES = [
   "./",
   "./index.html",
@@ -22,7 +22,9 @@ const FILES = [
   "./assets/characters/player.png",
   "./assets/mobs/slime.png",
   "./assets/mobs/wolf.png",
-  "./assets/mobs/goblin.png"
+  "./assets/mobs/goblin.png",
+  "./assets/mobs/bear.png",
+  "./assets/environment/cave-entrance.png"
 ];
 
 self.addEventListener("install", event => {

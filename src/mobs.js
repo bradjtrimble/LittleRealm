@@ -103,10 +103,10 @@ function spawnMobs(){
     id:nextMobId++,
     kind:"boss",
     template:bossTemplate,
-    x:36*TILE+TILE/2,
-    y:27*TILE+TILE/2,
-    homeX:36*TILE+TILE/2,
-    homeY:27*TILE+TILE/2,
+    x:2326,
+    y:1750,
+    homeX:2326,
+    homeY:1750,
     vx:0,vy:0,
     drawVx:0,drawVy:0,
     facing:"down",
@@ -369,7 +369,7 @@ function drawMob(c,mob,sx,sy){
   } else if(mob.kind==="chicken") {
     drawChicken(c,sx,sy,1.0);
   } else if(mob.kind==="boss") {
-    drawBearSprite(c,sx,sy,0.18,mob.facing||"down",mob.animTime||0,Math.hypot(mob.drawVx||0,mob.drawVy||0)>1 || mob===combatTarget);
+    drawBearSprite(c,sx,sy,0.145,mob.facing||"down",mob.animTime||0,Math.hypot(mob.drawVx||0,mob.drawVy||0)>1 || mob===combatTarget);
   }
 }
 
@@ -384,7 +384,7 @@ function drawBattleSprites(){
   else if(enemy.kind==="cow") drawCow(enemyCtx,36,40,1.55);
   else if(enemy.kind==="pig") drawPig(enemyCtx,36,40,1.65);
   else if(enemy.kind==="chicken") drawChicken(enemyCtx,36,40,1.8);
-  else if(enemy.kind==="boss") drawBearSprite(enemyCtx,36,54,0.15,"down",performance.now()/1000,true);
+  else if(enemy.kind==="boss") drawBearSprite(enemyCtx,36,56,0.13,"down",performance.now()/1000,true);
   else drawBoss(enemyCtx,36,38,.95);
 }
 
