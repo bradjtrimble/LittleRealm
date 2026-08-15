@@ -1,0 +1,16 @@
+{
+  "baseline": "little_realm_world_v4",
+  "protected_systems": [
+    "drawContinuousTerrain",
+    "drawGrassTile",
+    "circleIntersectsRect",
+    "hitsSolidScenery",
+    "canStand"
+  ],
+  "rules": [
+    "terrain-seamless.png must remain the grass/dirt ground source",
+    "house collision uses HOUSE_SPECS footprint only",
+    "tree collision uses trunk rectangle only",
+    "new scenery features must be additive overlays, not replacements for protected render/collision functions"
+  ]
+}
