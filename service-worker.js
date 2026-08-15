@@ -1,4 +1,4 @@
-const CACHE_NAME = "little-realm-v18-water-pass";
+const CACHE_NAME = "little-realm-v19-water-texture";
 const FILES = [
   "./",
   "./index.html",
@@ -12,6 +12,7 @@ const FILES = [
   "./assets/icons/icon-192.png",
   "./assets/icons/icon-512.png",
   "./assets/environment/terrain-seamless.png",
+  "./assets/environment/water-seamless.png",
   "./assets/environment/environment-atlas.png",
   "./assets/buildings/house-a.png",
   "./assets/buildings/house-b.png",

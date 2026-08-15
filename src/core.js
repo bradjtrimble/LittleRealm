@@ -49,6 +49,11 @@ terrainTexture.src = "./assets/environment/terrain-seamless.png";
 let terrainTextureReady = terrainTexture.complete && terrainTexture.naturalWidth > 0;
 terrainTexture.onload = () => { terrainTextureReady = true; };
 
+const waterTexture = new Image();
+waterTexture.src = "./assets/environment/water-seamless.png";
+let waterTextureReady = waterTexture.complete && waterTexture.naturalWidth > 0;
+waterTexture.onload = () => { waterTextureReady = true; };
+
 const houseAImage = new Image();
 houseAImage.src = "./assets/buildings/house-a.png";
 let houseAReady = houseAImage.complete && houseAImage.naturalWidth > 0;

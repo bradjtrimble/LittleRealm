@@ -29,7 +29,7 @@
       await loadScript("./config/keybinds.js");
     }
 
-    await loadScript("./js/game.js");
+    await loadScript("./js/game.js", true);
   }
 
   bootLittleRealm().catch(err => {

@@ -54,6 +54,11 @@ terrainTexture.src = "./assets/environment/terrain-seamless.png";
 let terrainTextureReady = terrainTexture.complete && terrainTexture.naturalWidth > 0;
 terrainTexture.onload = () => { terrainTextureReady = true; };
 
+const waterTexture = new Image();
+waterTexture.src = "./assets/environment/water-seamless.png";
+let waterTextureReady = waterTexture.complete && waterTexture.naturalWidth > 0;
+waterTexture.onload = () => { waterTextureReady = true; };
+
 const houseAImage = new Image();
 houseAImage.src = "./assets/buildings/house-a.png";
 let houseAReady = houseAImage.complete && houseAImage.naturalWidth > 0;
@@ -321,50 +326,33 @@ function drawForestTile(x,y,variant=0,tx=0,ty=0){
 }
 
 function drawWaterTile(x,y,variant=0,tx=0,ty=0){
-  // Higher-detail pixel-art water to match the terrain/building quality.
-  const t=performance.now()*0.0014;
-  const px=8;
-  const palette=["#2e6997","#3b86b6","#4da7d4","#7fd4ee"];
-  const ox=Math.floor(x)-1;
-  const oy=Math.floor(y)-1;
-
   ctx.imageSmoothingEnabled=false;
-  ctx.fillStyle=palette[1];
-  ctx.fillRect(ox,oy,TILE+2,TILE+2);
 
-  // Fill the tile using deterministic 8x8 water pixels so it feels like a real texture,
-  // but animate the shading gently with a wave phase.
-  for(let gy=0;gy<8;gy++){
-    for(let gx=0;gx<8;gx++){
-      const wx=tx*8+gx;
-      const wy=ty*8+gy;
-      const wave=Math.sin(wx*0.72+t*2.4)+Math.cos(wy*0.66-t*1.9);
-      const seed=(worldHash(wx+19,wy+7)%9)*0.14;
-      const v=wave*0.55+seed;
-      let idx=1;
-      if(v<-0.35) idx=0;
-      else if(v>0.72) idx=3;
-      else if(v>0.15) idx=2;
-      ctx.fillStyle=palette[idx];
-      ctx.fillRect(Math.floor(x)+gx*px,Math.floor(y)+gy*px,px,px);
-    }
+  if(waterTextureReady){
+    const size=512;
+    const sx=(((tx*TILE)%size)+size)%size;
+    const sy=(((ty*TILE)%size)+size)%size;
+    ctx.drawImage(
+      waterTexture,
+      sx,sy,TILE,TILE,
+      Math.floor(x)-1,Math.floor(y)-1,TILE+2,TILE+2
+    );
+  }else{
+    ctx.fillStyle="#247b99";
+    ctx.fillRect(Math.floor(x)-1,Math.floor(y)-1,TILE+2,TILE+2);
   }
 
-  // Subtle brighter ripples to sell motion without becoming noisy.
-  ctx.fillStyle="rgba(255,255,255,.22)";
-  for(let i=0;i<3;i++){
-    const base=(worldHash(tx*13+i*5,ty*17+i*11)%42)+8;
-    const row=(worldHash(tx*7+i*23,ty*5+i*31)%5)*9+8;
-    const drift=Math.sin(t*2+i*1.7+tx*0.8+ty*0.5)*6;
-    const rx=Math.round(x+base+drift);
-    const ry=Math.round(y+row);
-    ctx.fillRect(rx,ry,12,2);
-    ctx.fillRect(rx+3,ry+2,6,1);
+  // Small moving highlights sit on top of the texture. They are deliberately
+  // short/broken so the water never turns back into horizontal tile stripes.
+  const t=performance.now()*0.001;
+  for(let i=0;i<2;i++){
+    const seed=worldHash(tx*31+i*17,ty*37+i*23);
+    const rx=x+7+(seed%42)+Math.sin(t*1.7+i+tx*.4+ty*.2)*3;
+    const ry=y+10+((seed>>3)%38);
+    ctx.fillStyle=i===0?"rgba(202,241,242,.34)":"rgba(143,220,230,.24)";
+    ctx.fillRect(Math.round(rx),Math.round(ry),7+(seed%8),1);
+    if(seed%3===0) ctx.fillRect(Math.round(rx)+3,Math.round(ry)+2,5,1);
   }
-
-  // Slight inner shadow so water has depth and stops reading as a flat fill.
-  ctx.fillStyle="rgba(19,57,83,.22)";
-  ctx.fillRect(Math.floor(x),Math.floor(y)+TILE-10,TILE,10);
 }
 
 function drawRoadTile(x,y,variant=0,tx=0,ty=0){
@@ -466,32 +454,43 @@ function drawWaterEdgeOverlay(x,y,tx,ty){
   const s=worldTypeAt(tx,ty+1)===1;
   const w=worldTypeAt(tx-1,ty)===1;
   const e=worldTypeAt(tx+1,ty)===1;
+  const depth=(edge,i)=>5+(worldHash(tx*43+i*11+(edge===1?101:edge===2?203:edge===3?307:409),ty*47+i*13)%7);
 
-  // A soft sandy bank plus foam reads much better than hard flat borders.
-  ctx.fillStyle="#b99663";
-  if(!n) ctx.fillRect(Math.floor(x),Math.floor(y),TILE,6);
-  if(!s) ctx.fillRect(Math.floor(x),Math.floor(y)+TILE-6,TILE,6);
-  if(!w) ctx.fillRect(Math.floor(x),Math.floor(y),6,TILE);
-  if(!e) ctx.fillRect(Math.floor(x)+TILE-6,Math.floor(y),6,TILE);
+  // Let the real grass texture overlap the water in a jagged pixel shoreline.
+  // Collision still uses the unchanged water tiles; this is visual only.
+  if(!n) paintContinuousGrassClip(x,y,tx,ty,()=>{
+    ctx.moveTo(x,y);ctx.lineTo(x+TILE,y);
+    for(let i=4;i>=0;i--) ctx.lineTo(x+i*16,y+depth(1,i));
+    ctx.closePath();
+  });
+  if(!s) paintContinuousGrassClip(x,y,tx,ty,()=>{
+    ctx.moveTo(x,y+TILE);ctx.lineTo(x+TILE,y+TILE);
+    for(let i=4;i>=0;i--) ctx.lineTo(x+i*16,y+TILE-depth(2,i));
+    ctx.closePath();
+  });
+  if(!w) paintContinuousGrassClip(x,y,tx,ty,()=>{
+    ctx.moveTo(x,y);ctx.lineTo(x,y+TILE);
+    for(let i=4;i>=0;i--) ctx.lineTo(x+depth(3,i),y+i*16);
+    ctx.closePath();
+  });
+  if(!e) paintContinuousGrassClip(x,y,tx,ty,()=>{
+    ctx.moveTo(x+TILE,y);ctx.lineTo(x+TILE,y+TILE);
+    for(let i=4;i>=0;i--) ctx.lineTo(x+TILE-depth(4,i),y+i*16);
+    ctx.closePath();
+  });
 
-  ctx.fillStyle="#d6c091";
-  if(!n) ctx.fillRect(Math.floor(x),Math.floor(y),TILE,2);
-  if(!s) ctx.fillRect(Math.floor(x),Math.floor(y)+TILE-2,TILE,2);
-  if(!w) ctx.fillRect(Math.floor(x),Math.floor(y),2,TILE);
-  if(!e) ctx.fillRect(Math.floor(x)+TILE-2,Math.floor(y),2,TILE);
+  // Sandy pixels and foam are broken into short sections instead of straight borders.
+  ctx.fillStyle="#b89a62";
+  if(!n) for(let i=0;i<4;i++){const d=depth(1,i);ctx.fillRect(x+i*16+2,y+d-2,12,3);}
+  if(!s) for(let i=0;i<4;i++){const d=depth(2,i);ctx.fillRect(x+i*16+2,y+TILE-d-1,12,3);}
+  if(!w) for(let i=0;i<4;i++){const d=depth(3,i);ctx.fillRect(x+d-2,y+i*16+2,3,12);}
+  if(!e) for(let i=0;i<4;i++){const d=depth(4,i);ctx.fillRect(x+TILE-d-1,y+i*16+2,3,12);}
 
-  ctx.fillStyle="rgba(255,255,255,.34)";
-  if(!n) ctx.fillRect(Math.floor(x)+7,Math.floor(y)+5,TILE-14,2);
-  if(!s) ctx.fillRect(Math.floor(x)+7,Math.floor(y)+TILE-7,TILE-14,2);
-  if(!w) ctx.fillRect(Math.floor(x)+5,Math.floor(y)+7,2,TILE-14);
-  if(!e) ctx.fillRect(Math.floor(x)+TILE-7,Math.floor(y)+7,2,TILE-14);
-
-  // Corner caps keep the banks from looking like a reintroduced tile grid.
-  ctx.fillStyle="#b99663";
-  if(!n && !w) ctx.fillRect(Math.floor(x),Math.floor(y),10,10);
-  if(!n && !e) ctx.fillRect(Math.floor(x)+TILE-10,Math.floor(y),10,10);
-  if(!s && !w) ctx.fillRect(Math.floor(x),Math.floor(y)+TILE-10,10,10);
-  if(!s && !e) ctx.fillRect(Math.floor(x)+TILE-10,Math.floor(y)+TILE-10,10,10);
+  ctx.fillStyle="rgba(225,244,234,.42)";
+  if(!n) for(let i=0;i<3;i++){const d=depth(1,i);ctx.fillRect(x+i*20+8,y+d+2,8,1);}
+  if(!s) for(let i=0;i<3;i++){const d=depth(2,i);ctx.fillRect(x+i*20+8,y+TILE-d-3,8,1);}
+  if(!w) for(let i=0;i<3;i++){const d=depth(3,i);ctx.fillRect(x+d+2,y+i*20+8,1,8);}
+  if(!e) for(let i=0;i<3;i++){const d=depth(4,i);ctx.fillRect(x+TILE-d-3,y+i*20+8,1,8);}
 }
 
 function drawFenceObject(obj,camX,camY){
