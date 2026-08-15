@@ -18,7 +18,7 @@
     "value": 1.85,
     "rule": "POV changes modify CAMERA_ZOOM only; do not rewrite terrain/collision systems."
   },
-  "combat_update": "v9 open-world auto combat; no separate turn-based battle screen",
+  "combat_update": "v10 open-world combat balance: shorter melee/acquire range + attack-button global cooldown",
   "combat_protected_validation": {
     "drawContinuousTerrain": "PASS",
     "drawGrassTile": "PASS",
@@ -27,11 +27,15 @@
     "canStand": "PASS",
     "drawRoadShapeOverlay": "PASS",
     "drawWaterEdgeOverlay": "PASS",
-    "CAMERA_ZOOM": "PASS"
+    "CAMERA_ZOOM": "PASS",
+    "world_assets": "PASS"
   },
   "combat_behavior": {
-    "engage": "tap a mob or use the ATTACK button near a mob",
-    "attack_style": "timed automatic melee exchanges while both actors remain in the overworld",
+    "engage": "tap a mob or use ATTACK only within 72 world pixels",
+    "melee_range": "30 world pixels",
+    "auto_chase": "up to 82 world pixels after a valid engage",
+    "attack_button_gcd": "0.90 seconds; repeated attack presses cannot bypass combat timing",
+    "first_attack_delay": "0.62 seconds; enemy wind-up begins slightly sooner to prevent free opener spam",
     "disengage": "move beyond disengage range or tap LEAVE COMBAT",
     "hp_display": "world-space health bars and target HUD",
     "potions": "quick-use button remains available during combat"

@@ -480,6 +480,7 @@ button.action:active{transform:scale(.98)}
 }
 #actionHint.ready{background:rgba(117,57,47,.88);border-color:rgba(255,180,140,.55)}
 #actionHint.engaged{background:rgba(91,44,45,.9);border-color:rgba(255,122,122,.58)}
+#actionHint.cooldown{background:rgba(58,55,65,.88);border-color:rgba(190,184,205,.35);color:#cfc9d8}
 #actionHint:active{transform:scale(.95)}
 
 </style>
@@ -804,14 +805,18 @@ let townCooldown=0;
 let castleCooldown=0;
 
 // Open-world combat state (RuneScape-style auto combat)
-const ATTACK_RANGE=46;
+const ATTACK_RANGE=30;
+const MAX_ENGAGE_RANGE=72;
 const DISENGAGE_RANGE=260;
-const AUTO_CHASE_RANGE=210;
+const AUTO_CHASE_RANGE=82;
 const PLAYER_ATTACK_INTERVAL=1.15;
 const ENEMY_ATTACK_INTERVAL=1.45;
+const ATTACK_BUTTON_GCD=.90;
+const ATTACK_START_DELAY=.62;
 let combatTarget=null;
 let playerAttackTimer=0;
 let enemyAttackTimer=0;
+let attackButtonCooldown=0;
 let playerAttackAnim=0;
 let enemyAttackAnim=0;
 let potionCooldown=0;
@@ -900,6 +905,7 @@ function reset(){
   playerAttackAnim=0;
   enemyAttackAnim=0;
   combatFx=[];
+  attackButtonCooldown=0;
   input={up:false,down:false,left:false,right:false};
   spawnMobs();
   closeAll();
@@ -1632,7 +1638,7 @@ function drawWorld(){
       if((mob.attackAnim||0)>0 && mob===combatTarget){
         const phase=Math.sin((1-mob.attackAnim/.20)*Math.PI);
         const dx=state.x-mob.x,dy=state.y-mob.y,len=Math.max(1,Math.hypot(dx,dy));
-        sx+=dx/len*8*phase; sy+=dy/len*8*phase;
+        sx+=dx/len*6*phase; sy+=dy/len*6*phase;
       }
 
       ctx.fillStyle="rgba(0,0,0,.20)";
@@ -1650,7 +1656,7 @@ function drawWorld(){
       if(playerAttackAnim>0 && combatTarget && combatTarget.alive){
         const phase=Math.sin((1-playerAttackAnim/.20)*Math.PI);
         const dx=combatTarget.x-state.x,dy=combatTarget.y-state.y,len=Math.max(1,Math.hypot(dx,dy));
-        hx+=dx/len*9*phase; hy+=dy/len*9*phase;
+        hx+=dx/len*5*phase; hy+=dy/len*5*phase;
       }
       drawHero(ctx,hx,hy,0.055,isHeroMoving,moveAnimTime,heroFacing);
       if(combatTarget || state.hp<state.maxHp) drawWorldHpBar(hx,hy-31,state.hp,state.maxHp,42);
@@ -1729,6 +1735,7 @@ function updateMovement(dt){
   townCooldown=Math.max(0,townCooldown-dt);
   castleCooldown=Math.max(0,castleCooldown-dt);
   potionCooldown=Math.max(0,potionCooldown-dt);
+  attackButtonCooldown=Math.max(0,attackButtonCooldown-dt);
 
   const t=tileAtWorld(state.x,state.y);
   if(t===4 && townCooldown<=0){townCooldown=2;townEvent()}
@@ -1824,8 +1831,10 @@ function updateOpenCombat(dt){
   }
 
   if(d>ATTACK_RANGE){
-    playerAttackTimer=Math.min(playerAttackTimer,.18);
-    enemyAttackTimer=Math.min(enemyAttackTimer,.35);
+    // Closing distance does not preload an instant hit. The first swing still
+    // respects the attack cycle once the fighter reaches melee range.
+    playerAttackTimer=Math.max(playerAttackTimer,.12);
+    enemyAttackTimer=Math.max(enemyAttackTimer,.12);
     updateCombatHud();
     return;
   }
@@ -1901,21 +1910,26 @@ function updateCombatHud(){
   const action=document.getElementById("actionHint");
   if(!hud||!action) return;
 
-  action.classList.remove("ready","engaged");
+  action.classList.remove("ready","engaged","cooldown");
   if(combatTarget && combatTarget.alive){
     hud.classList.add("show");
     document.getElementById("targetName").textContent=combatTarget.template.name;
     document.getElementById("targetHpText").textContent=`${Math.max(0,Math.ceil(combatTarget.hp))}/${combatTarget.maxHp}`;
     document.getElementById("targetHpFill").style.width=`${Math.max(0,100*combatTarget.hp/combatTarget.maxHp)}%`;
     const d=dist(state.x,state.y,combatTarget.x,combatTarget.y);
-    document.getElementById("combatHint").textContent=d>ATTACK_RANGE?"Moving into range…":"Auto-attacking • move away to escape";
+    document.getElementById("combatHint").textContent=d>ATTACK_RANGE?"Closing to melee range…":"Auto-attacking • move away to escape";
     action.innerHTML="LEAVE<br>COMBAT";
     action.classList.add("engaged");
   }else{
     hud.classList.remove("show");
-    const near=findNearestMob(125);
-    action.innerHTML=near?"ATTACK<br>MOB":"TAP MOB<br>TO FIGHT";
-    if(near) action.classList.add("ready");
+    const near=findNearestMob(MAX_ENGAGE_RANGE);
+    if(attackButtonCooldown>0){
+      action.innerHTML=`ATTACK<br>${attackButtonCooldown.toFixed(1)}s`;
+      action.classList.add("cooldown");
+    }else{
+      action.innerHTML=near?"ATTACK<br>MOB":"TAP MOB<br>TO FIGHT";
+      if(near) action.classList.add("ready");
+    }
   }
 }
 
@@ -1930,16 +1944,31 @@ function findNearestMob(maxDistance=Infinity){
 }
 
 function engageMob(mob,forced=false){
-  if(!mob||!mob.alive) return;
-  if(combatTarget===mob) return;
+  if(!mob||!mob.alive) return false;
+  if(combatTarget===mob) return true;
+
+  const engageDistance=dist(state.x,state.y,mob.x,mob.y);
+  if(!forced && engageDistance>MAX_ENGAGE_RANGE){
+    toast("Move closer before attacking.");
+    return false;
+  }
+  if(!forced && attackButtonCooldown>0){
+    toast(`Attack ready in ${attackButtonCooldown.toFixed(1)}s.`);
+    return false;
+  }
+
   combatTarget=mob;
   currentMob=mob;
   mob.aggro=true;
-  playerAttackTimer=.16;
-  enemyAttackTimer=.72;
+  if(!forced) attackButtonCooldown=ATTACK_BUTTON_GCD;
+
+  // Starting or switching combat can never grant an instant free hit.
+  playerAttackTimer=Math.max(playerAttackTimer,ATTACK_START_DELAY);
+  enemyAttackTimer=Math.max(enemyAttackTimer,ATTACK_START_DELAY-.08);
   heroFacing=vectorFacing(mob.x-state.x,mob.y-state.y,heroFacing);
   updateCombatHud();
   if(!forced) toast(`Engaged ${mob.template.name}.`);
+  return true;
 }
 
 function disengageCombat(showToast=true){
@@ -2108,6 +2137,7 @@ function startBattle(base,mobRef=null){
   enemy.atk=base.atk+Math.floor((state.level-1)*.6);
   defending=false;
   battleLocked=false;
+  attackButtonCooldown=0;
   input={up:false,down:false,left:false,right:false};
 
   document.getElementById("battleTitle").textContent=`${enemy.name} Encounter`;
@@ -2318,6 +2348,7 @@ function load(){
     currentMob=null;
     combatTarget=null;
     combatFx=[];
+    attackButtonCooldown=0;
     input={up:false,down:false,left:false,right:false};
     spawnMobs();
     closeAll();
@@ -2381,9 +2412,13 @@ window.addEventListener("keyup",e=>{
 document.getElementById("actionHint").innerHTML="TAP MOB<br>TO FIGHT";
 document.getElementById("actionHint").onclick=()=>{
   if(combatTarget){disengageCombat();return}
-  const near=findNearestMob(135);
+  if(attackButtonCooldown>0){
+    toast(`Attack ready in ${attackButtonCooldown.toFixed(1)}s.`);
+    return;
+  }
+  const near=findNearestMob(MAX_ENGAGE_RANGE);
   if(near) engageMob(near);
-  else toast("Move closer or tap a mob.");
+  else toast("Move closer before attacking.");
 };
 document.getElementById("quickPotion").onclick=useQuickPotion;
 game.addEventListener("pointerdown",handleWorldTap);
