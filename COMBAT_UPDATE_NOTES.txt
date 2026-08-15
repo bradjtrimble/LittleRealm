@@ -1,0 +1,21 @@
+Little Realm v7 Combat Pass
+
+Protected systems unchanged:
+- seamless terrain renderer
+- grass renderer
+- house/tree collision functions
+- world renderer
+- CAMERA_ZOOM = 1.85
+
+Combat changes:
+- larger combat sprites
+- separate hero/enemy HP bars
+- clearer turn badge
+- attack lunge and hit shake feedback
+- floating damage/healing numbers
+- enemy attack telegraph
+- improved Guard action (55% damage reduction)
+- potion heal feedback
+- disabled actions while a turn is resolving
+- boss Run button disabled
+- updated mobile battle layout

@@ -211,50 +211,210 @@ button.action{
 }
 button.action:active{transform:scale(.98)}
 #closeMenu{grid-column:1/-1}
-#battlePanel{text-align:center}
+#battlePanel{
+  text-align:left;
+  width:min(520px,96vw);
+  padding:14px;
+  overflow:hidden;
+}
+.battleHeader{
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  gap:10px;
+  margin-bottom:8px;
+}
+#battleTitle{
+  margin:0;
+  font-size:19px;
+  letter-spacing:.2px;
+}
+#turnBadge{
+  padding:5px 9px;
+  border-radius:999px;
+  background:rgba(126,226,159,.16);
+  border:1px solid rgba(126,226,159,.35);
+  color:#bff7d0;
+  font-size:11px;
+  font-weight:900;
+  white-space:nowrap;
+}
+#turnBadge.enemy{
+  background:rgba(255,125,125,.14);
+  border-color:rgba(255,125,125,.35);
+  color:#ffc1c1;
+}
+#turnBadge.guard{
+  background:rgba(141,180,255,.16);
+  border-color:rgba(141,180,255,.38);
+  color:#c7d8ff;
+}
+#battleMsg{
+  min-height:38px;
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  padding:8px 10px;
+  border-radius:10px;
+  background:rgba(17,13,24,.42);
+  border:1px solid rgba(255,255,255,.08);
+  color:#f1e9d8;
+  text-align:center;
+  font-size:13px;
+  font-weight:700;
+}
 #battleScene{
-  height:230px;
+  height:285px;
   border-radius:14px;
-  background:linear-gradient(#223449,#3f6945 62%,#574835 62%);
   position:relative;
   overflow:hidden;
-  margin:10px 0 14px;
+  margin:10px 0 12px;
+  background:
+    linear-gradient(rgba(19,28,38,.08),rgba(12,20,17,.08)),
+    linear-gradient(#283c50 0 51%,#50794b 51% 73%,#66503d 73%);
+  border:1px solid rgba(255,255,255,.10);
+  box-shadow:inset 0 -22px 40px rgba(0,0,0,.18);
 }
+#battleScene::before{
+  content:"";
+  position:absolute;
+  left:0;right:0;bottom:42px;
+  height:42px;
+  background:rgba(39,55,34,.20);
+  border-top:2px solid rgba(255,255,255,.05);
+}
+.battleGroundShadow{
+  position:absolute;
+  height:18px;
+  border-radius:50%;
+  background:rgba(0,0,0,.24);
+  filter:blur(1px);
+}
+#heroGroundShadow{left:12%;bottom:36px;width:105px}
+#enemyGroundShadow{right:10%;bottom:43px;width:120px}
 .fighterLabel{
   position:absolute;
   top:10px;
-  padding:6px 9px;
-  border-radius:9px;
-  background:rgba(0,0,0,.57);
-  font-size:12px;
+  width:44%;
+  padding:8px 9px 9px;
+  border-radius:10px;
+  background:rgba(13,12,19,.72);
+  border:1px solid rgba(255,255,255,.12);
+  font-size:11px;
   text-align:left;
+  z-index:4;
+  box-shadow:0 4px 14px rgba(0,0,0,.22);
 }
-#heroLabel{left:10px}
-#enemyLabel{right:10px}
+#heroLabel{left:9px}
+#enemyLabel{right:9px}
+.fighterName{
+  display:flex;
+  justify-content:space-between;
+  align-items:center;
+  gap:5px;
+  font-size:12px;
+  font-weight:900;
+  color:#fff;
+  margin-bottom:5px;
+}
+.battleHpBar{
+  height:9px;
+  overflow:hidden;
+  border-radius:999px;
+  background:rgba(0,0,0,.55);
+  border:1px solid rgba(255,255,255,.08);
+}
+.battleHpFill{
+  height:100%;
+  width:100%;
+  border-radius:999px;
+  background:linear-gradient(90deg,#58c77a,#8aeba7);
+  transition:width .28s ease;
+}
+#bEnemyHpFill{background:linear-gradient(90deg,#d85858,#ff8d73)}
+.battleHpText{
+  color:#e9def0;
+  font-size:10px;
+  font-weight:750;
+}
 #heroBattleSprite{
   position:absolute;
-  left:17%;
-  bottom:28px;
-  width:48px;
-  height:66px;
+  left:14%;
+  bottom:42px;
+  width:82px;
+  height:112px;
+  image-rendering:pixelated;
+  z-index:3;
+  transform-origin:50% 85%;
 }
 #enemyBattleSprite{
   position:absolute;
-  right:18%;
-  bottom:32px;
-  width:72px;
-  height:72px;
+  right:14%;
+  bottom:48px;
+  width:108px;
+  height:108px;
+  image-rendering:pixelated;
+  z-index:3;
+  transform-origin:50% 85%;
 }
+#battleFlash{
+  position:absolute;
+  inset:0;
+  pointer-events:none;
+  z-index:8;
+  opacity:0;
+}
+#battleFlash.playerHit{animation:playerHitFlash .22s ease}
+#battleFlash.enemyHit{animation:enemyHitFlash .22s ease}
+@keyframes playerHitFlash{0%{opacity:0}45%{opacity:1;background:rgba(255,70,70,.22)}100%{opacity:0}}
+@keyframes enemyHitFlash{0%{opacity:0}45%{opacity:1;background:rgba(255,238,170,.20)}100%{opacity:0}}
+@keyframes heroLunge{0%{transform:translate(0,0)}45%{transform:translate(38px,-5px)}100%{transform:translate(0,0)}}
+@keyframes enemyLunge{0%{transform:translate(0,0)}45%{transform:translate(-38px,4px)}100%{transform:translate(0,0)}}
+@keyframes battleShake{0%,100%{transform:translateX(0)}25%{transform:translateX(-5px)}50%{transform:translateX(5px)}75%{transform:translateX(-3px)}}
+@keyframes guardPulse{0%,100%{filter:none}50%{filter:drop-shadow(0 0 8px #8db4ff) brightness(1.25)}}
+@keyframes healPulse{0%,100%{filter:none}50%{filter:drop-shadow(0 0 9px #7ee29f) brightness(1.25)}}
+#heroBattleSprite.heroLunge{animation:heroLunge .30s ease}
+#enemyBattleSprite.enemyLunge{animation:enemyLunge .32s ease}
+#heroBattleSprite.shake,#enemyBattleSprite.shake{animation:battleShake .25s linear}
+#heroBattleSprite.guardPulse{animation:guardPulse .6s ease}
+#heroBattleSprite.healPulse{animation:healPulse .65s ease}
+.floatNumber{
+  position:absolute;
+  z-index:10;
+  font-size:20px;
+  font-weight:1000;
+  text-shadow:0 2px 3px rgba(0,0,0,.8);
+  pointer-events:none;
+  animation:floatNumber .75s ease-out forwards;
+}
+.floatNumber.damage{color:#ffe2c5}
+.floatNumber.crit{color:#ffd85c;font-size:24px}
+.floatNumber.heal{color:#8ff0ad}
+.floatNumber.guard{color:#a9c7ff}
+@keyframes floatNumber{0%{opacity:0;transform:translateY(6px) scale(.85)}20%{opacity:1;transform:translateY(0) scale(1.08)}100%{opacity:0;transform:translateY(-34px) scale(1)}}
 .battleActions{
   display:grid;
   grid-template-columns:1fr 1fr;
   gap:8px;
 }
-#battleMsg{
-  min-height:20px;
-  color:#e9e3d3;
-  font-size:13px;
+button.battleAction{
+  min-height:56px;
+  padding:8px 10px;
+  display:flex;
+  flex-direction:column;
+  justify-content:center;
+  align-items:flex-start;
+  text-align:left;
+  background:linear-gradient(#705b8d,#5d496f);
+  border-color:rgba(255,255,255,.18);
 }
+button.battleAction strong{font-size:13px;letter-spacing:.3px}
+button.battleAction small{font-size:10px;color:#e8daf2;font-weight:650;margin-top:2px}
+button.battleAction:disabled{opacity:.42;filter:saturate(.55);transform:none}
+#attackBtn:not(:disabled){background:linear-gradient(#8b5a5f,#71464d)}
+#defendBtn:not(:disabled){background:linear-gradient(#526e91,#405876)}
+#potionBtn:not(:disabled){background:linear-gradient(#4f8063,#3f6850)}
+#runBtn:not(:disabled){background:linear-gradient(#75664d,#5d513e)}
 @media (orientation:landscape) and (max-height:550px){
   #dpad{transform:scale(.82);transform-origin:left bottom}
   #actionHint{transform:scale(.82);transform-origin:right bottom}
@@ -317,19 +477,33 @@ button.action:active{transform:scale(.98)}
 
   <div id="battle" class="overlay">
     <div id="battlePanel" class="panel">
-      <h2 id="battleTitle">Battle</h2>
+      <div class="battleHeader">
+        <h2 id="battleTitle">Battle</h2>
+        <div id="turnBadge">YOUR TURN</div>
+      </div>
       <div id="battleMsg">An enemy appears!</div>
       <div id="battleScene">
-        <div id="heroLabel" class="fighterLabel">Hero<br><span id="bHeroHp"></span></div>
-        <div id="enemyLabel" class="fighterLabel"><span id="bEnemyName"></span><br><span id="bEnemyHp"></span></div>
+        <div id="heroLabel" class="fighterLabel">
+          <div class="fighterName"><span>Hero</span><span id="bHeroLevel">Lv 1</span></div>
+          <div class="battleHpText" id="bHeroHp">HP 30/30</div>
+          <div class="battleHpBar"><div class="battleHpFill" id="bHeroHpFill"></div></div>
+        </div>
+        <div id="enemyLabel" class="fighterLabel">
+          <div class="fighterName"><span id="bEnemyName">Enemy</span><span id="bEnemyState"></span></div>
+          <div class="battleHpText" id="bEnemyHp">HP 0/0</div>
+          <div class="battleHpBar"><div class="battleHpFill" id="bEnemyHpFill"></div></div>
+        </div>
+        <div class="battleGroundShadow" id="heroGroundShadow"></div>
+        <div class="battleGroundShadow" id="enemyGroundShadow"></div>
         <canvas id="heroBattleSprite" width="48" height="66"></canvas>
         <canvas id="enemyBattleSprite" width="72" height="72"></canvas>
+        <div id="battleFlash"></div>
       </div>
       <div class="battleActions">
-        <button class="action" id="attackBtn">Attack</button>
-        <button class="action" id="defendBtn">Defend</button>
-        <button class="action" id="potionBtn">Potion</button>
-        <button class="action" id="runBtn">Run</button>
+        <button class="action battleAction" id="attackBtn"><strong>ATTACK</strong><small>Strike the enemy</small></button>
+        <button class="action battleAction" id="defendBtn"><strong>GUARD</strong><small>Reduce the next hit</small></button>
+        <button class="action battleAction" id="potionBtn"><strong>POTION</strong><small id="potionSub">Restore 14 HP</small></button>
+        <button class="action battleAction" id="runBtn"><strong>RUN</strong><small>Try to escape</small></button>
       </div>
     </div>
   </div>
@@ -548,6 +722,7 @@ let enemy=null;
 let currentMob=null;
 let defending=false;
 let battleLocked=false;
+let battlePhase="YOUR TURN";
 let toastTimer=null;
 let lastFrame=performance.now();
 let moveAnimTime=0;
@@ -711,10 +886,15 @@ function updateUI(){
   document.getElementById("mQuest").textContent=q;
 
   if(enemy){
-    document.getElementById("bHeroHp").textContent=`HP ${state.hp}/${state.maxHp}`;
+    document.getElementById("bHeroHp").textContent=`HP ${Math.max(0,state.hp)}/${state.maxHp}`;
+    document.getElementById("bHeroLevel").textContent=`Lv ${state.level}`;
     document.getElementById("bEnemyName").textContent=enemy.name;
     document.getElementById("bEnemyHp").textContent=`HP ${Math.max(0,enemy.hp)}/${enemy.maxHp}`;
-    document.getElementById("potionBtn").textContent=`Potion (${state.potions})`;
+    document.getElementById("bHeroHpFill").style.width=`${Math.max(0,100*state.hp/state.maxHp)}%`;
+    document.getElementById("bEnemyHpFill").style.width=`${Math.max(0,100*enemy.hp/enemy.maxHp)}%`;
+    document.getElementById("potionSub").textContent=`Restore 14 HP · ${state.potions} left`;
+    document.getElementById("bEnemyState").textContent=enemy.boss?"BOSS":"";
+    updateBattleButtons();
     drawBattleSprites();
   }
 }
@@ -1506,6 +1686,61 @@ function startMobBattle(mob){
   startBattle({...mob.template},mob);
 }
 
+function setBattlePhase(text,tone="player"){
+  battlePhase=text;
+  const badge=document.getElementById("turnBadge");
+  badge.textContent=text;
+  badge.classList.remove("enemy","guard");
+  if(tone==="enemy") badge.classList.add("enemy");
+  else if(tone==="guard") badge.classList.add("guard");
+}
+
+function updateBattleButtons(){
+  if(!enemy) return;
+  const locked=!!battleLocked;
+  document.getElementById("attackBtn").disabled=locked;
+  document.getElementById("defendBtn").disabled=locked;
+  document.getElementById("potionBtn").disabled=locked || state.potions<=0 || state.hp>=state.maxHp;
+  document.getElementById("runBtn").disabled=locked || !!enemy.boss;
+}
+
+function restartBattleAnimation(el,className){
+  if(!el) return;
+  el.classList.remove(className);
+  void el.offsetWidth;
+  el.classList.add(className);
+  el.addEventListener("animationend",()=>el.classList.remove(className),{once:true});
+}
+
+function battleFlash(kind){
+  const el=document.getElementById("battleFlash");
+  el.classList.remove("playerHit","enemyHit");
+  void el.offsetWidth;
+  el.classList.add(kind);
+  el.addEventListener("animationend",()=>el.classList.remove(kind),{once:true});
+}
+
+function battlePop(side,text,tone="damage"){
+  const scene=document.getElementById("battleScene");
+  const el=document.createElement("div");
+  el.className=`floatNumber ${tone}`;
+  el.textContent=text;
+  if(side==="hero"){
+    el.style.left="25%";
+    el.style.bottom="132px";
+  }else{
+    el.style.right="24%";
+    el.style.bottom="135px";
+  }
+  scene.appendChild(el);
+  setTimeout(()=>el.remove(),850);
+}
+
+function lockBattle(value=true){
+  battleLocked=value;
+  updateBattleButtons();
+}
+
 function startBattle(base,mobRef=null){
   currentMob=mobRef;
   enemy={...base};
@@ -1515,75 +1750,134 @@ function startBattle(base,mobRef=null){
   defending=false;
   battleLocked=false;
   input={up:false,down:false,left:false,right:false};
-  document.getElementById("battleTitle").textContent=`${enemy.name} attacks!`;
-  document.getElementById("battleMsg").textContent="Choose an action.";
+  document.getElementById("battleTitle").textContent=`Battle · ${enemy.name}`;
+  document.getElementById("battleMsg").textContent=`A ${enemy.name} stands in your way.`;
   document.getElementById("battle").classList.add("show");
+  setBattlePhase("YOUR TURN","player");
   updateUI();
 }
 
 function heroAttack(){
   if(!enemy||battleLocked)return;
-  battleLocked=true;
-  const crit=Math.random()<.12;
-  let dmg=Math.max(1,state.atk+rand(0,3)-enemy.def);
-  if(crit)dmg*=2;
-  enemy.hp-=dmg;
-  document.getElementById("battleMsg").textContent=crit?`Critical hit! ${dmg} damage.`:`You deal ${dmg} damage.`;
-  updateUI();
-  if(enemy.hp<=0){setTimeout(winBattle,400);return}
-  setTimeout(enemyTurn,480);
+  lockBattle(true);
+  setBattlePhase("YOUR ACTION","player");
+  document.getElementById("battleMsg").textContent="You move in to attack...";
+  restartBattleAnimation(document.getElementById("heroBattleSprite"),"heroLunge");
+
+  setTimeout(()=>{
+    if(!enemy)return;
+    const crit=Math.random()<.12;
+    let dmg=Math.max(1,state.atk+rand(0,3)-enemy.def);
+    if(crit)dmg*=2;
+    enemy.hp-=dmg;
+
+    restartBattleAnimation(document.getElementById("enemyBattleSprite"),"shake");
+    battleFlash("enemyHit");
+    battlePop("enemy",`-${dmg}`,crit?"crit":"damage");
+    document.getElementById("battleMsg").textContent=crit?`Critical hit! ${dmg} damage.`:`You deal ${dmg} damage.`;
+    updateUI();
+
+    if(enemy.hp<=0){
+      setBattlePhase("VICTORY","guard");
+      setTimeout(winBattle,620);
+      return;
+    }
+
+    setBattlePhase("ENEMY TURN","enemy");
+    setTimeout(enemyTurn,700);
+  },170);
 }
 
 function defend(){
   if(!enemy||battleLocked)return;
-  battleLocked=true;defending=true;
-  document.getElementById("battleMsg").textContent="You raise your guard.";
-  setTimeout(enemyTurn,380);
+  lockBattle(true);
+  defending=true;
+  setBattlePhase("GUARDING","guard");
+  document.getElementById("battleMsg").textContent="You brace for the next attack.";
+  restartBattleAnimation(document.getElementById("heroBattleSprite"),"guardPulse");
+  battlePop("hero","GUARD","guard");
+  setTimeout(enemyTurn,650);
 }
 
 function potion(){
   if(!enemy||battleLocked)return;
   if(state.potions<=0){document.getElementById("battleMsg").textContent="No potions left.";return}
   if(state.hp>=state.maxHp){document.getElementById("battleMsg").textContent="Your HP is already full.";return}
-  battleLocked=true;
+
+  lockBattle(true);
+  const before=state.hp;
   state.potions--;
   state.hp=Math.min(state.maxHp,state.hp+14);
-  document.getElementById("battleMsg").textContent="You recover 14 HP.";
+  const healed=state.hp-before;
+  setBattlePhase("RECOVERING","guard");
+  restartBattleAnimation(document.getElementById("heroBattleSprite"),"healPulse");
+  battlePop("hero",`+${healed}`,"heal");
+  document.getElementById("battleMsg").textContent=`Potion restores ${healed} HP.`;
   updateUI();
-  setTimeout(enemyTurn,450);
+  setTimeout(enemyTurn,780);
 }
 
 function run(){
   if(!enemy||battleLocked)return;
-  if(enemy.boss){document.getElementById("battleMsg").textContent="You cannot flee from the Stone King.";return}
-  if(Math.random()<.68){
-    if(currentMob){
-      // push the hero away a little so the same mob doesn't instantly retrigger combat
-      const dx=state.x-currentMob.x;
-      const dy=state.y-currentMob.y;
-      const len=Math.max(1,Math.hypot(dx,dy));
-      state.x+=dx/len*38;
-      state.y+=dy/len*38;
-    }
-    endBattle();
-    toast("You escaped.");
-  }else{
-    battleLocked=true;
-    document.getElementById("battleMsg").textContent="You couldn't escape.";
-    setTimeout(enemyTurn,380);
+  if(enemy.boss){
+    document.getElementById("battleMsg").textContent="There is no escape from the Stone King.";
+    return;
   }
+  lockBattle(true);
+  setBattlePhase("ESCAPE?","guard");
+  document.getElementById("battleMsg").textContent="You look for an opening...";
+
+  setTimeout(()=>{
+    if(Math.random()<.68){
+      if(currentMob){
+        const dx=state.x-currentMob.x;
+        const dy=state.y-currentMob.y;
+        const len=Math.max(1,Math.hypot(dx,dy));
+        state.x+=dx/len*38;
+        state.y+=dy/len*38;
+      }
+      endBattle();
+      toast("You escaped.");
+    }else{
+      document.getElementById("battleMsg").textContent="No opening — the enemy attacks!";
+      setBattlePhase("ENEMY TURN","enemy");
+      setTimeout(enemyTurn,500);
+    }
+  },360);
 }
 
 function enemyTurn(){
   if(!enemy)return;
-  let dmg=Math.max(1,enemy.atk+rand(0,2)-state.def);
-  if(defending)dmg=Math.max(1,Math.floor(dmg/2));
-  defending=false;
-  state.hp-=dmg;
-  document.getElementById("battleMsg").textContent=`${enemy.name} hits for ${dmg}.`;
-  updateUI();
-  if(state.hp<=0){state.hp=0;setTimeout(loseBattle,450);return}
-  battleLocked=false;
+  setBattlePhase("ENEMY TURN","enemy");
+  document.getElementById("battleMsg").textContent=`${enemy.name} prepares to strike...`;
+  restartBattleAnimation(document.getElementById("enemyBattleSprite"),"enemyLunge");
+
+  setTimeout(()=>{
+    if(!enemy)return;
+    let dmg=Math.max(1,enemy.atk+rand(0,2)-state.def);
+    const wasDefending=defending;
+    if(wasDefending)dmg=Math.max(1,Math.floor(dmg*.45));
+    defending=false;
+    state.hp-=dmg;
+
+    restartBattleAnimation(document.getElementById("heroBattleSprite"),"shake");
+    battleFlash("playerHit");
+    battlePop("hero",`-${dmg}`,wasDefending?"guard":"damage");
+    document.getElementById("battleMsg").textContent=wasDefending
+      ? `Guard absorbs the blow. You take ${dmg} damage.`
+      : `${enemy.name} hits you for ${dmg} damage.`;
+    updateUI();
+
+    if(state.hp<=0){
+      state.hp=0;
+      setBattlePhase("DEFEATED","enemy");
+      setTimeout(loseBattle,760);
+      return;
+    }
+
+    lockBattle(false);
+    setBattlePhase("YOUR TURN","player");
+  },330);
 }
 
 function winBattle(){
@@ -1644,6 +1938,7 @@ function endBattle(){
   currentMob=null;
   defending=false;
   battleLocked=false;
+  battlePhase="YOUR TURN";
   document.getElementById("battle").classList.remove("show");
   updateUI();
 }

@@ -1,4 +1,4 @@
-const CACHE_NAME = "little-realm-stable-v6-close-pov";
+const CACHE_NAME = "little-realm-v7-combat-pass";
 const FILES = [
   "./",
   "./index.html",
