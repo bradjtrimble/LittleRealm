@@ -78,6 +78,12 @@ try:
 except Exception as e:
     failed.append('keyboard input test'); print('FAIL keyboard input test',e)
 
+try:
+    config_test=subprocess.run(['node',str(ROOT/'tools'/'config-test.js')],check=True,capture_output=True,text=True)
+    print(config_test.stdout.strip())
+except Exception as e:
+    failed.append('live config test'); print('FAIL live config test',e)
+
 if failed:
     print('\nValidation failed:',', '.join(failed)); sys.exit(1)
 print('\nAll protected-system checks passed.')

@@ -1,0 +1,15 @@
+const fs=require('fs');
+const path=require('path');
+const ROOT=path.resolve(__dirname,'..');
+global.window=global;
+eval(fs.readFileSync(path.join(ROOT,'config','game-balance.js'),'utf8'));
+if(!global.LR_BALANCE) throw new Error('LR_BALANCE missing');
+if(global.LR_BALANCE.player.startingGold !== 0) throw new Error('startingGold should be 0 in v17 baseline');
+const index=fs.readFileSync(path.join(ROOT,'index.html'),'utf8');
+if(!index.includes('./js/runtime-loader.js')) throw new Error('runtime loader missing from index');
+const loader=fs.readFileSync(path.join(ROOT,'js','runtime-loader.js'),'utf8');
+if(!loader.includes('game-balance.js", true')) throw new Error('balance config not cache-busted');
+if(!loader.includes('keybinds.js", true')) throw new Error('keybind config not cache-busted');
+const sw=fs.readFileSync(path.join(ROOT,'service-worker.js'),'utf8');
+if(!sw.includes('cache:"no-store"')) throw new Error('service worker config fetch is not no-store');
+console.log('PASS live config test');
