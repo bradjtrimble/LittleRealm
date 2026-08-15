@@ -1848,8 +1848,16 @@ function updateOpenCombat(dt){
   }
 
   if(enemyAttackTimer<=0 && combatTarget && combatTarget.alive){
-    performEnemyAutoAttack(combatTarget);
-    enemyAttackTimer=ENEMY_ATTACK_INTERVAL + (combatTarget.kind==="wolf"?-.12:combatTarget.kind==="boss"?.18:0);
+    // Capture the attacker and schedule its next swing BEFORE applying damage.
+    // A killing blow can clear combatTarget during worldCombatDeath(), so never
+    // dereference combatTarget after performEnemyAutoAttack() returns.
+    const attackingMob=combatTarget;
+    enemyAttackTimer=ENEMY_ATTACK_INTERVAL + (attackingMob.kind==="wolf"?-.12:attackingMob.kind==="boss"?.18:0);
+    performEnemyAutoAttack(attackingMob);
+    if(!combatTarget){
+      updateCombatHud();
+      return;
+    }
   }
   updateCombatHud();
 }
@@ -2032,13 +2040,25 @@ function defeatWorldMob(mob){
 
 function worldCombatDeath(){
   state.gold=Math.floor(state.gold*.75);
-  state.hp=state.maxHp;
-  state.x=6*TILE+TILE/2; state.y=7*TILE+TILE/2;
-  lastSafePos={x:state.x,y:state.y};
+
+  // Clear active controls/effects before teleporting so the new life begins in
+  // a clean frame even if a direction or combat button was held at death.
+  input={up:false,down:false,left:false,right:false};
+  isHeroMoving=false;
+  playerAttackTimer=0;
+  enemyAttackTimer=0;
+  playerAttackAnim=0;
+  enemyAttackAnim=0;
+  combatFx=[];
+
   if(combatTarget && !combatTarget.boss){
     combatTarget.x=combatTarget.homeX; combatTarget.y=combatTarget.homeY;
   }
   disengageCombat(false);
+
+  state.hp=state.maxHp;
+  state.x=6*TILE+TILE/2; state.y=7*TILE+TILE/2;
+  lastSafePos={x:state.x,y:state.y};
   toast("You wake up back in Oakrest.");
   updateUI();
 }

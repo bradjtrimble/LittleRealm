@@ -1,4 +1,4 @@
-const CACHE_NAME = "little-realm-v10-combat-balance";
+const CACHE_NAME = "little-realm-v11-death-fix";
 const FILES = [
   "./",
   "./index.html",

@@ -18,7 +18,7 @@
     "value": 1.85,
     "rule": "POV changes modify CAMERA_ZOOM only; do not rewrite terrain/collision systems."
   },
-  "combat_update": "v10 open-world combat balance: shorter melee/acquire range + attack-button global cooldown",
+  "combat_update": "v11 death-state fix on top of v10 combat balance",
   "combat_protected_validation": {
     "drawContinuousTerrain": "PASS",
     "drawGrassTile": "PASS",
@@ -39,5 +39,11 @@
     "disengage": "move beyond disengage range or tap LEAVE COMBAT",
     "hp_display": "world-space health bars and target HUD",
     "potions": "quick-use button remains available during combat"
+  },
+  "death_fix": {
+    "root_cause": "enemy killing blow cleared combatTarget, then updateOpenCombat dereferenced combatTarget.kind in the same frame",
+    "fix": "capture attacking mob and schedule cooldown before applying damage; return cleanly if combat clears",
+    "respawn_cleanup": "movement input, attack timers, attack animations, and combat FX reset before Oakrest respawn",
+    "v10_balance_preserved": true
   }
 }
