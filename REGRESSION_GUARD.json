@@ -46,7 +46,7 @@
     "respawn_cleanup": "movement input, attack timers, attack animations, and combat FX reset before Oakrest respawn",
     "v10_balance_preserved": true
   },
-  "architecture_update": "v13 targeting + live balance config on top of user-confirmed v12 modular baseline",
+  "architecture_update": "v14 desktop keybinds + Node 24 GitHub Pages workflow on top of v13 targeting/config baseline",
   "source_modules": [
     "core.js",
     "world.js",
@@ -55,6 +55,7 @@
     "combat.js",
     "ui.js",
     "save.js",
+    "input.js",
     "loop.js",
     "bootstrap.js"
   ],
@@ -81,5 +82,15 @@
     "hud": "selected mob name and exact HP/max HP remain visible in the target HUD",
     "world_feedback": "selected mob gets a target ring and world-space HP bar",
     "attack": "ATTACK prioritizes the selected mob; aggressive mobs still auto-engage normally"
-  }
+  },
+  "keybind_config": "config/keybinds.js loads directly before js/game.js; key-only edits require no build step",
+  "pc_controls": {
+    "movement": "WASD or arrow keys",
+    "target": "Tab / Shift+Tab cycles nearby mobs",
+    "attack": "Space or F engages the selected target; auto-combat timing remains authoritative",
+    "potion": "Q",
+    "clear_or_disengage": "Escape",
+    "menu": "M"
+  },
+  "github_actions": ".github/workflows/static.yml uses checkout@v6, setup-node@v6 Node 24, configure-pages@v6, upload-pages-artifact@v5, deploy-pages@v5"
 }

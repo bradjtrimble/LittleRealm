@@ -33,7 +33,8 @@ window.LR_BALANCE = {
     playerDamageBonusMax: 3,
     enemyDamageBonusMin: 0,
     enemyDamageBonusMax: 2,
-    targetClickRadius: 34
+    targetClickRadius: 34,
+    keyboardTargetRange: 220
   },
 
   progression: {

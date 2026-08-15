@@ -9,27 +9,7 @@ bindHold("down","down");
 bindHold("left","left");
 bindHold("right","right");
 
-window.addEventListener("blur",()=>{
-  input={up:false,down:false,left:false,right:false};
-});
-document.addEventListener("visibilitychange",()=>{
-  if(document.hidden) input={up:false,down:false,left:false,right:false};
-});
-
-window.addEventListener("keydown",e=>{
-  const k=e.key.toLowerCase();
-  if(k==="arrowup"||k==="w"){e.preventDefault();input.up=true}
-  if(k==="arrowdown"||k==="s"){e.preventDefault();input.down=true}
-  if(k==="arrowleft"||k==="a"){e.preventDefault();input.left=true}
-  if(k==="arrowright"||k==="d"){e.preventDefault();input.right=true}
-});
-window.addEventListener("keyup",e=>{
-  const k=e.key.toLowerCase();
-  if(k==="arrowup"||k==="w")input.up=false;
-  if(k==="arrowdown"||k==="s")input.down=false;
-  if(k==="arrowleft"||k==="a")input.left=false;
-  if(k==="arrowright"||k==="d")input.right=false;
-});
+bindKeyboardControls();
 
 document.getElementById("actionHint").innerHTML="SELECT MOB<br>TO TARGET";
 document.getElementById("actionHint").onclick=()=>{

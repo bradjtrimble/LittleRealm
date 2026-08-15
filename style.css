@@ -472,3 +472,27 @@ button.action:active{transform:scale(.98)}
 #actionHint.cooldown{background:rgba(58,55,65,.88);border-color:rgba(190,184,205,.35);color:#cfc9d8}
 #actionHint.targeted{background:rgba(71,61,38,.90);border-color:rgba(255,220,96,.50);color:#fff1b8}
 #actionHint:active{transform:scale(.95)}
+
+/* Desktop keyboard help. Hidden on touch-first devices to keep the phone UI clean. */
+#pcControls{
+  display:none;
+  position:absolute;
+  left:50%;
+  bottom:12px;
+  transform:translateX(-50%);
+  z-index:8;
+  max-width:min(760px,78vw);
+  padding:7px 11px;
+  border:1px solid rgba(255,255,255,.13);
+  border-radius:9px;
+  background:rgba(18,18,24,.70);
+  color:rgba(255,255,255,.78);
+  font-size:11px;
+  font-weight:700;
+  text-align:center;
+  pointer-events:none;
+  white-space:nowrap;
+}
+@media (hover:hover) and (pointer:fine){
+  #pcControls{display:block}
+}

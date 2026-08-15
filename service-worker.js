@@ -1,4 +1,4 @@
-const CACHE_NAME = "little-realm-v13-targeting-config";
+const CACHE_NAME = "little-realm-v14-keybinds-node24";
 const FILES = [
   "./",
   "./index.html",
@@ -6,6 +6,7 @@ const FILES = [
   "./manifest.webmanifest",
   "./js/pwa.js",
   "./config/game-balance.js",
+  "./config/keybinds.js",
   "./js/game.js",
   "./assets/icons/icon-192.png",
   "./assets/icons/icon-512.png",

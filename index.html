@@ -28,6 +28,7 @@
   <button id="menuBtn">MENU</button>
   <div id="questChip">Slimes 0/3</div>
   <div id="toast"></div>
+  <div id="pcControls" aria-hidden="true"></div>
 
   <div id="dpad">
     <div class="pad" id="up">▲</div>
@@ -58,6 +59,7 @@
         <b>Quest</b><br>
         <span id="mQuest">Defeat 3 Slimes.</span>
       </div>
+      <div class="infoBox" id="keybindList" style="margin-bottom:12px"></div>
       <div class="menuActions">
         <button class="action" id="saveBtn">Save</button>
         <button class="action" id="loadBtn">Load</button>
@@ -104,6 +106,7 @@
 </div>
   <script src="./js/pwa.js"></script>
   <script src="./config/game-balance.js"></script>
+  <script src="./config/keybinds.js"></script>
   <script src="./js/game.js"></script>
 </body>
 </html>
