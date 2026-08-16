@@ -1,6 +1,6 @@
 from pathlib import Path
 ROOT=Path(__file__).resolve().parents[1]
-ORDER=["core.js","inventory.js","loot.js","world.js","devmode.js","player.js","mobs.js","combat.js","ui.js","save.js","input.js","loop.js","bootstrap.js"]
+ORDER=["core.js","inventory.js","loot.js","world.js","quests.js","devmode.js","player.js","mobs.js","combat.js","ui.js","save.js","input.js","loop.js","bootstrap.js"]
 error_handler='window.addEventListener("error", (event) => {\n  console.error("Little Realm error:", event.error || event.message);\n});\n'
 parts=[(ROOT/"src"/name).read_text().rstrip() for name in ORDER]
 out=error_handler.rstrip()+"\n\n(() => {\n"+"\n\n".join(parts)+"\n})();\n"

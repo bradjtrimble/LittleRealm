@@ -5,6 +5,8 @@ window.addEventListener("error", (event) => {
 (() => {
 const BALANCE = window.LR_BALANCE || {};
 const PROJECT_WORLD_OBJECTS = window.LR_WORLD_OBJECTS || [];
+const PROJECT_NPCS = window.LR_NPCS || [];
+const PROJECT_QUESTS = window.LR_QUESTS || [];
 const VISUAL_CONFIG = window.LR_VISUAL || {};
 
 function visualScaleOr(value,fallback=1){
@@ -51,7 +53,7 @@ function overlayIsShown(id){
 function isGameplayModalOpen(){
   // Backpack and loot are intentionally non-modal floating panels in v51.
   // Only true dialogs should stop movement/combat input.
-  return overlayIsShown("menu") || overlayIsShown("disposePrompt");
+  return overlayIsShown("menu") || overlayIsShown("disposePrompt") || overlayIsShown("npcDialog");
 }
 
 function isLootInteractionOpen(){
@@ -341,6 +343,7 @@ function refreshInventoryViews(){
   updateBackpackHud();
   if(document.getElementById("backpack")?.classList.contains("show")) renderInventory();
   if(document.getElementById("lootWindow")?.classList.contains("show") && typeof renderLootInventory==="function") renderLootInventory();
+  if(typeof refreshQuestUI==="function") refreshQuestUI();
 }
 
 function addItem(itemId,qty=1){
@@ -1205,6 +1208,68 @@ function addSolidRect(x,y,w,h,type="solid"){
   solidRects.push({x,y,w,h,type});
 }
 
+function cloneNpc(obj){
+  return JSON.parse(JSON.stringify(obj));
+}
+
+function normalizeNpcRecord(raw,index=0){
+  const npc=cloneNpc(raw||{});
+  npc.id=String(npc.id||`npc-${index+1}`).trim().replace(/\s+/g,"-").toLowerCase();
+  npc.name=String(npc.name||npc.id||"NPC");
+  npc.role=String(npc.role||"Villager");
+  npc.sprite=typeof npc.sprite==="string"?npc.sprite:"";
+  npc.x=numberOr(npc.x,START_X);
+  npc.y=numberOr(npc.y,START_Y);
+  npc.facing=["down","left","right","up"].includes(npc.facing)?npc.facing:"down";
+  npc.solid=npc.solid!==false;
+  npc.displayHeight=Math.max(24,numberOr(npc.displayHeight,58));
+  npc.greeting=String(npc.greeting||`Hello. I'm ${npc.name}.`);
+  npc.interactRadius=Math.max(20,numberOr(npc.interactRadius,58));
+  return npc;
+}
+
+function getProjectNPCs(){
+  return (PROJECT_NPCS||[]).map((npc,index)=>normalizeNpcRecord(npc,index));
+}
+
+function rebuildNpcCollision(){
+  solidRects=solidRects.filter(r=>r.type!=="npc");
+  for(const npc of sceneryNPCs){
+    if(npc.solid===false) continue;
+    const hb=npc.hitbox||{};
+    const w=Math.max(6,numberOr(hb.w,12));
+    const h=Math.max(6,numberOr(hb.h,14));
+    const x=numberOr(hb.x,-w/2);
+    const y=numberOr(hb.y,-h/2);
+    addSolidRect(npc.x+x,npc.y+y,w,h,"npc");
+  }
+}
+
+function findNpcAtWorld(wx,wy){
+  let best=null,bestScore=Infinity;
+  for(const npc of sceneryNPCs){
+    const h=Math.max(30,numberOr(npc.displayHeight,58)*VISUAL_SCALE.npcs);
+    const dx=Math.abs(wx-npc.x);
+    const dy=wy-npc.y;
+    const halfW=Math.max(18,h*.30);
+    if(dx<=halfW && dy>=-h && dy<=18){
+      const score=dx*dx+(dy*.55)*(dy*.55);
+      if(score<bestScore){best=npc;bestScore=score;}
+    }
+  }
+  return best;
+}
+
+function nearestInteractableNpc(range=72){
+  let best=null,bestDist=Infinity;
+  for(const npc of sceneryNPCs){
+    const d=dist(state.x,state.y,npc.x,npc.y);
+    const allowed=Math.max(range,numberOr(npc.interactRadius,58));
+    if(d<=allowed && d<bestDist){best=npc;bestDist=d;}
+  }
+  return best;
+}
+
 function buildScenery(){
   sceneryTrees.length=0;
   sceneryHouses.length=0;
@@ -1234,16 +1299,10 @@ function buildScenery(){
   // edit this list visually and export a replacement config file.
   sceneryProps.push(...getProjectWorldObjects());
 
-  // Future vendor / quest-giver placeholders. They are intentionally simple
-  // NPCs now; interaction behavior can be added later without redesigning town.
-  sceneryNPCs.push(
-    {x:5*TILE+18,y:5*TILE+12,name:"Mara",role:"Shopkeeper",shirt:"#b85c4a"},
-    {x:8*TILE+20,y:5*TILE+24,name:"Eldon",role:"Villager",shirt:"#4e79a7"},
-    {x:5*TILE+4,y:8*TILE+18,name:"Rhea",role:"Quest Giver",shirt:"#6e9c5e"},
-    {x:10*TILE+16,y:8*TILE+10,name:"Torren",role:"Blacksmith",shirt:"#8a6651"},
-    {x:4*TILE+22,y:20*TILE+28,name:"Farmer",role:"Farmer",shirt:"#b28b43"}
-  );
-  for(const npc of sceneryNPCs) addSolidRect(npc.x-6,npc.y-7,12,14,"npc");
+  // NPC placement is project data now. World Builder can move/add/delete NPCs
+  // and export config/npcs.js without changing this runtime module.
+  sceneryNPCs.push(...getProjectNPCs());
+  rebuildNpcCollision();
   addSolidRect(6*TILE+15,5*TILE+25,30,24,"well");
 
   // Farm perimeter. Keep a gate opening on the north side near the road.
@@ -1636,20 +1695,60 @@ function drawCastle(x,y){
   ctx.fillRect(x+44,y+31,3,7);
 }
 
+function npcSpriteImage(path){
+  if(!path) return null;
+  npcSpriteImage.cache=npcSpriteImage.cache||new Map();
+  if(npcSpriteImage.cache.has(path)) return npcSpriteImage.cache.get(path);
+  const image=new Image();
+  image.src=path;
+  image.onload=()=>buildSpriteFrameMeta(image);
+  npcSpriteImage.cache.set(path,image);
+  return image;
+}
+
+function npcQuestMarker(npc){
+  if(typeof getNpcQuestMarker!=="function") return "";
+  return getNpcQuestMarker(npc?.id)||"";
+}
+
 function drawNpcObject(obj,camX,camY){
   const x=Math.round(obj.x-camX), y=Math.round(obj.y-camY);
-  ctx.save(); ctx.imageSmoothingEnabled=false;
-  ctx.translate(x,y+15);
-  ctx.scale(VISUAL_SCALE.npcs,VISUAL_SCALE.npcs);
-  ctx.translate(-x,-(y+15));
-  ctx.fillStyle="rgba(0,0,0,.18)"; ctx.fillRect(x-6,y+8,12,3);
-  ctx.fillStyle="#d9ad84"; ctx.fillRect(x-5,y-11,10,9);
-  ctx.fillStyle="#5a3d2d"; ctx.fillRect(x-6,y-13,12,4); ctx.fillRect(x-6,y-9,2,5);
-  ctx.fillStyle=obj.shirt||"#627e9b"; ctx.fillRect(x-6,y-2,12,10);
-  ctx.fillStyle="#3b2e29"; ctx.fillRect(x-5,y+8,4,7); ctx.fillRect(x+1,y+8,4,7);
-  ctx.fillStyle="#202020"; ctx.fillRect(x-3,y-7,1,1); ctx.fillRect(x+2,y-7,1,1);
-  if(obj.role==="Quest Giver"){
-    ctx.fillStyle="#ffd45b"; ctx.font="900 12px system-ui"; ctx.textAlign="center"; ctx.fillText("!",x,y-18); ctx.textAlign="start";
+  const facingRows={down:0,left:1,right:2,up:3};
+  const row=facingRows[obj.facing]??0;
+  const image=npcSpriteImage(obj.sprite);
+  const displayH=Math.max(24,numberOr(obj.displayHeight,58))*VISUAL_SCALE.npcs;
+  let topY=y-displayH+12;
+
+  ctx.save();
+  ctx.imageSmoothingEnabled=false;
+  ctx.fillStyle="rgba(0,0,0,.18)";
+  ctx.beginPath();ctx.ellipse(x,y+9,Math.max(6,displayH*.13),3,0,0,Math.PI*2);ctx.fill();
+
+  if(image?.naturalWidth&&image?.naturalHeight){
+    const meta=spriteFrameMeta(image,row,0);
+    if(meta){
+      const dh=displayH;
+      const dw=Math.max(1,dh*(meta.sw/meta.sh));
+      topY=y-dh+14;
+      ctx.drawImage(image,meta.sx,meta.sy,meta.sw,meta.sh,Math.round(x-dw/2),Math.round(topY),Math.round(dw),Math.round(dh));
+    }
+  }else{
+    const scale=VISUAL_SCALE.npcs;
+    ctx.translate(x,y+15);ctx.scale(scale,scale);ctx.translate(-x,-(y+15));
+    ctx.fillStyle="#d9ad84"; ctx.fillRect(x-5,y-11,10,9);
+    ctx.fillStyle="#5a3d2d"; ctx.fillRect(x-6,y-13,12,4); ctx.fillRect(x-6,y-9,2,5);
+    ctx.fillStyle=obj.shirt||"#627e9b"; ctx.fillRect(x-6,y-2,12,10);
+    ctx.fillStyle="#3b2e29"; ctx.fillRect(x-5,y+8,4,7); ctx.fillRect(x+1,y+8,4,7);
+    ctx.fillStyle="#202020"; ctx.fillRect(x-3,y-7,1,1); ctx.fillRect(x+2,y-7,1,1);
+    topY=y-18*scale;
+  }
+
+  const marker=npcQuestMarker(obj);
+  if(marker){
+    const ready=marker==="?";
+    ctx.font="900 15px system-ui";ctx.textAlign="center";
+    ctx.lineWidth=3;ctx.strokeStyle="rgba(35,24,15,.82)";ctx.strokeText(marker,x,topY-7);
+    ctx.fillStyle=ready?"#ffe17b":"#ffd45b";ctx.fillText(marker,x,topY-7);ctx.textAlign="start";
   }
   ctx.restore();
 }
@@ -1914,7 +2013,437 @@ function castleEvent(){
   toast("The next zone is not open yet.");
 }
 
-const DEV_DRAFT_KEY = "littleRealmWorldBuilderDraftV1";
+// Data-driven quest runtime ---------------------------------------------------
+// Quest definitions live in config/quests.js and can be authored visually in
+// World Builder. Runtime progress stays in the normal player save state.
+
+function cloneQuest(value){
+  return JSON.parse(JSON.stringify(value));
+}
+
+function normalizeQuestObjective(raw={}){
+  const type=["kill","collect","talk","deliver","visit"].includes(raw.type)?raw.type:"talk";
+  const objective={
+    type,
+    target:typeof raw.target==="string"?raw.target:"",
+    amount:Math.max(1,Math.floor(numberOr(raw.amount,1)))
+  };
+  if(type==="visit"){
+    objective.x=numberOr(raw.x,START_X);
+    objective.y=numberOr(raw.y,START_Y);
+    objective.radius=Math.max(8,numberOr(raw.radius,36));
+  }
+  if(type==="collect"||type==="deliver") objective.consumeOnTurnIn=raw.consumeOnTurnIn!==false;
+  return objective;
+}
+
+function normalizeQuestDefinition(raw,index=0){
+  const quest=cloneQuest(raw||{});
+  quest.id=String(quest.id||`quest-${index+1}`).trim().replace(/\s+/g,"_").toLowerCase();
+  quest.title=String(quest.title||quest.id||"Untitled Quest");
+  quest.description=String(quest.description||"");
+  quest.giverNpc=String(quest.giverNpc||"");
+  quest.turnInNpc=String(quest.turnInNpc||quest.giverNpc||"");
+  quest.openingDialogue=String(quest.openingDialogue||quest.description||"Can you help me?");
+  quest.completionDialogue=String(quest.completionDialogue||"Thank you for your help.");
+  quest.objectives=(Array.isArray(quest.objectives)?quest.objectives:[]).map(normalizeQuestObjective);
+  if(!quest.objectives.length) quest.objectives=[normalizeQuestObjective({type:"talk",target:quest.turnInNpc||quest.giverNpc,amount:1})];
+  const rewards=quest.rewards||{};
+  quest.rewards={
+    xp:Math.max(0,Math.floor(numberOr(rewards.xp,0))),
+    gold:Math.max(0,Math.floor(numberOr(rewards.gold,0))),
+    items:(Array.isArray(rewards.items)?rewards.items:[])
+      .filter(item=>item&&typeof item.id==="string"&&item.id)
+      .map(item=>({id:item.id,qty:Math.max(1,Math.floor(numberOr(item.qty,1))) }))
+  };
+  quest.prerequisite=quest.prerequisite?String(quest.prerequisite):null;
+  quest.nextQuest=quest.nextQuest?String(quest.nextQuest):null;
+  quest.repeatable=!!quest.repeatable;
+  return quest;
+}
+
+let questDefinitions=(PROJECT_QUESTS||[]).map(normalizeQuestDefinition);
+let activeNpcDialogId=null;
+
+function replaceQuestDefinitions(list){
+  questDefinitions=(Array.isArray(list)?list:[]).map(normalizeQuestDefinition);
+  refreshQuestUI();
+}
+
+function getQuestDefinition(id){
+  return questDefinitions.find(quest=>quest.id===id)||null;
+}
+
+function ensureQuestState(){
+  if(!state) return {};
+  if(!state.quests||typeof state.quests!=="object"||Array.isArray(state.quests)) state.quests={};
+  return state.quests;
+}
+
+function questWasCompleted(id){
+  if(!id) return true;
+  const record=ensureQuestState()[id];
+  return !!record&&(record.status==="completed"||numberOr(record.completedCount,0)>0);
+}
+
+function questPrerequisiteMet(quest){
+  if(!quest?.prerequisite) return true;
+  if(Array.isArray(quest.prerequisite)) return quest.prerequisite.every(questWasCompleted);
+  return questWasCompleted(quest.prerequisite);
+}
+
+function questRecord(id){
+  return ensureQuestState()[id]||null;
+}
+
+function questObjectiveStoredProgress(quest,index){
+  const record=questRecord(quest.id);
+  return Math.max(0,Math.floor(numberOr(record?.objectives?.[index],0)));
+}
+
+function questObjectiveProgress(quest,index){
+  const objective=quest?.objectives?.[index];
+  if(!objective) return 0;
+  if(objective.type==="collect"||objective.type==="deliver") return Math.min(objective.amount,getItemCount(objective.target));
+  return Math.min(objective.amount,questObjectiveStoredProgress(quest,index));
+}
+
+function questObjectiveComplete(quest,index){
+  const objective=quest?.objectives?.[index];
+  return !!objective&&questObjectiveProgress(quest,index)>=objective.amount;
+}
+
+function questCanTurnIn(quest){
+  if(!quest) return false;
+  const record=questRecord(quest.id);
+  if(!record||record.status!=="active") return false;
+  return quest.objectives.every((_,index)=>questObjectiveComplete(quest,index));
+}
+
+function getQuestStatus(questOrId){
+  const quest=typeof questOrId==="string"?getQuestDefinition(questOrId):questOrId;
+  if(!quest) return "locked";
+  const record=questRecord(quest.id);
+  if(record?.status==="active") return questCanTurnIn(quest)?"ready":"active";
+  if(record?.status==="completed"&&!quest.repeatable) return "completed";
+  if(!questPrerequisiteMet(quest)) return "locked";
+  return "available";
+}
+
+function questsForNpc(npcId,kind="giver"){
+  return questDefinitions.filter(quest=>(kind==="turnin"?quest.turnInNpc:quest.giverNpc)===npcId);
+}
+
+function getNpcQuestMarker(npcId){
+  if(!state||!npcId) return "";
+  if(questsForNpc(npcId,"turnin").some(quest=>getQuestStatus(quest)==="ready")) return "?";
+  if(questsForNpc(npcId,"giver").some(quest=>getQuestStatus(quest)==="available")) return "!";
+  return "";
+}
+
+function questEscape(value){
+  return String(value??"").replace(/[&<>"']/g,ch=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[ch]));
+}
+
+function questTargetLabel(objective){
+  if(!objective) return "Objective";
+  if(objective.type==="kill"){
+    const template=[...enemyTemplates,bossTemplate].find(t=>(t.configKey||t.kind)===objective.target||t.kind===objective.target);
+    return template?.name||objective.target||"enemy";
+  }
+  if(objective.type==="collect"||objective.type==="deliver") return getItemDefinition(objective.target).name;
+  if(objective.type==="talk") return sceneryNPCs.find(n=>n.id===objective.target)?.name||objective.target||"NPC";
+  if(objective.type==="visit") return `location (${Math.round(objective.x)}, ${Math.round(objective.y)})`;
+  return objective.target||"target";
+}
+
+function questObjectiveText(quest,index){
+  const objective=quest.objectives[index];
+  const progress=questObjectiveProgress(quest,index);
+  const target=questTargetLabel(objective);
+  if(objective.type==="kill") return `Defeat ${target}: ${progress}/${objective.amount}`;
+  if(objective.type==="collect") return `Collect ${target}: ${progress}/${objective.amount}`;
+  if(objective.type==="deliver") return `Bring ${target}: ${progress}/${objective.amount}`;
+  if(objective.type==="talk") return `Talk to ${target}: ${progress}/${objective.amount}`;
+  if(objective.type==="visit") return `Visit ${target}: ${progress}/${objective.amount}`;
+  return `${target}: ${progress}/${objective.amount}`;
+}
+
+function questRewardText(quest){
+  const parts=[];
+  if(quest.rewards.xp) parts.push(`${quest.rewards.xp} XP`);
+  if(quest.rewards.gold) parts.push(`${quest.rewards.gold} gold`);
+  for(const item of quest.rewards.items) parts.push(`${item.qty}× ${getItemDefinition(item.id).name}`);
+  return parts.length?parts.join(" • "):"No reward";
+}
+
+function acceptQuest(id){
+  const quest=getQuestDefinition(id);
+  if(!quest||getQuestStatus(quest)!=="available") return false;
+  const old=ensureQuestState()[quest.id]||{};
+  ensureQuestState()[quest.id]={
+    status:"active",
+    objectives:quest.objectives.map(()=>0),
+    completedCount:Math.max(0,Math.floor(numberOr(old.completedCount,0))),
+    acceptedAt:Date.now(),
+    readyAnnounced:false
+  };
+  toast(`Quest accepted: ${quest.title}`);
+  refreshQuestUI();
+  renderNpcDialogue();
+  return true;
+}
+
+function abandonQuest(id){
+  const quest=getQuestDefinition(id);
+  const record=questRecord(id);
+  if(!quest||!record||record.status!=="active") return false;
+  const completedCount=Math.max(0,Math.floor(numberOr(record.completedCount,0)));
+  if(completedCount>0&&quest.repeatable) ensureQuestState()[id]={status:"available",completedCount};
+  else delete ensureQuestState()[id];
+  toast(`Abandoned: ${quest.title}`);
+  refreshQuestUI();
+  return true;
+}
+
+function questRewardsFit(quest){
+  for(const item of quest.rewards.items){
+    if(!canAddItem(item.id,item.qty)) return false;
+  }
+  return true;
+}
+
+function completeQuest(id){
+  const quest=getQuestDefinition(id);
+  if(!quest||!questCanTurnIn(quest)) return false;
+  if(!questRewardsFit(quest)){
+    toast("Make room in your backpack for the quest reward.");
+    return false;
+  }
+
+  // Collection/delivery objectives can optionally consume the required items.
+  const consume={};
+  for(const objective of quest.objectives){
+    if((objective.type==="collect"||objective.type==="deliver")&&objective.consumeOnTurnIn!==false){
+      consume[objective.target]=(consume[objective.target]||0)+objective.amount;
+    }
+  }
+  for(const [itemId,qty] of Object.entries(consume)) removeItem(itemId,qty);
+
+  state.xp+=quest.rewards.xp;
+  state.gold+=quest.rewards.gold;
+  for(const item of quest.rewards.items) addItem(item.id,item.qty);
+  levelCheck();
+
+  const record=questRecord(id)||{};
+  const completedCount=Math.max(0,Math.floor(numberOr(record.completedCount,0)))+1;
+  ensureQuestState()[id]={
+    status:quest.repeatable?"available":"completed",
+    objectives:quest.objectives.map(()=>0),
+    completedCount,
+    completedAt:Date.now(),
+    readyAnnounced:false
+  };
+
+  toast(`Quest complete: ${quest.title}`);
+  updateUI();
+  refreshQuestUI();
+  renderNpcDialogue();
+  return true;
+}
+
+function updateStoredQuestObjective(quest,index,amount=1){
+  const record=questRecord(quest.id);
+  if(!record||record.status!=="active") return false;
+  const objective=quest.objectives[index];
+  const before=questObjectiveStoredProgress(quest,index);
+  const next=Math.min(objective.amount,before+Math.max(0,Math.floor(numberOr(amount,1))));
+  if(!Array.isArray(record.objectives)) record.objectives=quest.objectives.map(()=>0);
+  record.objectives[index]=next;
+  return next!==before;
+}
+
+function notifyQuestKill(target,amount=1){
+  let changed=false;
+  for(const quest of questDefinitions){
+    if(getQuestStatus(quest)!=="active") continue;
+    quest.objectives.forEach((objective,index)=>{
+      if(objective.type==="kill"&&objective.target===target) changed=updateStoredQuestObjective(quest,index,amount)||changed;
+    });
+  }
+  if(changed) refreshQuestUI();
+}
+
+function notifyQuestTalk(npcId){
+  let changed=false;
+  for(const quest of questDefinitions){
+    if(getQuestStatus(quest)!=="active") continue;
+    quest.objectives.forEach((objective,index)=>{
+      if(objective.type==="talk"&&objective.target===npcId) changed=updateStoredQuestObjective(quest,index,1)||changed;
+    });
+  }
+  if(changed) refreshQuestUI();
+}
+
+function updateQuestVisits(){
+  if(!state) return;
+  let changed=false;
+  for(const quest of questDefinitions){
+    if(getQuestStatus(quest)!=="active") continue;
+    quest.objectives.forEach((objective,index)=>{
+      if(objective.type!=="visit"||questObjectiveComplete(quest,index)) return;
+      if(dist(state.x,state.y,objective.x,objective.y)<=objective.radius) changed=updateStoredQuestObjective(quest,index,1)||changed;
+    });
+  }
+  if(changed) refreshQuestUI();
+}
+
+function activeQuests(){
+  return questDefinitions.filter(quest=>["active","ready"].includes(getQuestStatus(quest)));
+}
+
+function refreshQuestReadyAnnouncements(){
+  for(const quest of activeQuests()){
+    const record=questRecord(quest.id);
+    const ready=questCanTurnIn(quest);
+    if(ready&&!record.readyAnnounced){
+      record.readyAnnounced=true;
+      toast(`Quest ready to turn in: ${quest.title}`);
+    }else if(!ready&&record.readyAnnounced){
+      record.readyAnnounced=false;
+    }
+  }
+}
+
+function renderQuestLog(){
+  const body=document.getElementById("questLogBody");
+  if(!body||!state) return;
+  const active=activeQuests();
+  const completed=questDefinitions.filter(q=>getQuestStatus(q)==="completed");
+  if(!active.length&&!completed.length){
+    body.innerHTML='<div class="questEmpty">No quests yet. Look for an NPC with a <b>!</b> over their head.</div>';
+    return;
+  }
+  body.innerHTML=`${active.map(quest=>{
+    const ready=getQuestStatus(quest)==="ready";
+    return `<article class="questLogEntry${ready?" ready":""}"><div class="questLogTitle">${questEscape(quest.title)}${ready?'<span>READY</span>':''}</div><div class="questLogDesc">${questEscape(quest.description)}</div><div class="questObjectives">${quest.objectives.map((_,index)=>`<div>${questEscape(questObjectiveText(quest,index))}</div>`).join("")}</div><div class="questRewards">Reward: ${questEscape(questRewardText(quest))}</div><button class="questAbandon" data-abandon-quest="${questEscape(quest.id)}">Abandon</button></article>`;
+  }).join("")}${completed.length?`<div class="questCompletedHeading">Completed</div>${completed.map(q=>`<div class="questCompletedItem">✓ ${questEscape(q.title)}</div>`).join("")}`:""}`;
+  body.querySelectorAll("[data-abandon-quest]").forEach(button=>button.onclick=()=>{
+    const id=button.dataset.abandonQuest;
+    if(confirm(`Abandon ${getQuestDefinition(id)?.title||"this quest"}?`)) abandonQuest(id);
+  });
+}
+
+function toggleQuestLog(){
+  const overlay=document.getElementById("questLog");
+  if(!overlay) return;
+  overlay.classList.toggle("show");
+  if(overlay.classList.contains("show")) renderQuestLog();
+}
+
+function closeQuestLog(){
+  document.getElementById("questLog")?.classList.remove("show");
+}
+
+function renderNpcDialogue(){
+  const overlay=document.getElementById("npcDialog");
+  const nameEl=document.getElementById("npcDialogName");
+  const roleEl=document.getElementById("npcDialogRole");
+  const textEl=document.getElementById("npcDialogText");
+  const actions=document.getElementById("npcDialogActions");
+  if(!overlay||!nameEl||!roleEl||!textEl||!actions||!activeNpcDialogId) return;
+  const npc=sceneryNPCs.find(n=>n.id===activeNpcDialogId);
+  if(!npc){closeNpcDialogue();return;}
+  nameEl.textContent=npc.name;
+  roleEl.textContent=npc.role||"Villager";
+  textEl.textContent=npc.greeting||`Hello. I'm ${npc.name}.`;
+
+  const ready=questsForNpc(npc.id,"turnin").filter(q=>getQuestStatus(q)==="ready");
+  const available=questsForNpc(npc.id,"giver").filter(q=>getQuestStatus(q)==="available");
+  const active=Array.from(new Set([
+    ...questsForNpc(npc.id,"giver"),
+    ...questsForNpc(npc.id,"turnin")
+  ])).filter(q=>getQuestStatus(q)==="active");
+
+  const cards=[];
+  for(const quest of ready){
+    cards.push(`<article class="npcQuestCard ready"><div class="npcQuestTitle">? ${questEscape(quest.title)}</div><div class="npcQuestCopy">${questEscape(quest.completionDialogue)}</div><div class="questRewards">Reward: ${questEscape(questRewardText(quest))}</div><button data-complete-quest="${questEscape(quest.id)}">Complete Quest</button></article>`);
+  }
+  for(const quest of available){
+    cards.push(`<article class="npcQuestCard"><div class="npcQuestTitle">! ${questEscape(quest.title)}</div><div class="npcQuestCopy">${questEscape(quest.openingDialogue)}</div><div class="questObjectives">${quest.objectives.map((_,index)=>`<div>${questEscape(questObjectiveText(quest,index))}</div>`).join("")}</div><div class="questRewards">Reward: ${questEscape(questRewardText(quest))}</div><button data-accept-quest="${questEscape(quest.id)}">Accept Quest</button></article>`);
+  }
+  for(const quest of active){
+    cards.push(`<article class="npcQuestCard active"><div class="npcQuestTitle">${questEscape(quest.title)}</div><div class="npcQuestCopy">In progress</div><div class="questObjectives">${quest.objectives.map((_,index)=>`<div>${questEscape(questObjectiveText(quest,index))}</div>`).join("")}</div></article>`);
+  }
+  actions.innerHTML=cards.join("")||'<div class="npcNoQuest">Nothing else right now.</div>';
+  actions.querySelectorAll("[data-accept-quest]").forEach(button=>button.onclick=()=>acceptQuest(button.dataset.acceptQuest));
+  actions.querySelectorAll("[data-complete-quest]").forEach(button=>button.onclick=()=>completeQuest(button.dataset.completeQuest));
+}
+
+function openNpcDialogue(npc){
+  if(!npc||!state) return false;
+  activeNpcDialogId=npc.id;
+  if(combatTarget) disengageCombat(false);
+  npc.facing=vectorFacing(state.x-npc.x,state.y-npc.y,npc.facing||"down");
+  notifyQuestTalk(npc.id);
+  document.getElementById("npcDialog")?.classList.add("show");
+  renderNpcDialogue();
+  return true;
+}
+
+function closeNpcDialogue(){
+  activeNpcDialogId=null;
+  document.getElementById("npcDialog")?.classList.remove("show");
+}
+
+function interactWithNpc(npc){
+  if(!npc||!state) return false;
+  const range=Math.max(42,numberOr(npc.interactRadius,58));
+  if(dist(state.x,state.y,npc.x,npc.y)>range){
+    toast(`Move closer to ${npc.name}.`);
+    return false;
+  }
+  return openNpcDialogue(npc);
+}
+
+function interactWithNearestNpc(){
+  if(isGameplayModalOpen()&&!overlayIsShown("npcDialog")) return false;
+  if(overlayIsShown("npcDialog")){closeNpcDialogue();return true;}
+  const npc=nearestInteractableNpc(76);
+  if(!npc){toast("No one is close enough to talk to.");return false;}
+  return interactWithNpc(npc);
+}
+
+function refreshQuestUI(){
+  if(!state) return;
+  refreshQuestReadyAnnouncements();
+  const active=activeQuests();
+  const tracked=active[0]||null;
+  const chip=document.getElementById("questChip");
+  if(chip){
+    if(!tracked){
+      chip.textContent="Quests";
+      chip.classList.remove("complete");
+    }else{
+      const ready=getQuestStatus(tracked)==="ready";
+      const objective=tracked.objectives[0];
+      const short=ready?`✓ ${tracked.title}`:`${tracked.title}: ${questObjectiveProgress(tracked,0)}/${objective.amount}`;
+      chip.textContent=short;
+      chip.classList.toggle("complete",ready);
+    }
+  }
+  const menuQuest=document.getElementById("mQuest");
+  if(menuQuest){
+    menuQuest.textContent=tracked
+      ?`${tracked.title} — ${tracked.objectives.map((_,index)=>questObjectiveText(tracked,index)).join(" • ")}`
+      :"No active quests. Talk to NPCs with a ! marker.";
+  }
+  if(document.getElementById("questLog")?.classList.contains("show")) renderQuestLog();
+  if(document.getElementById("npcDialog")?.classList.contains("show")) renderNpcDialogue();
+}
+
+const DEV_DRAFT_KEY = "littleRealmWorldBuilderDraftV2";
+const DEV_OLD_DRAFT_KEY = "littleRealmWorldBuilderDraftV1";
 let devModeActive=false;
 let devPanel=null;
 let devSelected=null;
@@ -1931,6 +2460,12 @@ let devShowDepthLines=true;
 let devSnap=8;
 let devStatusTimer=null;
 let devSelectedMob=null;
+let devSelectedNpc=null;
+let devNpcDragging=false;
+let devNpcDragOffset={x:0,y:0};
+let devPlaceNpcTemplate=null;
+let devSelectedQuestId=null;
+let devQuestFormDraft=null;
 let devActiveTab="objects";
 let devCombatMobType="goblin";
 let devPlayerTestBaseline=null;
@@ -1998,6 +2533,11 @@ function ensureDeveloperStyles(){
     #devPanel .devCombatDetails{background:#211b27;border:1px solid rgba(255,255,255,.08);border-radius:10px;margin:8px 0;overflow:hidden}.devCombatDetails summary{cursor:pointer;padding:10px 11px;font-weight:900;color:#d8c1e7;user-select:none}.devCombatDetails>div{padding:0 10px 10px}
     #devPanel .devPlayerTest{display:grid;grid-template-columns:minmax(110px,160px) 1fr;gap:10px;align-items:end}.devQuickLevels{display:flex;gap:5px;flex-wrap:wrap}.devQuickLevels button{border:1px solid rgba(255,255,255,.12);background:#30283a;color:#fff;border-radius:7px;padding:7px 9px;font-weight:800}
     #devPanel .devStatPreview{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:6px;margin-top:9px}.devStatPreview div{background:#2b2432;border-radius:8px;padding:8px;text-align:center}.devStatPreview b{display:block;color:#7ceaff;font-size:14px}.devStatPreview span{font-size:9px;color:#a99bb3;text-transform:uppercase;letter-spacing:.05em}
+    #devPanel .devNpcPalette{display:grid;grid-template-columns:repeat(3,1fr);gap:7px}.devNpcPalette button{border:1px solid rgba(255,255,255,.12);background:#30283a;color:#fff;border-radius:9px;padding:9px;font-weight:850;cursor:pointer}.devNpcPalette button.active{outline:2px solid #63e6ff;background:#385a64}
+    #devPanel #devNpcList,#devPanel #devQuestList{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:6px;max-height:230px;overflow:auto}.devNpcChip,.devQuestChip{border:1px solid rgba(255,255,255,.12);background:#2e2736;color:#e9dff0;border-radius:8px;padding:7px 9px;font-size:11px;cursor:pointer;text-align:left;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}.devNpcChip.active,.devQuestChip.active{outline:2px solid #63e6ff;background:#385a64}
+    #devPanel .devNpcInspector label,#devPanel .devQuestEditor label{display:flex;flex-direction:column;gap:4px;margin:7px 0;color:#d7cbdc;font-size:11px;font-weight:700}.devNpcInspector input,.devNpcInspector select,.devNpcInspector textarea,.devQuestEditor input,.devQuestEditor select,.devQuestEditor textarea{width:100%;background:#1c1821;color:#fff;border:1px solid #594b62;border-radius:7px;padding:8px;font:inherit}.devNpcInspector textarea,.devQuestEditor textarea{min-height:62px;resize:vertical}
+    #devPanel .devQuestObjective{margin-top:8px;padding:8px;border:1px solid rgba(255,255,255,.08);border-radius:9px;background:#2a2331}.devQuestObjectiveTop{display:grid;grid-template-columns:1fr 1.35fr .55fr auto;gap:6px;align-items:end}.devQuestObjectiveTop button{height:34px;border:1px solid rgba(255,255,255,.12);background:#713b47;color:#fff;border-radius:7px;font-weight:900}.devVisitGrid{display:grid;grid-template-columns:1fr 1fr 1fr;gap:6px}.devQuestListActions{display:flex;gap:7px;margin-top:8px}.devQuestListActions button{flex:1;border:1px solid rgba(255,255,255,.14);background:#5a4869;color:#fff;border-radius:8px;padding:8px;font-weight:800}
+    #devPanel .devProjectBig{display:grid;grid-template-columns:1fr 1fr;gap:8px}.devProjectBig button{border:1px solid rgba(255,255,255,.14);background:#5a4869;color:#fff;border-radius:9px;padding:10px;font-weight:850}.devProjectBig .primary{grid-column:1/-1;background:#38606a}.devProjectBig .danger{background:#713b47}.devProjectNote{padding:9px;border:1px solid rgba(99,230,255,.14);border-radius:9px;background:rgba(99,230,255,.05);color:#cbd9dd;font-size:10px;line-height:1.4}
     body.devMode #pcControls{opacity:.25}
     @media(max-width:1100px){#devPanel{width:min(650px,68vw)!important}#devPanel #devPalette{grid-template-columns:repeat(5,minmax(0,1fr))!important}}
     @media(max-width:760px){#devPanel .devTabs{grid-template-columns:repeat(2,1fr)}#devPanel .devCombatGrid{grid-template-columns:repeat(2,minmax(0,1fr))}#devPanel .devStatPreview{grid-template-columns:repeat(2,minmax(0,1fr))}#devPanel{width:calc(100vw - 12px)!important;right:6px!important;top:6px!important;height:calc(100vh - 12px)!important}#devPanel #devPalette{grid-template-columns:repeat(4,minmax(0,1fr))!important}#devPanel #devObjectList{grid-template-columns:repeat(2,minmax(0,1fr))}#devPanel #devScalePanel{grid-template-columns:1fr}.devQuad{grid-template-columns:repeat(2,1fr)!important}}
@@ -2246,51 +2786,137 @@ function setDeveloperTab(tab){
 }
 
 
+function developerWorldPack(){
+  return {
+    format:"little-realm-world-pack",
+    schemaVersion:1,
+    build:"v54-quest-builder",
+    exportedAt:new Date().toISOString(),
+    worldObjects:sceneryProps.map(cloneWorldObject),
+    npcs:sceneryNPCs.map(cloneNpc),
+    quests:questDefinitions.map(cloneQuest),
+    visualSettings:{...VISUAL_SCALE,mobTypes:{...MOB_TYPE_SCALE}},
+    balance:devBalanceClone(BALANCE)
+  };
+}
+
+function applyDeveloperWorldPack(pack,{quiet=false}={}){
+  if(!pack||typeof pack!=="object") throw new Error("World Pack is not an object");
+  if(Array.isArray(pack.worldObjects)){
+    sceneryProps.splice(0,sceneryProps.length,...pack.worldObjects.map(cloneWorldObject));
+    rebuildWorldObjectCollision();
+  }
+  if(Array.isArray(pack.npcs)){
+    sceneryNPCs.splice(0,sceneryNPCs.length,...pack.npcs.map((npc,index)=>normalizeNpcRecord(npc,index)));
+    rebuildNpcCollision();
+  }
+  if(Array.isArray(pack.quests)) replaceQuestDefinitions(pack.quests);
+  if(pack.visualSettings&&typeof pack.visualSettings==="object"){
+    for(const key of Object.keys(VISUAL_SCALE)) if(Number.isFinite(Number(pack.visualSettings[key]))) VISUAL_SCALE[key]=visualScaleOr(pack.visualSettings[key],VISUAL_SCALE[key]);
+    if(pack.visualSettings.mobTypes) for(const key of Object.keys(MOB_TYPE_SCALE)) if(Number.isFinite(Number(pack.visualSettings.mobTypes[key]))) MOB_TYPE_SCALE[key]=visualScaleOr(pack.visualSettings.mobTypes[key],MOB_TYPE_SCALE[key]);
+  }
+  if(pack.balance&&typeof pack.balance==="object"){
+    devReplaceBalance(pack.balance);
+    if(typeof refreshMobTemplatesFromBalance==="function") refreshMobTemplatesFromBalance();
+    if(typeof refreshAliveMobStatsForPlayer==="function"&&state) refreshAliveMobStatsForPlayer();
+  }
+  devSelected=null;devSelectedNpc=null;devSelectedMob=null;devSelectedQuestId=questDefinitions[0]?.id||null;devQuestFormDraft=null;
+  refreshDeveloperPanel();
+  updateUI?.();
+  if(!quiet) devSetStatus(`Loaded World Pack • ${sceneryProps.length} props • ${sceneryNPCs.length} NPCs • ${questDefinitions.length} quests`);
+}
+
 function saveDeveloperDraft(){
   try{
-    localStorage.setItem(DEV_DRAFT_KEY,JSON.stringify(sceneryProps));
-    devSetStatus("Draft autosaved locally");
+    localStorage.setItem(DEV_DRAFT_KEY,JSON.stringify(developerWorldPack()));
+    devSetStatus("World Builder draft autosaved locally");
   }catch(err){ console.warn("Could not save developer draft",err); }
 }
 
 function loadDeveloperDraft(){
   try{
-    const raw=localStorage.getItem(DEV_DRAFT_KEY);
+    const raw=localStorage.getItem(DEV_DRAFT_KEY)||localStorage.getItem(DEV_OLD_DRAFT_KEY);
     if(!raw){devSetStatus("No local draft found");return;}
     const parsed=JSON.parse(raw);
-    if(!Array.isArray(parsed)) throw new Error("Draft is not an array");
-    sceneryProps.splice(0,sceneryProps.length,...parsed.map(cloneWorldObject));
-    devSelected=null;
-    rebuildWorldObjectCollision();
-    refreshDeveloperPanel();
-    devSetStatus(`Loaded ${sceneryProps.length} draft objects`);
+    if(Array.isArray(parsed)){
+      // v1 migration: the original editor stored world objects only.
+      sceneryProps.splice(0,sceneryProps.length,...parsed.map(cloneWorldObject));
+      rebuildWorldObjectCollision();
+      devSelected=null;
+      refreshDeveloperPanel();
+      devSetStatus(`Loaded legacy draft with ${sceneryProps.length} objects`);
+      return;
+    }
+    applyDeveloperWorldPack(parsed);
   }catch(err){
     console.error(err); devSetStatus("Draft could not be loaded");
   }
 }
 
 function resetDeveloperLayout(){
-  if(!confirm("Reset the live editor to the project layout? Your local draft will remain until you overwrite it.")) return;
+  if(!confirm("Reset the live prop layout to config/world-objects.js? Your local World Pack draft will remain until you overwrite it.")) return;
   sceneryProps.splice(0,sceneryProps.length,...getProjectWorldObjects());
   devSelected=null;
   rebuildWorldObjectCollision();
   refreshDeveloperPanel();
-  devSetStatus("Project layout restored");
+  devSetStatus("Project prop layout restored");
+}
+
+function resetDeveloperProject(){
+  if(!confirm("Reset props, NPCs, quests, visual settings, and combat tuning to the deployed project files?")) return;
+  sceneryProps.splice(0,sceneryProps.length,...getProjectWorldObjects());
+  sceneryNPCs.splice(0,sceneryNPCs.length,...getProjectNPCs());
+  replaceQuestDefinitions(PROJECT_QUESTS);
+  Object.assign(VISUAL_SCALE,PROJECT_VISUAL_SCALE);
+  Object.assign(MOB_TYPE_SCALE,PROJECT_MOB_TYPE_SCALE);
+  devReplaceBalance(DEV_PROJECT_BALANCE);
+  refreshMobTemplatesFromBalance();
+  if(state) refreshAliveMobStatsForPlayer();
+  rebuildWorldObjectCollision();rebuildNpcCollision();
+  devSelected=null;devSelectedNpc=null;devSelectedMob=null;devSelectedQuestId=questDefinitions[0]?.id||null;devQuestFormDraft=null;
+  refreshDeveloperPanel();updateUI();
+  devSetStatus("Deployed project content restored");
+}
+
+function downloadDeveloperText(filename,text,type="application/json"){
+  const blob=new Blob([text],{type});
+  const url=URL.createObjectURL(blob);
+  const a=document.createElement("a");a.href=url;a.download=filename;document.body.appendChild(a);a.click();a.remove();
+  setTimeout(()=>URL.revokeObjectURL(url),1000);
 }
 
 function exportDeveloperLayout(){
   const clean=sceneryProps.map(cloneWorldObject);
-  const text=`/* Exported from Little Realm Developer Mode */\nwindow.LR_WORLD_OBJECTS = ${JSON.stringify(clean,null,2)};\n`;
-  const blob=new Blob([text],{type:"text/javascript"});
-  const url=URL.createObjectURL(blob);
-  const a=document.createElement("a");
-  a.href=url;
-  a.download="world-objects.js";
-  document.body.appendChild(a);
-  a.click();
-  a.remove();
-  setTimeout(()=>URL.revokeObjectURL(url),1000);
+  downloadDeveloperText("world-objects.js",`/* Exported from Little Realm World Builder */\nwindow.LR_WORLD_OBJECTS = ${JSON.stringify(clean,null,2)};\n`,"text/javascript");
   devSetStatus("Exported world-objects.js");
+}
+
+function exportDeveloperNpcs(){
+  downloadDeveloperText("npcs.js",`/* Exported from Little Realm World Builder */\nwindow.LR_NPCS = ${JSON.stringify(sceneryNPCs.map(cloneNpc),null,2)};\n`,"text/javascript");
+  devSetStatus("Exported npcs.js");
+}
+
+function exportDeveloperQuests(){
+  downloadDeveloperText("quests.js",`/* Exported from Little Realm World Builder */\nwindow.LR_QUESTS = ${JSON.stringify(questDefinitions.map(cloneQuest),null,2)};\n`,"text/javascript");
+  devSetStatus("Exported quests.js");
+}
+
+function exportDeveloperWorldPack(){
+  downloadDeveloperText("little-realm-world-pack.json",JSON.stringify(developerWorldPack(),null,2));
+  devSetStatus("Exported one World Pack — upload this file when you want the project updated");
+}
+
+function importDeveloperWorldPackFile(file){
+  if(!file) return;
+  const reader=new FileReader();
+  reader.onload=()=>{
+    try{
+      const parsed=JSON.parse(String(reader.result||""));
+      applyDeveloperWorldPack(parsed);
+      saveDeveloperDraft();
+    }catch(err){console.error(err);devSetStatus("World Pack import failed — invalid JSON");}
+  };
+  reader.readAsText(file);
 }
 
 function devSetStatus(text){
@@ -2301,13 +2927,48 @@ function devSetStatus(text){
   devStatusTimer=setTimeout(()=>{if(el)el.textContent="F2 toggles World Builder";},2200);
 }
 
+function developerNpcTemplate(kind){
+  if(kind==="lilly") return {name:"Lilly",role:"Villager",sprite:"./assets/npcs/lilly.png",displayHeight:58,greeting:"Hello!"};
+  if(kind==="jorge") return {name:"Jorge",role:"Villager",sprite:"./assets/npcs/jorge.png",displayHeight:58,greeting:"Good to see you."};
+  return {name:"New NPC",role:"Villager",sprite:"",displayHeight:44,greeting:"Hello there."};
+}
+
+function uniqueNpcId(base="npc"){
+  const root=String(base||"npc").toLowerCase().replace(/[^a-z0-9_-]+/g,"-").replace(/^-+|-+$/g,"")||"npc";
+  let id=root,n=2;
+  while(sceneryNPCs.some(npc=>npc.id===id)){id=`${root}-${n++}`;}
+  return id;
+}
+
+function placeDeveloperNpc(kind,wx,wy){
+  const template=developerNpcTemplate(kind);
+  const npc=normalizeNpcRecord({
+    ...template,
+    id:uniqueNpcId(template.name),
+    x:snapDev(wx),
+    y:snapDev(wy),
+    facing:"down",
+    solid:true
+  },sceneryNPCs.length);
+  sceneryNPCs.push(npc);
+  rebuildNpcCollision();
+  devSelectedNpc=npc;devSelected=null;devSelectedMob=null;devPlaceNpcTemplate=null;
+  setDeveloperTab("npcs");
+  saveDeveloperDraft();refreshDeveloperPanel();
+  devSetStatus(`Placed ${npc.name} — drag the NPC in the world or edit details here`);
+}
+
+function findDeveloperNpcAt(wx,wy){
+  return findNpcAtWorld(wx,wy);
+}
+
 function placeDeveloperObject(type,wx,wy){
   const spec=worldObjectSpec({type});
   if(!spec) return;
   const obj=defaultWorldObject(type,snapDev(wx-spec.w/2),snapDev(wy-spec.h/2));
   sceneryProps.push(obj);
   devSelected=obj;
-  devSelectedMob=null;
+  devSelectedMob=null;devSelectedNpc=null;
   setDeveloperTab("selection");
   rebuildWorldObjectCollision();
   saveDeveloperDraft();
@@ -2318,6 +2979,10 @@ function devPointerDown(event){
   if(!devModeActive) return;
   event.preventDefault(); event.stopImmediatePropagation();
   const p=devWorldFromPointer(event);
+  if(devPlaceNpcTemplate){
+    placeDeveloperNpc(devPlaceNpcTemplate,p.x,p.y);
+    return;
+  }
   if(devPlaceType){
     placeDeveloperObject(devPlaceType,p.x,p.y);
     return;
@@ -2349,10 +3014,24 @@ function devPointerDown(event){
     return;
   }
 
+  const npc=findDeveloperNpcAt(p.x,p.y);
+  if(npc){
+    devSelectedNpc=npc;
+    devSelected=null;devSelectedMob=null;
+    devDragging=false;devNpcDragging=true;
+    devNpcDragOffset={x:p.x-npc.x,y:p.y-npc.y};
+    devHitboxEditing=false;devHitboxDrag=null;devDepthEditing=false;devDepthDrag=null;
+    setDeveloperTab("npcs");
+    try{ game.setPointerCapture?.(event.pointerId); }catch{}
+    refreshDeveloperPanel();
+    devSetStatus(`Selected ${npc.name} — drag to move`);
+    return;
+  }
+
   const mob=findDeveloperMobAt(p.x,p.y);
   if(mob){
     devSelectedMob=mob;
-    devSelected=null;
+    devSelected=null;devSelectedNpc=null;
     devDragging=false;
     devHitboxEditing=false;
     devHitboxDrag=null;
@@ -2366,7 +3045,7 @@ function devPointerDown(event){
     return;
   }
 
-  devSelectedMob=null;
+  devSelectedMob=null;devSelectedNpc=null;
   devSelected=findWorldObjectAt(p.x,p.y);
   if(devSelected){
     setDeveloperTab("selection");
@@ -2392,6 +3071,15 @@ function devPointerDown(event){
 function devPointerMove(event){
   if(!devModeActive) return;
   const p=devWorldFromPointer(event);
+
+  if(devNpcDragging && devSelectedNpc){
+    event.preventDefault();event.stopImmediatePropagation();
+    devSelectedNpc.x=snapDev(p.x-devNpcDragOffset.x);
+    devSelectedNpc.y=snapDev(p.y-devNpcDragOffset.y);
+    rebuildNpcCollision();
+    refreshDeveloperNpcInspectorValues();
+    return;
+  }
 
   if(devHitboxDrag && devSelected){
     event.preventDefault(); event.stopImmediatePropagation();
@@ -2421,16 +3109,18 @@ function devPointerMove(event){
   refreshDeveloperInspectorValues();
 }
 function devPointerUp(event){
-  if(!devModeActive || (!devDragging && !devHitboxDrag && !devDepthDrag)) return;
+  if(!devModeActive || (!devDragging && !devNpcDragging && !devHitboxDrag && !devDepthDrag)) return;
   event.preventDefault(); event.stopImmediatePropagation();
-  devDragging=false;
+  const finishedNpc=!!devNpcDragging;
+  devDragging=false;devNpcDragging=false;
   const finishedHitbox=!!devHitboxDrag;
   const finishedDepth=!!devDepthDrag;
   devHitboxDrag=null;
   devDepthDrag=null;
   try{ game.releasePointerCapture?.(event.pointerId); }catch{}
   saveDeveloperDraft();
-  if(finishedHitbox) devSetStatus("Hitbox updated — keep dragging handles or click Finish Hitbox Editing");
+  if(finishedNpc) devSetStatus("NPC position updated");
+  else if(finishedHitbox) devSetStatus("Hitbox updated — keep dragging handles or click Finish Hitbox Editing");
   else if(finishedDepth) devSetStatus("Depth line updated — move around the object to test front/behind overlap");
 }
 
@@ -2517,6 +3207,12 @@ function drawDeveloperOverlay(camX,camY,viewW,viewH){
         ctx.fillText("DEPTH",x+spec.w+10,lineY-2/CAMERA_ZOOM);
       }
     }
+  }
+  if(devSelectedNpc){
+    const x=devSelectedNpc.x-camX,y=devSelectedNpc.y-camY;
+    ctx.strokeStyle="#63e6ff";ctx.fillStyle="rgba(99,230,255,.08)";ctx.lineWidth=2/CAMERA_ZOOM;
+    ctx.beginPath();ctx.ellipse(x,y+8,18,8,0,0,Math.PI*2);ctx.fill();ctx.stroke();
+    ctx.font="800 9px system-ui";ctx.textAlign="center";ctx.fillStyle="#dffbff";ctx.fillText(devSelectedNpc.name,x,y-44);ctx.textAlign="start";
   }
   if(devSelectedMob && devSelectedMob.alive){
     const x=devSelectedMob.x-camX,y=devSelectedMob.y-camY;
@@ -2628,8 +3324,8 @@ function refreshDeveloperObjectList(){
     b.textContent=obj.label||obj.type;
     b.title=`${obj.type} @ ${Math.round(obj.x)}, ${Math.round(obj.y)}`;
     b.onclick=()=>{
-      devPlaceType=null;
-      devSelectedMob=null;
+      devPlaceType=null;devPlaceNpcTemplate=null;
+      devSelectedMob=null;devSelectedNpc=null;
       devSelected=obj;
       setDeveloperTab("selection");
       updateDevPaletteActive();
@@ -2646,6 +3342,9 @@ function refreshDeveloperPanel(rebuild=true){
   const inspector=devPanel.querySelector("#devInspector");
   if(!inspector) return;
   refreshDeveloperObjectList();
+  refreshDeveloperNpcPanel();
+  refreshDeveloperQuestPanel();
+  refreshDeveloperProjectPanel();
   refreshDeveloperMobPanel();
   refreshDeveloperCombatPanel();
   if(!devSelected){
@@ -2706,7 +3405,7 @@ function selectDeveloperMobType(key){
   const match=mobs.find(m=>mobTypeScaleKey(m)===key) || {kind:key,boss:key==="snickers",alive:false};
   devSelectedMob=match;
   devCombatMobType=key;
-  devSelected=null;
+  devSelected=null;devSelectedNpc=null;
   setDeveloperTab("scale");
   refreshDeveloperPanel();
 }
@@ -2918,12 +3617,234 @@ function refreshDeveloperCombatPanel(){
   globals.querySelector("#devResetBalance").onclick=resetDeveloperCombatBalance;
 }
 
+
+function developerSafeId(value,fallback="id"){
+  return String(value||fallback).trim().toLowerCase().replace(/\s+/g,"-").replace(/[^a-z0-9_-]+/g,"")||fallback;
+}
+
+function refreshDeveloperNpcInspectorValues(){
+  if(!devPanel||!devSelectedNpc) return;
+  const root=devPanel.querySelector("#devNpcInspector");
+  if(!root) return;
+  const x=root.querySelector("#devNpcX"),y=root.querySelector("#devNpcY");
+  if(x)x.value=Math.round(devSelectedNpc.x);
+  if(y)y.value=Math.round(devSelectedNpc.y);
+}
+
+function updateQuestNpcReferences(oldId,newId){
+  if(!oldId||oldId===newId) return;
+  for(const quest of questDefinitions){
+    if(quest.giverNpc===oldId) quest.giverNpc=newId;
+    if(quest.turnInNpc===oldId) quest.turnInNpc=newId;
+    for(const objective of quest.objectives) if(objective.type==="talk"&&objective.target===oldId) objective.target=newId;
+  }
+  if(activeNpcDialogId===oldId) activeNpcDialogId=newId;
+}
+
+function saveDeveloperNpc(){
+  if(!devPanel||!devSelectedNpc) return;
+  const root=devPanel.querySelector("#devNpcInspector");
+  if(!root) return;
+  const oldId=devSelectedNpc.id;
+  let newId=developerSafeId(root.querySelector("#devNpcId")?.value,oldId||"npc");
+  if(sceneryNPCs.some(n=>n!==devSelectedNpc&&n.id===newId)){
+    devSetStatus(`NPC id '${newId}' is already in use`);return;
+  }
+  devSelectedNpc.id=newId;
+  devSelectedNpc.name=root.querySelector("#devNpcName")?.value.trim()||newId;
+  devSelectedNpc.role=root.querySelector("#devNpcRole")?.value.trim()||"Villager";
+  devSelectedNpc.sprite=root.querySelector("#devNpcSprite")?.value||"";
+  devSelectedNpc.x=numberOr(root.querySelector("#devNpcX")?.value,devSelectedNpc.x);
+  devSelectedNpc.y=numberOr(root.querySelector("#devNpcY")?.value,devSelectedNpc.y);
+  devSelectedNpc.facing=root.querySelector("#devNpcFacing")?.value||"down";
+  devSelectedNpc.displayHeight=Math.max(24,numberOr(root.querySelector("#devNpcHeight")?.value,58));
+  devSelectedNpc.interactRadius=Math.max(24,numberOr(root.querySelector("#devNpcRange")?.value,58));
+  devSelectedNpc.greeting=root.querySelector("#devNpcGreeting")?.value.trim()||`Hello. I'm ${devSelectedNpc.name}.`;
+  devSelectedNpc.solid=!!root.querySelector("#devNpcSolid")?.checked;
+  updateQuestNpcReferences(oldId,newId);
+  rebuildNpcCollision();
+  saveDeveloperDraft();refreshDeveloperPanel();refreshQuestUI();
+  devSetStatus(`Saved NPC: ${devSelectedNpc.name}`);
+}
+
+function duplicateDeveloperNpc(){
+  if(!devSelectedNpc)return;
+  const copy=normalizeNpcRecord({...cloneNpc(devSelectedNpc),id:uniqueNpcId(devSelectedNpc.id),name:`${devSelectedNpc.name} Copy`,x:devSelectedNpc.x+devSnap*2,y:devSelectedNpc.y+devSnap*2},sceneryNPCs.length);
+  sceneryNPCs.push(copy);devSelectedNpc=copy;rebuildNpcCollision();saveDeveloperDraft();refreshDeveloperPanel();
+}
+
+function deleteDeveloperNpc(){
+  if(!devSelectedNpc)return;
+  const refs=questDefinitions.filter(q=>q.giverNpc===devSelectedNpc.id||q.turnInNpc===devSelectedNpc.id||q.objectives.some(o=>o.type==="talk"&&o.target===devSelectedNpc.id));
+  const warning=refs.length?` ${refs.length} quest(s) reference this NPC and will need repair.`:"";
+  if(!confirm(`Delete ${devSelectedNpc.name}?${warning}`))return;
+  const i=sceneryNPCs.indexOf(devSelectedNpc);if(i>=0)sceneryNPCs.splice(i,1);
+  devSelectedNpc=null;rebuildNpcCollision();saveDeveloperDraft();refreshDeveloperPanel();refreshQuestUI();
+}
+
+function refreshDeveloperNpcPanel(){
+  if(!devPanel)return;
+  const list=devPanel.querySelector("#devNpcList");
+  const inspector=devPanel.querySelector("#devNpcInspector");
+  const count=devPanel.querySelector("#devNpcCount");
+  if(count)count.textContent=`${sceneryNPCs.length} placed`;
+  if(list){
+    list.innerHTML="";
+    for(const npc of sceneryNPCs){
+      const b=document.createElement("button");b.className="devNpcChip"+(npc===devSelectedNpc?" active":"");b.textContent=`${npc.name} • ${npc.role}`;
+      b.onclick=()=>{devSelectedNpc=npc;devSelected=null;devSelectedMob=null;devPlaceType=null;devPlaceNpcTemplate=null;setDeveloperTab("npcs");refreshDeveloperPanel();};list.appendChild(b);
+    }
+  }
+  if(!inspector)return;
+  if(!devSelectedNpc){inspector.innerHTML='<div class="devEmpty">Choose an NPC from the list, click one in the world, or place a new model.</div>';return;}
+  const spriteChoices=[
+    ["","Simple placeholder"],["./assets/npcs/lilly.png","Lilly model"],["./assets/npcs/jorge.png","Jorge model"]
+  ];
+  if(devSelectedNpc.sprite&&!spriteChoices.some(([v])=>v===devSelectedNpc.sprite))spriteChoices.push([devSelectedNpc.sprite,"Current custom sprite"]);
+  inspector.innerHTML=`<div class="devNpcInspector">
+    <div class="devSelectedTitle">${questEscape(devSelectedNpc.name)}</div>
+    <div class="devPair"><label>ID<input id="devNpcId" value="${questEscape(devSelectedNpc.id)}"></label><label>Name<input id="devNpcName" value="${questEscape(devSelectedNpc.name)}"></label></div>
+    <div class="devPair"><label>Role<input id="devNpcRole" value="${questEscape(devSelectedNpc.role||"Villager")}"></label><label>Sprite<select id="devNpcSprite">${spriteChoices.map(([v,l])=>`<option value="${questEscape(v)}" ${v===devSelectedNpc.sprite?"selected":""}>${questEscape(l)}</option>`).join("")}</select></label></div>
+    <div class="devPair"><label>X<input id="devNpcX" type="number" value="${Math.round(devSelectedNpc.x)}"></label><label>Y<input id="devNpcY" type="number" value="${Math.round(devSelectedNpc.y)}"></label></div>
+    <div class="devPair"><label>Facing<select id="devNpcFacing">${["down","left","right","up"].map(v=>`<option ${v===devSelectedNpc.facing?"selected":""}>${v}</option>`).join("")}</select></label><label>Sprite Height<input id="devNpcHeight" type="number" min="24" value="${numberOr(devSelectedNpc.displayHeight,58)}"></label></div>
+    <label>Talk Radius<input id="devNpcRange" type="number" min="24" value="${numberOr(devSelectedNpc.interactRadius,58)}"></label>
+    <label>Greeting<textarea id="devNpcGreeting">${questEscape(devSelectedNpc.greeting||"")}</textarea></label>
+    <label style="flex-direction:row;align-items:center"><input id="devNpcSolid" type="checkbox" ${devSelectedNpc.solid!==false?"checked":""}> Solid collision</label>
+    <div class="devRow"><button id="devNpcSave">Save NPC</button><button id="devNpcDuplicate">Duplicate</button><button id="devNpcDelete" class="danger">Delete</button></div>
+  </div>`;
+  inspector.querySelector("#devNpcSave").onclick=saveDeveloperNpc;
+  inspector.querySelector("#devNpcDuplicate").onclick=duplicateDeveloperNpc;
+  inspector.querySelector("#devNpcDelete").onclick=deleteDeveloperNpc;
+}
+
+function devQuestOptions(values,selected){
+  return values.map(([value,label])=>`<option value="${questEscape(value)}" ${value===selected?"selected":""}>${questEscape(label)}</option>`).join("");
+}
+function developerObjectiveDefault(type="talk"){
+  if(type==="kill")return normalizeQuestObjective({type,target:enemyTemplates[0]?.configKey||"slime",amount:1});
+  if(type==="collect"||type==="deliver")return normalizeQuestObjective({type,target:Object.keys(ITEM_DEFS)[0]||"",amount:1,consumeOnTurnIn:true});
+  if(type==="visit")return normalizeQuestObjective({type,x:Math.round(state?.x||START_X),y:Math.round(state?.y||START_Y),radius:36,amount:1});
+  return normalizeQuestObjective({type:"talk",target:sceneryNPCs[0]?.id||"",amount:1});
+}
+function developerNewQuest(){
+  const giver=devSelectedNpc?.id||sceneryNPCs[0]?.id||"";
+  const root=uniqueQuestId("new_quest");
+  return normalizeQuestDefinition({id:root,title:"New Quest",description:"Describe what the player should do.",giverNpc:giver,turnInNpc:giver,openingDialogue:"Could you help me?",completionDialogue:"Thank you for your help.",objectives:[developerObjectiveDefault("talk")],rewards:{xp:0,gold:0,items:[]}},questDefinitions.length);
+}
+function uniqueQuestId(base="quest"){
+  const root=String(base||"quest").toLowerCase().replace(/[^a-z0-9_-]+/g,"_")||"quest";let id=root,n=2;
+  while(questDefinitions.some(q=>q.id===id))id=`${root}_${n++}`;return id;
+}
+function developerQuestTargetOptions(type,selected){
+  let values=[];
+  if(type==="kill") values=[...enemyTemplates,bossTemplate].map(t=>[t.configKey||t.kind,t.name]);
+  else if(type==="collect"||type==="deliver") values=Object.keys(ITEM_DEFS).map(id=>[id,getItemDefinition(id).name]);
+  else if(type==="talk") values=sceneryNPCs.map(n=>[n.id,n.name]);
+  if(selected&&!values.some(([v])=>v===selected)) values.push([selected,selected]);
+  return values;
+}
+function readDeveloperQuestForm(){
+  const root=devPanel?.querySelector("#devQuestEditor");
+  const fallback=devQuestFormDraft||getQuestDefinition(devSelectedQuestId)||developerNewQuest();
+  if(!root)return cloneQuest(fallback);
+  const objectives=[...root.querySelectorAll("[data-objective-index]")].map(row=>{
+    const type=row.querySelector("[data-obj-type]")?.value||"talk";
+    const amount=Math.max(1,Math.floor(numberOr(row.querySelector("[data-obj-amount]")?.value,1)));
+    if(type==="visit")return normalizeQuestObjective({type,amount:1,x:row.querySelector("[data-obj-x]")?.value,y:row.querySelector("[data-obj-y]")?.value,radius:row.querySelector("[data-obj-radius]")?.value});
+    return normalizeQuestObjective({type,target:row.querySelector("[data-obj-target]")?.value||"",amount,consumeOnTurnIn:row.querySelector("[data-obj-consume]")?.checked!==false});
+  });
+  const rewardItem=root.querySelector("#devQuestRewardItem")?.value||"";
+  return normalizeQuestDefinition({
+    id:root.querySelector("#devQuestId")?.value||fallback.id,
+    title:root.querySelector("#devQuestTitle")?.value||fallback.title,
+    description:root.querySelector("#devQuestDescription")?.value||"",
+    giverNpc:root.querySelector("#devQuestGiver")?.value||"",
+    turnInNpc:root.querySelector("#devQuestTurnIn")?.value||"",
+    openingDialogue:root.querySelector("#devQuestOpening")?.value||"",
+    completionDialogue:root.querySelector("#devQuestCompletion")?.value||"",
+    objectives:objectives.length?objectives:[developerObjectiveDefault("talk")],
+    rewards:{xp:root.querySelector("#devQuestRewardXp")?.value,gold:root.querySelector("#devQuestRewardGold")?.value,items:rewardItem?[{id:rewardItem,qty:root.querySelector("#devQuestRewardQty")?.value||1}]:[]},
+    prerequisite:root.querySelector("#devQuestPrereq")?.value||null,
+    nextQuest:root.querySelector("#devQuestNext")?.value||null,
+    repeatable:!!root.querySelector("#devQuestRepeatable")?.checked
+  });
+}
+function renderDeveloperQuestEditor(draft){
+  const root=devPanel?.querySelector("#devQuestEditor");if(!root)return;
+  devQuestFormDraft=cloneQuest(draft);
+  const npcOptions=sceneryNPCs.map(n=>[n.id,n.name]);
+  const questOptions=[["","None"],...questDefinitions.filter(q=>q.id!==draft.id).map(q=>[q.id,q.title])];
+  const itemOptions=[["","No item reward"],...Object.keys(ITEM_DEFS).map(id=>[id,getItemDefinition(id).name])];
+  const rewardItem=draft.rewards.items?.[0]?.id||"",rewardQty=draft.rewards.items?.[0]?.qty||1;
+  root.innerHTML=`<div class="devQuestEditor">
+    <div class="devPair"><label>Quest ID<input id="devQuestId" value="${questEscape(draft.id)}"></label><label>Quest Name<input id="devQuestTitle" value="${questEscape(draft.title)}"></label></div>
+    <label>Description<textarea id="devQuestDescription">${questEscape(draft.description)}</textarea></label>
+    <div class="devPair"><label>Quest Giver<select id="devQuestGiver">${devQuestOptions(npcOptions,draft.giverNpc)}</select></label><label>Turn-In NPC<select id="devQuestTurnIn">${devQuestOptions(npcOptions,draft.turnInNpc)}</select></label></div>
+    <label>Opening Dialogue<textarea id="devQuestOpening">${questEscape(draft.openingDialogue)}</textarea></label>
+    <label>Completion Dialogue<textarea id="devQuestCompletion">${questEscape(draft.completionDialogue)}</textarea></label>
+    <div class="devSubhead">Objectives</div><div id="devQuestObjectives">${draft.objectives.map((objective,index)=>{
+      const types=[["kill","Kill"],["collect","Collect"],["talk","Talk"],["deliver","Deliver"],["visit","Visit"]];
+      const visit=objective.type==="visit";
+      return `<div class="devQuestObjective" data-objective-index="${index}"><div class="devQuestObjectiveTop"><label>Type<select data-obj-type>${devQuestOptions(types,objective.type)}</select></label>${visit?`<label>Location<span style="padding:9px 0;color:#b9aebe">World coordinates</span></label>`:`<label>Target<select data-obj-target>${devQuestOptions(developerQuestTargetOptions(objective.type,objective.target),objective.target)}</select></label>`}<label>Amount<input data-obj-amount type="number" min="1" value="${objective.amount}" ${visit?"disabled":""}></label><button data-remove-objective="${index}" title="Remove objective">×</button></div>${visit?`<div class="devVisitGrid"><label>X<input data-obj-x type="number" value="${Math.round(objective.x)}"></label><label>Y<input data-obj-y type="number" value="${Math.round(objective.y)}"></label><label>Radius<input data-obj-radius type="number" min="8" value="${Math.round(objective.radius)}"></label></div><button data-use-player-pos="${index}" style="margin-top:6px;border:1px solid rgba(255,255,255,.12);background:#4b4056;color:#fff;border-radius:7px;padding:6px 8px">Use Player Position</button>`:(objective.type==="collect"||objective.type==="deliver")?`<label style="flex-direction:row;align-items:center"><input data-obj-consume type="checkbox" ${objective.consumeOnTurnIn!==false?"checked":""}> Consume items on turn-in</label>`:""}</div>`;
+    }).join("")}</div>
+    <button id="devAddQuestObjective" class="devHitboxEditButton">+ Add Objective</button>
+    <div class="devSubhead">Rewards</div><div class="devQuad"><label>XP<input id="devQuestRewardXp" type="number" min="0" value="${draft.rewards.xp}"></label><label>Gold<input id="devQuestRewardGold" type="number" min="0" value="${draft.rewards.gold}"></label><label>Item<select id="devQuestRewardItem">${devQuestOptions(itemOptions,rewardItem)}</select></label><label>Qty<input id="devQuestRewardQty" type="number" min="1" value="${rewardQty}"></label></div>
+    <div class="devPair"><label>Prerequisite<select id="devQuestPrereq">${devQuestOptions(questOptions,draft.prerequisite||"")}</select></label><label>Next Quest<select id="devQuestNext">${devQuestOptions(questOptions,draft.nextQuest||"")}</select></label></div>
+    <label style="flex-direction:row;align-items:center"><input id="devQuestRepeatable" type="checkbox" ${draft.repeatable?"checked":""}> Repeatable quest</label>
+    <div class="devRow"><button id="devQuestSave">Save Quest</button><button id="devQuestTest">Reset Test Progress</button></div>
+  </div>`;
+  root.querySelectorAll("[data-obj-type]").forEach((select,index)=>select.onchange=()=>{
+    const next=readDeveloperQuestForm();const type=select.value;next.objectives[index]=developerObjectiveDefault(type);devQuestFormDraft=next;renderDeveloperQuestEditor(next);
+  });
+  root.querySelectorAll("[data-remove-objective]").forEach(button=>button.onclick=()=>{const next=readDeveloperQuestForm();next.objectives.splice(Number(button.dataset.removeObjective),1);if(!next.objectives.length)next.objectives.push(developerObjectiveDefault("talk"));renderDeveloperQuestEditor(next);});
+  root.querySelectorAll("[data-use-player-pos]").forEach(button=>button.onclick=()=>{const next=readDeveloperQuestForm();const objective=next.objectives[Number(button.dataset.usePlayerPos)];objective.x=Math.round(state.x);objective.y=Math.round(state.y);renderDeveloperQuestEditor(next);});
+  root.querySelector("#devAddQuestObjective").onclick=()=>{const next=readDeveloperQuestForm();next.objectives.push(developerObjectiveDefault("kill"));renderDeveloperQuestEditor(next);};
+  root.querySelector("#devQuestSave").onclick=saveDeveloperQuest;
+  root.querySelector("#devQuestTest").onclick=()=>{const id=readDeveloperQuestForm().id;delete ensureQuestState()[id];refreshQuestUI();renderNpcDialogue();devSetStatus(`Reset test progress for ${id}`);};
+}
+function saveDeveloperQuest(){
+  const oldId=devSelectedQuestId;const next=readDeveloperQuestForm();
+  let newId=String(next.id||oldId||"quest").trim().toLowerCase().replace(/[^a-z0-9_-]+/g,"_");
+  if(!newId)newId="quest";
+  if(questDefinitions.some(q=>q.id===newId&&q.id!==oldId)){devSetStatus(`Quest id '${newId}' is already in use`);return;}
+  next.id=newId;
+  const i=questDefinitions.findIndex(q=>q.id===oldId);if(i>=0)questDefinitions[i]=normalizeQuestDefinition(next,i);else questDefinitions.push(normalizeQuestDefinition(next,questDefinitions.length));
+  if(oldId&&oldId!==newId){
+    for(const quest of questDefinitions){if(quest.prerequisite===oldId)quest.prerequisite=newId;if(quest.nextQuest===oldId)quest.nextQuest=newId;}
+    const qs=ensureQuestState();if(qs[oldId]){qs[newId]=qs[oldId];delete qs[oldId];}
+  }
+  devSelectedQuestId=newId;devQuestFormDraft=cloneQuest(getQuestDefinition(newId));saveDeveloperDraft();refreshDeveloperQuestPanel();refreshQuestUI();devSetStatus(`Saved quest: ${next.title}`);
+}
+function refreshDeveloperQuestPanel(){
+  if(!devPanel)return;
+  const list=devPanel.querySelector("#devQuestList"),editor=devPanel.querySelector("#devQuestEditor"),count=devPanel.querySelector("#devQuestCount");
+  if(count)count.textContent=`${questDefinitions.length} quest${questDefinitions.length===1?"":"s"}`;
+  if(!devSelectedQuestId||!getQuestDefinition(devSelectedQuestId))devSelectedQuestId=questDefinitions[0]?.id||null;
+  if(list){list.innerHTML="";for(const quest of questDefinitions){const b=document.createElement("button");b.className="devQuestChip"+(quest.id===devSelectedQuestId?" active":"");b.textContent=quest.title;b.title=quest.id;b.onclick=()=>{devSelectedQuestId=quest.id;devQuestFormDraft=cloneQuest(quest);refreshDeveloperQuestPanel();};list.appendChild(b);}}
+  if(!editor)return;
+  if(!devSelectedQuestId){editor.innerHTML='<div class="devEmpty">No quests yet. Click New Quest to create one.</div>';return;}
+  const selected=getQuestDefinition(devSelectedQuestId);if(!devQuestFormDraft||devQuestFormDraft.id!==selected.id)devQuestFormDraft=cloneQuest(selected);renderDeveloperQuestEditor(devQuestFormDraft);
+}
+function createDeveloperQuest(){
+  const quest=developerNewQuest();questDefinitions.push(quest);devSelectedQuestId=quest.id;devQuestFormDraft=cloneQuest(quest);setDeveloperTab("quests");saveDeveloperDraft();refreshDeveloperPanel();
+}
+function duplicateDeveloperQuest(){
+  const source=getQuestDefinition(devSelectedQuestId);if(!source)return;const copy=cloneQuest(source);copy.id=uniqueQuestId(`${source.id}_copy`);copy.title=`${source.title} Copy`;questDefinitions.push(normalizeQuestDefinition(copy,questDefinitions.length));devSelectedQuestId=copy.id;devQuestFormDraft=cloneQuest(copy);saveDeveloperDraft();refreshDeveloperQuestPanel();
+}
+function deleteDeveloperQuest(){
+  const quest=getQuestDefinition(devSelectedQuestId);if(!quest)return;if(!confirm(`Delete quest '${quest.title}'?`))return;
+  questDefinitions=questDefinitions.filter(q=>q.id!==quest.id);for(const other of questDefinitions){if(other.prerequisite===quest.id)other.prerequisite=null;if(other.nextQuest===quest.id)other.nextQuest=null;}delete ensureQuestState()[quest.id];devSelectedQuestId=questDefinitions[0]?.id||null;devQuestFormDraft=null;saveDeveloperDraft();refreshDeveloperQuestPanel();refreshQuestUI();
+}
+function refreshDeveloperProjectPanel(){
+  if(!devPanel)return;const el=devPanel.querySelector("#devProjectSummary");if(el)el.textContent=`${sceneryProps.length} props • ${sceneryNPCs.length} NPCs • ${questDefinitions.length} quests • one uploadable World Pack`;
+}
+
 function buildDeveloperPanel(){
   ensureDeveloperStyles();
   const root=document.createElement("aside");
   root.id="devPanel";
   root.innerHTML=`
-    <div class="devHeader"><div><b>WORLD BUILDER</b><span>F2 to close • build, scale, and live-test combat</span></div><button id="devClose">×</button></div>
+    <div class="devHeader"><div><b>WORLD BUILDER</b><span>F2 to close • props, NPCs, quests, scale, and testing</span></div><button id="devClose">×</button></div>
     <div class="devToolbar">
       <button id="devSelect" class="active">Select / Move</button>
       <label>Snap <select id="devSnap"><option>4</option><option selected>8</option><option>16</option><option>32</option><option>64</option></select></label>
@@ -2933,14 +3854,26 @@ function buildDeveloperPanel(){
     </div>
     <div class="devTabs">
       <button class="devTab active" data-dev-tab="objects">Objects</button>
+      <button class="devTab" data-dev-tab="npcs">NPCs</button>
+      <button class="devTab" data-dev-tab="quests">Quests</button>
       <button class="devTab" data-dev-tab="selection">Selection</button>
       <button class="devTab" data-dev-tab="scale">Visual Scale</button>
       <button class="devTab" data-dev-tab="combat">Combat Test</button>
+      <button class="devTab" data-dev-tab="project">Project</button>
     </div>
     <div class="devBody">
       <section class="devView active" data-dev-view="objects">
         <div class="devSection"><div class="devSectionTitle">Prop Palette</div><div class="devHint">Choose a prop, then click the world to place it. Switch back to Select / Move when finished.</div><div id="devPalette"></div></div>
         <div class="devSection"><div class="devSectionTitle">Existing Objects <span id="devObjectCount" style="float:right;font-weight:600;text-transform:none;letter-spacing:0;color:#a99bb3"></span></div><div id="devObjectList"></div></div>
+      </section>
+      <section class="devView" data-dev-view="npcs">
+        <div class="devSection"><div class="devSectionTitle">NPC Models</div><div class="devHint">Choose a model, then click the world to place an NPC. Click or drag existing NPCs directly in the world.</div><div class="devNpcPalette"><button data-npc-template="lilly">+ Lilly Model</button><button data-npc-template="jorge">+ Jorge Model</button><button data-npc-template="blank">+ Blank NPC</button></div></div>
+        <div class="devSection"><div class="devSectionTitle">Existing NPCs <span id="devNpcCount" style="float:right;font-weight:600;text-transform:none;letter-spacing:0;color:#a99bb3"></span></div><div id="devNpcList"></div></div>
+        <div class="devSection"><div class="devSectionTitle">NPC Inspector</div><div id="devNpcInspector"></div></div>
+      </section>
+      <section class="devView" data-dev-view="quests">
+        <div class="devSection"><div class="devSectionTitle">Quest Library <span id="devQuestCount" style="float:right;font-weight:600;text-transform:none;letter-spacing:0;color:#a99bb3"></span></div><div class="devHint">Create quests from dropdowns instead of code. Objectives can kill, collect, talk, deliver, or visit a world position.</div><div id="devQuestList"></div><div class="devQuestListActions"><button id="devNewQuest">New Quest</button><button id="devDuplicateQuest">Duplicate</button><button id="devDeleteQuest">Delete</button></div></div>
+        <div class="devSection"><div class="devSectionTitle">Quest Maker</div><div id="devQuestEditor"></div></div>
       </section>
       <section class="devView" data-dev-view="selection">
         <div class="devSection"><div class="devSectionTitle">Selected Object</div><div class="devHint">Click an object in the world or choose it from Existing Objects. Drag it directly in the world to reposition it.</div><div id="devInspector"></div></div>
@@ -2960,13 +3893,17 @@ function buildDeveloperPanel(){
         <div class="devSection"><div class="devSectionTitle">Mob Species Tuning</div><div class="devHint">Change a species' level range and base combat values, apply them live, then reroll its current spawns if you want new levels/elites immediately.</div><div id="devCombatSpecies"></div></div>
         <div class="devSection"><div class="devSectionTitle">Global Mob-Level Rules</div><div class="devHint">These values control level growth, danger boosts, elites, bosses, aggro, hit chance, and XP across the whole game.</div><div id="devCombatGlobals"></div></div>
       </section>
+      <section class="devView" data-dev-view="project">
+        <div class="devSection"><div class="devSectionTitle">World Pack</div><div class="devProjectNote">This is the new recommended workflow. Make many prop, NPC, quest, visual, and combat changes in World Builder, then export one <b>little-realm-world-pack.json</b>. Upload that single file when you want the project source updated.</div><div id="devProjectSummary" class="devHint" style="margin-top:9px"></div><div class="devProjectBig"><button id="devExportWorldPack" class="primary">Export World Pack (.json)</button><button id="devImportWorldPack">Import World Pack</button><button id="devSaveDraftNow">Save Local Draft</button><button id="devLoadDraftProject">Load Local Draft</button><button id="devResetProject" class="danger">Use Deployed Project</button></div><input id="devImportWorldPackFile" type="file" accept="application/json,.json" hidden></div>
+        <div class="devSection"><div class="devSectionTitle">Individual Config Exports</div><div class="devHint">Useful when only one content file changed.</div><div class="devProjectBig"><button id="devExportObjectsOnly">world-objects.js</button><button id="devExportNpcsOnly">npcs.js</button><button id="devExportQuestsOnly">quests.js</button><button id="devExportScaleProject">visual-settings.js</button><button id="devExportBalanceProject">game-balance.js</button></div></div>
+      </section>
     </div>
     <div id="devStatus">F2 toggles World Builder</div>`;
   document.body.appendChild(root);
   devPanel=root;
   root.querySelector("#devClose").onclick=()=>setDeveloperMode(false);
   root.querySelector("#devSelect").onclick=()=>{
-    devPlaceType=null;
+    devPlaceType=null;devPlaceNpcTemplate=null;
     if(devHitboxEditing) setDeveloperHitboxEditing(false);
     else if(devDepthEditing) setDeveloperDepthEditing(false);
     else{ updateDevPaletteActive();devSetStatus("Select / Move mode"); }
@@ -2978,6 +3915,23 @@ function buildDeveloperPanel(){
   root.querySelector("#devExport").onclick=exportDeveloperLayout;
   root.querySelector("#devLoadDraft").onclick=loadDeveloperDraft;
   root.querySelector("#devReset").onclick=resetDeveloperLayout;
+  root.querySelector("#devNewQuest").onclick=createDeveloperQuest;
+  root.querySelector("#devDuplicateQuest").onclick=duplicateDeveloperQuest;
+  root.querySelector("#devDeleteQuest").onclick=deleteDeveloperQuest;
+  root.querySelectorAll("[data-npc-template]").forEach(button=>button.onclick=()=>{
+    devPlaceNpcTemplate=button.dataset.npcTemplate;devPlaceType=null;devSelected=null;devSelectedMob=null;setDeveloperTab("npcs");updateDevPaletteActive();refreshDeveloperPanel();devSetStatus(`Placing ${button.textContent.replace(/^\+\s*/,"")} — click the world`);
+  });
+  root.querySelector("#devExportWorldPack").onclick=exportDeveloperWorldPack;
+  root.querySelector("#devImportWorldPack").onclick=()=>root.querySelector("#devImportWorldPackFile").click();
+  root.querySelector("#devImportWorldPackFile").onchange=e=>{importDeveloperWorldPackFile(e.target.files?.[0]);e.target.value="";};
+  root.querySelector("#devSaveDraftNow").onclick=saveDeveloperDraft;
+  root.querySelector("#devLoadDraftProject").onclick=loadDeveloperDraft;
+  root.querySelector("#devResetProject").onclick=resetDeveloperProject;
+  root.querySelector("#devExportObjectsOnly").onclick=exportDeveloperLayout;
+  root.querySelector("#devExportNpcsOnly").onclick=exportDeveloperNpcs;
+  root.querySelector("#devExportQuestsOnly").onclick=exportDeveloperQuests;
+  root.querySelector("#devExportScaleProject").onclick=exportVisualSettings;
+  root.querySelector("#devExportBalanceProject").onclick=exportDeveloperBalance;
   root.querySelectorAll(".devTab").forEach(b=>b.onclick=()=>setDeveloperTab(b.dataset.devTab));
   root.querySelectorAll("[data-scale-key]").forEach(input=>{
     updateVisualScaleControl(input.dataset.scaleKey,input.value);
@@ -2992,20 +3946,21 @@ function buildDeveloperPanel(){
     const cv=document.createElement("canvas");cv.width=48;cv.height=48;
     const name=document.createElement("span");name.textContent=type.replace(/([A-Z])/g," $1");
     b.append(cv,name);
-    b.onclick=()=>{devPlaceType=type;devSelectedMob=null;devHitboxEditing=false;devHitboxDrag=null;devDepthEditing=false;devDepthDrag=null;setDeveloperTab("objects");updateDevPaletteActive();devSetStatus(`Placing ${type} — click the world`);};
+    b.onclick=()=>{devPlaceType=type;devPlaceNpcTemplate=null;devSelectedMob=null;devSelectedNpc=null;devHitboxEditing=false;devHitboxDrag=null;devDepthEditing=false;devDepthDrag=null;setDeveloperTab("objects");updateDevPaletteActive();devSetStatus(`Placing ${type} — click the world`);};
     palette.appendChild(b);
     drawPaletteThumb(cv,type);
   }
   if(!propAtlasReady) propAtlas.addEventListener("load",()=>root.querySelectorAll(".devPropButton").forEach(b=>drawPaletteThumb(b.querySelector("canvas"),b.dataset.type)),{once:true});
   setDeveloperTab(devActiveTab);
   refreshDeveloperPanel();
-  devSetStatus(`${propTypes.length} props • ${sceneryProps.length} objects • Combat Test supports live level/stat tuning`);
+  devSetStatus(`${propTypes.length} prop types • ${sceneryNPCs.length} NPCs • ${questDefinitions.length} quests • World Pack export ready`);
   return root;
 }
 function updateDevPaletteActive(){
   if(!devPanel)return;
   devPanel.querySelectorAll(".devPropButton").forEach(b=>b.classList.toggle("active",b.dataset.type===devPlaceType));
-  devPanel.querySelector("#devSelect")?.classList.toggle("active",!devPlaceType);
+  devPanel.querySelectorAll("[data-npc-template]").forEach(b=>b.classList.toggle("active",b.dataset.npcTemplate===devPlaceNpcTemplate));
+  devPanel.querySelector("#devSelect")?.classList.toggle("active",!devPlaceType&&!devPlaceNpcTemplate);
 }
 
 function setDeveloperMode(active){
@@ -3016,8 +3971,8 @@ function setDeveloperMode(active){
   input={up:false,down:false,left:false,right:false};
   isHeroMoving=false;
   if(!devModeActive){
-    devDragging=false;
-    devPlaceType=null;
+    devDragging=false;devNpcDragging=false;
+    devPlaceType=null;devPlaceNpcTemplate=null;
     devHitboxEditing=false;
     devHitboxDrag=null;
     devDepthEditing=false;
@@ -3028,7 +3983,7 @@ function setDeveloperMode(active){
   if(devModeActive){
     // Rebuild the live panels now that normal game state is guaranteed to exist.
     refreshDeveloperPanel();
-    devSetStatus("Developer Mode active — Combat Test can change player level and mob balance live");
+    devSetStatus("World Builder active — edit props, NPCs, quests, and export one World Pack when ready");
   }
 }
 function toggleDeveloperMode(){setDeveloperMode(!devModeActive);}
@@ -3051,12 +4006,14 @@ function initDeveloperMode(){
     if(event.code==="Escape"){
       if(devHitboxEditing){setDeveloperHitboxEditing(false);}
       else if(devDepthEditing){setDeveloperDepthEditing(false);}
-      else if(devPlaceType){devPlaceType=null;updateDevPaletteActive();devSetStatus("Select / Move mode");}
+      else if(devPlaceType||devPlaceNpcTemplate){devPlaceType=null;devPlaceNpcTemplate=null;updateDevPaletteActive();devSetStatus("Select / Move mode");}
+      else if(devSelectedNpc){devSelectedNpc=null;refreshDeveloperPanel();}
       else if(devSelected){devSelected=null;refreshDeveloperPanel();}
       return;
     }
-    if((event.code==="Delete"||event.code==="Backspace") && devSelected && !["INPUT","TEXTAREA"].includes(document.activeElement?.tagName)){
-      event.preventDefault();deleteDeveloperSelection();
+    if((event.code==="Delete"||event.code==="Backspace") && !["INPUT","TEXTAREA","SELECT"].includes(document.activeElement?.tagName)){
+      if(devSelectedNpc){event.preventDefault();deleteDeveloperNpc();}
+      else if(devSelected){event.preventDefault();deleteDeveloperSelection();}
     }
   },true);
 }
@@ -3070,6 +4027,7 @@ function fresh(){
     atk:numberOr(BALANCE.player?.attack,5),def:numberOr(BALANCE.player?.defense,1),
     gold:numberOr(BALANCE.player?.startingGold,8),potions:numberOr(BALANCE.player?.startingPotions,2),kills:0,
     slimeKills:0,questComplete:false,bossDefeated:false,
+    quests:{},
     inventory:createEmptyInventory()
   };
 }
@@ -3199,6 +4157,8 @@ function updateMovement(dt){
   castleCooldown=Math.max(0,castleCooldown-dt);
   potionCooldown=Math.max(0,potionCooldown-dt);
   attackButtonCooldown=Math.max(0,attackButtonCooldown-dt);
+
+  updateQuestVisits();
 
   const t=tileAtWorld(state.x,state.y);
   if(t===4 && townCooldown<=0){townCooldown=2;townEvent()}
@@ -4314,13 +5274,8 @@ function defeatWorldMob(mob){
   state.potions+=potionDrop;
   state.kills++;
 
-  if(e.name==="Slime"){
-    state.slimeKills++;
-    if(state.slimeKills>=SLIMES_REQUIRED&&!state.questComplete){
-      state.questComplete=true;
-      setTimeout(()=>toast("Starter task complete! Explore the rest of the zone."),550);
-    }
-  }
+  if(e.name==="Slime") state.slimeKills++; // legacy save compatibility
+  notifyQuestKill(e.configKey||e.kind||mob.kind,1);
   if(mob.boss||e.boss) state.bossDefeated=true;
 
   mob.alive=false;
@@ -4389,6 +5344,12 @@ function handleWorldTap(ev){
   const viewW=innerWidth/CAMERA_ZOOM, viewH=innerHeight/CAMERA_ZOOM;
   const camX=state.x-viewW/2, camY=state.y-viewH/2;
   const wx=camX+sx/CAMERA_ZOOM, wy=camY+sy/CAMERA_ZOOM;
+
+  const tappedNpc=findNpcAtWorld(wx,wy);
+  if(tappedNpc){
+    interactWithNpc(tappedNpc);
+    return;
+  }
 
   let best=null;
   let bestScore=Infinity;
@@ -4647,13 +5608,8 @@ function winBattle(){
   state.gold+=gold;
   state.kills++;
 
-  if(e.name==="Slime"){
-    state.slimeKills++;
-    if(state.slimeKills>=SLIMES_REQUIRED&&!state.questComplete){
-      state.questComplete=true;
-      setTimeout(()=>toast("Starter task complete! Explore the rest of the zone."),500);
-    }
-  }
+  if(e.name==="Slime") state.slimeKills++; // legacy save compatibility
+  notifyQuestKill(e.configKey||e.kind||currentMob?.kind,1);
   if(e.boss)state.bossDefeated=true;
 
   if(currentMob){
@@ -4716,6 +5672,8 @@ function closeAll(){
   document.getElementById("menu").classList.remove("show");
   document.getElementById("battle").classList.remove("show");
   document.getElementById("backpack")?.classList.remove("show");
+  closeQuestLog?.();
+  closeNpcDialogue?.();
   closeLootWindow();
   cancelDisposePrompt();
 }
@@ -4736,20 +5694,8 @@ function updateUI(){
   document.getElementById("mPotions").textContent=state.potions;
   document.getElementById("mKills").textContent=state.kills;
 
-  const questChip=document.getElementById("questChip");
-  questChip.classList.toggle("complete",Boolean(state.questComplete||state.bossDefeated));
-  let q;
-  if(state.bossDefeated){
-    q="Starter zone complete.";
-    document.getElementById("questChip").textContent="Starter zone";
-  }else if(state.questComplete){
-    q="Starter task complete. Explore the farm, wilderness, and goblin camp.";
-    document.getElementById("questChip").textContent="Explore the zone";
-  }else{
-    q=`Defeat ${SLIMES_REQUIRED} Slimes (${state.slimeKills}/${SLIMES_REQUIRED}).`;
-    document.getElementById("questChip").textContent=`Slimes ${state.slimeKills}/${SLIMES_REQUIRED}`;
-  }
-  document.getElementById("mQuest").textContent=q;
+  // Quest chip + menu summary are driven by the data-driven quest system.
+  refreshQuestUI();
 
   if(enemy){
     const heroHp=Math.max(0,state.hp);
@@ -4845,6 +5791,7 @@ function bindFloatingPanels(){
   floatingPanelsBound=true;
   bindFloatingPanel("backpackPanel","backpackDragHandle","lr-ui-backpack-position-v51");
   bindFloatingPanel("lootPanel","lootDragHandle","lr-ui-loot-position-v51");
+  bindFloatingPanel("questLogPanel","questLogDragHandle","lr-ui-quest-position-v54");
 
   document.addEventListener("pointermove",event=>{
     const drag=floatingPanelDrag;
@@ -4919,6 +5866,7 @@ const INPUT_BINDINGS = {
   moveRight:bindingList("moveRight",["KeyD","ArrowRight"]),
   targetNext:bindingList("targetNext",["Tab"]),
   attackTarget:bindingList("attackTarget",["Space","KeyF"]),
+  interact:bindingList("interact",["KeyE"]),
   potion:bindingList("potion",["KeyQ"]),
   clearTarget:bindingList("clearTarget",["Escape"]),
   menu:bindingList("menu",["KeyM"]),
@@ -4927,7 +5875,7 @@ const INPUT_BINDINGS = {
 
 // Exposed only as read-only diagnostics so a desktop tester can confirm the
 // deployed build from DevTools without digging through bundled source.
-window.LR_BUILD_VERSION="v53-depth-sort-editor";
+window.LR_BUILD_VERSION="v54-quest-builder";
 window.LR_INPUT_BINDINGS=Object.freeze({...INPUT_BINDINGS});
 window.LR_INPUT_STATE=()=>({...input});
 
@@ -5016,11 +5964,11 @@ function bindingLabel(action){
 function updateKeyboardHelp(){
   const compact=document.getElementById("pcControls");
   if(compact){
-    compact.textContent=`PC CONTROLS  •  MOVE ${bindingLabel("moveUp")}/${bindingLabel("moveLeft")}/${bindingLabel("moveDown")}/${bindingLabel("moveRight")}  •  TARGET ${bindingLabel("targetNext")}  •  ATTACK ${bindingLabel("attackTarget")}  •  POTION ${bindingLabel("potion")}  •  PACK ${bindingLabel("backpack")}  •  CLEAR ${bindingLabel("clearTarget")}  •  MENU ${bindingLabel("menu")}`;
+    compact.textContent=`PC CONTROLS  •  MOVE ${bindingLabel("moveUp")}/${bindingLabel("moveLeft")}/${bindingLabel("moveDown")}/${bindingLabel("moveRight")}  •  TALK ${bindingLabel("interact")}  •  TARGET ${bindingLabel("targetNext")}  •  ATTACK ${bindingLabel("attackTarget")}  •  POTION ${bindingLabel("potion")}  •  PACK ${bindingLabel("backpack")}  •  MENU ${bindingLabel("menu")}`;
   }
   const list=document.getElementById("keybindList");
   if(list){
-    list.innerHTML=`<b>PC Controls</b><br>Move: ${bindingLabel("moveUp")} / ${bindingLabel("moveLeft")} / ${bindingLabel("moveDown")} / ${bindingLabel("moveRight")}<br>Target next mob: ${bindingLabel("targetNext")}<br>Attack target: ${bindingLabel("attackTarget")}<br>Quick potion: ${bindingLabel("potion")}<br>Backpack: ${bindingLabel("backpack")}<br>Clear target / leave combat: ${bindingLabel("clearTarget")}<br>Menu: ${bindingLabel("menu")}`;
+    list.innerHTML=`<b>PC Controls</b><br>Move: ${bindingLabel("moveUp")} / ${bindingLabel("moveLeft")} / ${bindingLabel("moveDown")} / ${bindingLabel("moveRight")}<br>Talk / interact: ${bindingLabel("interact")}<br>Target next mob: ${bindingLabel("targetNext")}<br>Attack target: ${bindingLabel("attackTarget")}<br>Quick potion: ${bindingLabel("potion")}<br>Backpack: ${bindingLabel("backpack")}<br>Clear target / leave combat: ${bindingLabel("clearTarget")}<br>Menu: ${bindingLabel("menu")}`;
   }
 }
 
@@ -5042,6 +5990,9 @@ function bindKeyboardControls(){
     if(keyMatches("backpack",event)){
       event.preventDefault();
       toggleBackpack();
+    }else if(keyMatches("interact",event)){
+      event.preventDefault();
+      interactWithNearestNpc();
     }else if(keyMatches("targetNext",event)){
       event.preventDefault();
       cycleKeyboardTarget(event.shiftKey);
@@ -5057,7 +6008,9 @@ function bindKeyboardControls(){
       const backpack=document.getElementById("backpack");
       const lootWindow=document.getElementById("lootWindow");
       const disposePrompt=document.getElementById("disposePrompt");
+      const npcDialog=document.getElementById("npcDialog");
       if(disposePrompt.classList.contains("show")) cancelDisposePrompt();
+      else if(npcDialog?.classList.contains("show")) closeNpcDialogue();
       else if(lootWindow.classList.contains("show")) closeLootWindow();
       else if(backpack.classList.contains("show")) closeBackpack();
       else if(menu.classList.contains("show")) menu.classList.remove("show");
@@ -5121,6 +6074,9 @@ document.getElementById("actionHint").onclick=()=>{
 document.getElementById("quickPotion").onclick=useQuickPotion;
 
 document.getElementById("backpackBtn").onclick=toggleBackpack;
+document.getElementById("questChip").onclick=toggleQuestLog;
+document.getElementById("closeQuestLog").onclick=closeQuestLog;
+document.getElementById("closeNpcDialog").onclick=closeNpcDialogue;
 document.getElementById("closeBackpack").onclick=closeBackpack;
 document.getElementById("inventoryGrid").onclick=handleInventoryGridClick;
 document.getElementById("lootGrid").onclick=handleLootGridClick;

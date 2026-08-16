@@ -122,6 +122,16 @@ except Exception as e:
     failed.append('developer world builder test'); print('FAIL developer world builder test',e)
 
 try:
+    quests=subprocess.run(['node',str(ROOT/'tools'/'quest-test.js')],check=True,capture_output=True,text=True)
+    print(quests.stdout.strip())
+except subprocess.CalledProcessError as e:
+    failed.append('quest builder test')
+    detail=(e.stderr or e.stdout or str(e)).strip()
+    print('FAIL quest builder test',detail)
+except Exception as e:
+    failed.append('quest builder test'); print('FAIL quest builder test',e)
+
+try:
     depth_sort=subprocess.run(['node',str(ROOT/'tools'/'depth-sort-test.js')],check=True,capture_output=True,text=True)
     print(depth_sort.stdout.strip())
 except subprocess.CalledProcessError as e:

@@ -81,6 +81,7 @@ function refreshInventoryViews(){
   updateBackpackHud();
   if(document.getElementById("backpack")?.classList.contains("show")) renderInventory();
   if(document.getElementById("lootWindow")?.classList.contains("show") && typeof renderLootInventory==="function") renderLootInventory();
+  if(typeof refreshQuestUI==="function") refreshQuestUI();
 }
 
 function addItem(itemId,qty=1){

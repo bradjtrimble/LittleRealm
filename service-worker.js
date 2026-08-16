@@ -1,4 +1,4 @@
-const CACHE_NAME = "little-realm-v53-depth-sort-editor";
+const CACHE_NAME = "little-realm-v54-quest-builder";
 const FILES = [
   "./",
   "./index.html",
@@ -11,6 +11,8 @@ const FILES = [
   "./config/items.js",
   "./config/loot-tables.js",
   "./config/keybinds.js",
+  "./config/npcs.js",
+  "./config/quests.js",
   "./config/world-objects.js",
   "./js/game.js",
   "./assets/icons/icon-192.png",
@@ -23,6 +25,8 @@ const FILES = [
   "./assets/buildings/house-a.png",
   "./assets/buildings/house-b.png",
   "./assets/characters/player.png",
+  "./assets/npcs/lilly.png",
+  "./assets/npcs/jorge.png",
   "./assets/mobs/slime.png",
   "./assets/mobs/wolf.png",
   "./assets/mobs/goblin.png",

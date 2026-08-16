@@ -1167,3 +1167,61 @@ button.action.danger{background:#8b3e4a;border-color:rgba(255,173,173,.32)}
 #closeBackpack.panelClose,#closeLootWindow.panelClose{width:24px;height:24px;margin:0;padding:0 0 2px}
 #backpackPanel .inventorySlot{touch-action:none}
 #menu{z-index:30}
+
+/* v54 quests + NPC conversations ----------------------------------------- */
+#questChip{cursor:pointer;pointer-events:auto;user-select:none}
+#questChip:hover{filter:brightness(1.12)}
+#questLog.floatingOverlay{
+  padding:0;
+  background:transparent;
+  pointer-events:none;
+}
+#questLog.floatingOverlay.show{display:block}
+#questLogPanel{
+  position:absolute;
+  top:112px;
+  right:12px;
+  width:min(330px,calc(100vw - 18px));
+  max-height:calc(100vh - 124px);
+  padding:7px;
+  pointer-events:auto;
+  overflow:hidden;
+  border-radius:10px;
+  border:1px solid rgba(255,255,255,.18);
+  background:linear-gradient(180deg,rgba(49,38,61,.97),rgba(29,23,36,.97));
+  box-shadow:0 10px 28px rgba(0,0,0,.42),inset 0 1px rgba(255,255,255,.05);
+  backdrop-filter:blur(6px);
+}
+#questLogBody{max-height:calc(100vh - 178px);overflow:auto;padding:1px 2px 4px}
+.questLogEntry{position:relative;margin-bottom:7px;padding:9px;border:1px solid rgba(255,255,255,.09);border-radius:8px;background:rgba(255,255,255,.045)}
+.questLogEntry.ready{border-color:rgba(255,216,92,.34);background:rgba(255,216,92,.07)}
+.questLogTitle{display:flex;align-items:center;justify-content:space-between;gap:8px;font-size:12px;font-weight:900;color:#fff}
+.questLogTitle span{padding:2px 5px;border-radius:999px;background:#6a5823;color:#ffeaa0;font-size:8px;letter-spacing:.08em}
+.questLogDesc{margin:5px 0 7px;color:#cfc1d7;font-size:10px;line-height:1.35}
+.questObjectives{display:grid;gap:3px;color:#f0e7f3;font-size:10px}
+.questRewards{margin-top:7px;color:#bfb0c7;font-size:9px}
+.questAbandon{margin-top:7px;border:1px solid rgba(255,255,255,.10);border-radius:6px;background:rgba(120,55,65,.48);color:#f4dde0;padding:5px 7px;font-size:9px;font-weight:800;cursor:pointer}
+.questCompletedHeading{margin:10px 2px 5px;color:#b9a9c1;font-size:9px;font-weight:900;letter-spacing:.10em;text-transform:uppercase}
+.questCompletedItem{padding:5px 7px;color:#9fd6aa;font-size:10px}
+.questEmpty{padding:12px;color:#cabdd0;font-size:11px;line-height:1.45}
+
+#npcDialog{align-items:flex-end;padding-bottom:max(18px,calc(env(safe-area-inset-bottom) + 12px));background:rgba(0,0,0,.42)}
+#npcDialogPanel{width:min(610px,96vw);max-height:min(70vh,560px);padding:14px;border-radius:14px;background:linear-gradient(180deg,#3b2d49,#2b2235)}
+.npcDialogHeader{display:flex;align-items:flex-start;justify-content:space-between;gap:12px;padding-bottom:9px;border-bottom:1px solid rgba(255,255,255,.09)}
+.npcDialogHeader h2{margin:0;font-size:18px}
+#npcDialogRole{margin-top:2px;color:#b9a9c2;font-size:10px;font-weight:800;text-transform:uppercase;letter-spacing:.08em}
+#npcDialogText{padding:12px 2px;color:#f6eef8;font-size:13px;line-height:1.45}
+#npcDialogActions{display:grid;gap:8px}
+.npcQuestCard{padding:10px;border:1px solid rgba(255,213,91,.20);border-radius:10px;background:rgba(255,255,255,.045)}
+.npcQuestCard.ready{border-color:rgba(255,225,123,.42);background:rgba(255,211,76,.08)}
+.npcQuestCard.active{border-color:rgba(121,194,230,.20)}
+.npcQuestTitle{font-size:12px;font-weight:900;color:#ffe08a}
+.npcQuestCopy{margin:5px 0 7px;color:#d8cbdc;font-size:11px;line-height:1.35}
+.npcQuestCard button{margin-top:8px;border:1px solid rgba(255,255,255,.15);border-radius:8px;background:#6b5685;color:#fff;padding:8px 10px;font-size:11px;font-weight:900;cursor:pointer}
+.npcNoQuest{padding:8px 2px;color:#a99cad;font-size:10px}
+
+@media(max-width:620px){
+  #questLogPanel{top:96px;right:7px;width:min(300px,calc(100vw - 14px));max-height:calc(100vh - 106px)}
+  #questLogBody{max-height:calc(100vh - 160px)}
+  #npcDialogPanel{width:calc(100vw - 12px);max-height:74vh}
+}

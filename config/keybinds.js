@@ -15,6 +15,7 @@ window.LR_KEYBINDS = {
 
   targetNext: ["Tab"],
   attackTarget: ["Space", "KeyF"],
+  interact: ["KeyE"],
   potion: ["KeyQ"],
   backpack: ["KeyI", "KeyB"],
   clearTarget: ["Escape"],

@@ -26,6 +26,9 @@ document.getElementById("actionHint").onclick=()=>{
 document.getElementById("quickPotion").onclick=useQuickPotion;
 
 document.getElementById("backpackBtn").onclick=toggleBackpack;
+document.getElementById("questChip").onclick=toggleQuestLog;
+document.getElementById("closeQuestLog").onclick=closeQuestLog;
+document.getElementById("closeNpcDialog").onclick=closeNpcDialogue;
 document.getElementById("closeBackpack").onclick=closeBackpack;
 document.getElementById("inventoryGrid").onclick=handleInventoryGridClick;
 document.getElementById("lootGrid").onclick=handleLootGridClick;

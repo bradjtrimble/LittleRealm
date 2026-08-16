@@ -22,3 +22,16 @@ Press **F2** on desktop to toggle Developer Mode.
 Selected world objects have a **Depth Mode**. `Y-Sort` is the recommended default: the player's feet are compared with the object's purple depth line. Feet above the line render behind the prop; feet below the line render in front. The line can be dragged outside the sprite bounds and is independent from collision.
 
 Fixed modes are available for special cases: **Always Behind Player**, **Always In Front of Player**, and **Ground / Floor**. The exported `world-objects.js` stores these as `depthMode` and (for Y-Sort) `depthY`. Older object files without these fields remain compatible; their default depth line is derived from the bottom of the object's hitbox.
+
+
+## NPCs and quests (v54)
+
+The **NPCs** tab can place the Lilly model, Jorge model, or a blank NPC. NPCs can be dragged directly in the world and the inspector can edit ID, name, role, sprite, position, facing, display height, interaction radius, greeting, and collision. NPC data exports to `config/npcs.js`.
+
+The **Quests** tab is a visual Quest Maker. It supports Kill, Collect, Talk, Deliver, and Visit objectives; quest giver / turn-in dropdowns; opening and completion dialogue; XP/gold/item rewards; prerequisites; next-quest links; and repeatable quests. Quest data exports to `config/quests.js`.
+
+## World Pack workflow (v54)
+
+The preferred long-term workflow is now **Project → Export World Pack (.json)**. The World Pack contains the current placed props, NPCs, quests, visual settings, and combat tuning in one uploadable file. This lets many small world/content edits be batched before the project source needs to be updated.
+
+Local drafts now save the same combined content. Old v1 prop-only drafts are migrated automatically when loaded. The Project tab can also import a previously exported World Pack to continue editing it in the browser.

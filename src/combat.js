@@ -297,13 +297,8 @@ function defeatWorldMob(mob){
   state.potions+=potionDrop;
   state.kills++;
 
-  if(e.name==="Slime"){
-    state.slimeKills++;
-    if(state.slimeKills>=SLIMES_REQUIRED&&!state.questComplete){
-      state.questComplete=true;
-      setTimeout(()=>toast("Starter task complete! Explore the rest of the zone."),550);
-    }
-  }
+  if(e.name==="Slime") state.slimeKills++; // legacy save compatibility
+  notifyQuestKill(e.configKey||e.kind||mob.kind,1);
   if(mob.boss||e.boss) state.bossDefeated=true;
 
   mob.alive=false;
@@ -372,6 +367,12 @@ function handleWorldTap(ev){
   const viewW=innerWidth/CAMERA_ZOOM, viewH=innerHeight/CAMERA_ZOOM;
   const camX=state.x-viewW/2, camY=state.y-viewH/2;
   const wx=camX+sx/CAMERA_ZOOM, wy=camY+sy/CAMERA_ZOOM;
+
+  const tappedNpc=findNpcAtWorld(wx,wy);
+  if(tappedNpc){
+    interactWithNpc(tappedNpc);
+    return;
+  }
 
   let best=null;
   let bestScore=Infinity;
@@ -630,13 +631,8 @@ function winBattle(){
   state.gold+=gold;
   state.kills++;
 
-  if(e.name==="Slime"){
-    state.slimeKills++;
-    if(state.slimeKills>=SLIMES_REQUIRED&&!state.questComplete){
-      state.questComplete=true;
-      setTimeout(()=>toast("Starter task complete! Explore the rest of the zone."),500);
-    }
-  }
+  if(e.name==="Slime") state.slimeKills++; // legacy save compatibility
+  notifyQuestKill(e.configKey||e.kind||currentMob?.kind,1);
   if(e.boss)state.bossDefeated=true;
 
   if(currentMob){

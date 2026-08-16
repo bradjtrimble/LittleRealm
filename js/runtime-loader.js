@@ -51,6 +51,20 @@
     }
 
     try {
+      await loadScript("./config/npcs.js", true);
+    } catch (err) {
+      console.warn("Fresh NPC config unavailable; trying offline cache.", err);
+      await loadScript("./config/npcs.js");
+    }
+
+    try {
+      await loadScript("./config/quests.js", true);
+    } catch (err) {
+      console.warn("Fresh quest config unavailable; trying offline cache.", err);
+      await loadScript("./config/quests.js");
+    }
+
+    try {
       await loadScript("./config/world-objects.js", true);
     } catch (err) {
       console.warn("Fresh world-object config unavailable; trying offline cache.", err);

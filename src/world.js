@@ -193,6 +193,68 @@ function addSolidRect(x,y,w,h,type="solid"){
   solidRects.push({x,y,w,h,type});
 }
 
+function cloneNpc(obj){
+  return JSON.parse(JSON.stringify(obj));
+}
+
+function normalizeNpcRecord(raw,index=0){
+  const npc=cloneNpc(raw||{});
+  npc.id=String(npc.id||`npc-${index+1}`).trim().replace(/\s+/g,"-").toLowerCase();
+  npc.name=String(npc.name||npc.id||"NPC");
+  npc.role=String(npc.role||"Villager");
+  npc.sprite=typeof npc.sprite==="string"?npc.sprite:"";
+  npc.x=numberOr(npc.x,START_X);
+  npc.y=numberOr(npc.y,START_Y);
+  npc.facing=["down","left","right","up"].includes(npc.facing)?npc.facing:"down";
+  npc.solid=npc.solid!==false;
+  npc.displayHeight=Math.max(24,numberOr(npc.displayHeight,58));
+  npc.greeting=String(npc.greeting||`Hello. I'm ${npc.name}.`);
+  npc.interactRadius=Math.max(20,numberOr(npc.interactRadius,58));
+  return npc;
+}
+
+function getProjectNPCs(){
+  return (PROJECT_NPCS||[]).map((npc,index)=>normalizeNpcRecord(npc,index));
+}
+
+function rebuildNpcCollision(){
+  solidRects=solidRects.filter(r=>r.type!=="npc");
+  for(const npc of sceneryNPCs){
+    if(npc.solid===false) continue;
+    const hb=npc.hitbox||{};
+    const w=Math.max(6,numberOr(hb.w,12));
+    const h=Math.max(6,numberOr(hb.h,14));
+    const x=numberOr(hb.x,-w/2);
+    const y=numberOr(hb.y,-h/2);
+    addSolidRect(npc.x+x,npc.y+y,w,h,"npc");
+  }
+}
+
+function findNpcAtWorld(wx,wy){
+  let best=null,bestScore=Infinity;
+  for(const npc of sceneryNPCs){
+    const h=Math.max(30,numberOr(npc.displayHeight,58)*VISUAL_SCALE.npcs);
+    const dx=Math.abs(wx-npc.x);
+    const dy=wy-npc.y;
+    const halfW=Math.max(18,h*.30);
+    if(dx<=halfW && dy>=-h && dy<=18){
+      const score=dx*dx+(dy*.55)*(dy*.55);
+      if(score<bestScore){best=npc;bestScore=score;}
+    }
+  }
+  return best;
+}
+
+function nearestInteractableNpc(range=72){
+  let best=null,bestDist=Infinity;
+  for(const npc of sceneryNPCs){
+    const d=dist(state.x,state.y,npc.x,npc.y);
+    const allowed=Math.max(range,numberOr(npc.interactRadius,58));
+    if(d<=allowed && d<bestDist){best=npc;bestDist=d;}
+  }
+  return best;
+}
+
 function buildScenery(){
   sceneryTrees.length=0;
   sceneryHouses.length=0;
@@ -222,16 +284,10 @@ function buildScenery(){
   // edit this list visually and export a replacement config file.
   sceneryProps.push(...getProjectWorldObjects());
 
-  // Future vendor / quest-giver placeholders. They are intentionally simple
-  // NPCs now; interaction behavior can be added later without redesigning town.
-  sceneryNPCs.push(
-    {x:5*TILE+18,y:5*TILE+12,name:"Mara",role:"Shopkeeper",shirt:"#b85c4a"},
-    {x:8*TILE+20,y:5*TILE+24,name:"Eldon",role:"Villager",shirt:"#4e79a7"},
-    {x:5*TILE+4,y:8*TILE+18,name:"Rhea",role:"Quest Giver",shirt:"#6e9c5e"},
-    {x:10*TILE+16,y:8*TILE+10,name:"Torren",role:"Blacksmith",shirt:"#8a6651"},
-    {x:4*TILE+22,y:20*TILE+28,name:"Farmer",role:"Farmer",shirt:"#b28b43"}
-  );
-  for(const npc of sceneryNPCs) addSolidRect(npc.x-6,npc.y-7,12,14,"npc");
+  // NPC placement is project data now. World Builder can move/add/delete NPCs
+  // and export config/npcs.js without changing this runtime module.
+  sceneryNPCs.push(...getProjectNPCs());
+  rebuildNpcCollision();
   addSolidRect(6*TILE+15,5*TILE+25,30,24,"well");
 
   // Farm perimeter. Keep a gate opening on the north side near the road.
@@ -624,20 +680,60 @@ function drawCastle(x,y){
   ctx.fillRect(x+44,y+31,3,7);
 }
 
+function npcSpriteImage(path){
+  if(!path) return null;
+  npcSpriteImage.cache=npcSpriteImage.cache||new Map();
+  if(npcSpriteImage.cache.has(path)) return npcSpriteImage.cache.get(path);
+  const image=new Image();
+  image.src=path;
+  image.onload=()=>buildSpriteFrameMeta(image);
+  npcSpriteImage.cache.set(path,image);
+  return image;
+}
+
+function npcQuestMarker(npc){
+  if(typeof getNpcQuestMarker!=="function") return "";
+  return getNpcQuestMarker(npc?.id)||"";
+}
+
 function drawNpcObject(obj,camX,camY){
   const x=Math.round(obj.x-camX), y=Math.round(obj.y-camY);
-  ctx.save(); ctx.imageSmoothingEnabled=false;
-  ctx.translate(x,y+15);
-  ctx.scale(VISUAL_SCALE.npcs,VISUAL_SCALE.npcs);
-  ctx.translate(-x,-(y+15));
-  ctx.fillStyle="rgba(0,0,0,.18)"; ctx.fillRect(x-6,y+8,12,3);
-  ctx.fillStyle="#d9ad84"; ctx.fillRect(x-5,y-11,10,9);
-  ctx.fillStyle="#5a3d2d"; ctx.fillRect(x-6,y-13,12,4); ctx.fillRect(x-6,y-9,2,5);
-  ctx.fillStyle=obj.shirt||"#627e9b"; ctx.fillRect(x-6,y-2,12,10);
-  ctx.fillStyle="#3b2e29"; ctx.fillRect(x-5,y+8,4,7); ctx.fillRect(x+1,y+8,4,7);
-  ctx.fillStyle="#202020"; ctx.fillRect(x-3,y-7,1,1); ctx.fillRect(x+2,y-7,1,1);
-  if(obj.role==="Quest Giver"){
-    ctx.fillStyle="#ffd45b"; ctx.font="900 12px system-ui"; ctx.textAlign="center"; ctx.fillText("!",x,y-18); ctx.textAlign="start";
+  const facingRows={down:0,left:1,right:2,up:3};
+  const row=facingRows[obj.facing]??0;
+  const image=npcSpriteImage(obj.sprite);
+  const displayH=Math.max(24,numberOr(obj.displayHeight,58))*VISUAL_SCALE.npcs;
+  let topY=y-displayH+12;
+
+  ctx.save();
+  ctx.imageSmoothingEnabled=false;
+  ctx.fillStyle="rgba(0,0,0,.18)";
+  ctx.beginPath();ctx.ellipse(x,y+9,Math.max(6,displayH*.13),3,0,0,Math.PI*2);ctx.fill();
+
+  if(image?.naturalWidth&&image?.naturalHeight){
+    const meta=spriteFrameMeta(image,row,0);
+    if(meta){
+      const dh=displayH;
+      const dw=Math.max(1,dh*(meta.sw/meta.sh));
+      topY=y-dh+14;
+      ctx.drawImage(image,meta.sx,meta.sy,meta.sw,meta.sh,Math.round(x-dw/2),Math.round(topY),Math.round(dw),Math.round(dh));
+    }
+  }else{
+    const scale=VISUAL_SCALE.npcs;
+    ctx.translate(x,y+15);ctx.scale(scale,scale);ctx.translate(-x,-(y+15));
+    ctx.fillStyle="#d9ad84"; ctx.fillRect(x-5,y-11,10,9);
+    ctx.fillStyle="#5a3d2d"; ctx.fillRect(x-6,y-13,12,4); ctx.fillRect(x-6,y-9,2,5);
+    ctx.fillStyle=obj.shirt||"#627e9b"; ctx.fillRect(x-6,y-2,12,10);
+    ctx.fillStyle="#3b2e29"; ctx.fillRect(x-5,y+8,4,7); ctx.fillRect(x+1,y+8,4,7);
+    ctx.fillStyle="#202020"; ctx.fillRect(x-3,y-7,1,1); ctx.fillRect(x+2,y-7,1,1);
+    topY=y-18*scale;
+  }
+
+  const marker=npcQuestMarker(obj);
+  if(marker){
+    const ready=marker==="?";
+    ctx.font="900 15px system-ui";ctx.textAlign="center";
+    ctx.lineWidth=3;ctx.strokeStyle="rgba(35,24,15,.82)";ctx.strokeText(marker,x,topY-7);
+    ctx.fillStyle=ready?"#ffe17b":"#ffd45b";ctx.fillText(marker,x,topY-7);ctx.textAlign="start";
   }
   ctx.restore();
 }

@@ -8,7 +8,7 @@
   <link rel="icon" type="image/png" sizes="192x192" href="./assets/icons/icon-192.png">
   <link rel="icon" type="image/png" sizes="512x512" href="./assets/icons/icon-512.png">
   <title>Little Realm RPG</title>
-  <link rel="stylesheet" href="./style.css?v=53">
+  <link rel="stylesheet" href="./style.css?v=54">
 </head>
 <body>
 <div id="gameShell">
@@ -28,10 +28,10 @@
 
   <button id="menuBtn">MENU</button>
   <button id="backpackBtn" aria-label="Open backpack"><span class="bagGlyph" aria-hidden="true"></span><span id="backpackCount">0/20</span></button>
-  <div id="questChip">Slimes 0/3</div>
+  <div id="questChip">Quests</div>
   <div id="toast"></div>
   <div id="pcControls" aria-hidden="true"></div>
-  <div id="buildBadge" aria-hidden="true">v53 • DEPTH SORT EDITOR</div>
+  <div id="buildBadge" aria-hidden="true">v54 • QUEST BUILDER</div>
 
   <div id="dpad">
     <div class="pad" id="up">▲</div>
@@ -70,6 +70,28 @@
     </div>
   </div>
 
+
+  <div id="questLog" class="overlay floatingOverlay">
+    <div id="questLogPanel" class="panel floatingPanel" role="region" aria-label="Quest Log">
+      <div id="questLogDragHandle" class="compactPanelHeader floatingDragHandle">
+        <div class="compactPanelTitle">Quest Log</div>
+        <button class="panelClose" id="closeQuestLog" aria-label="Close quest log">×</button>
+      </div>
+      <div id="questLogBody"></div>
+    </div>
+  </div>
+
+  <div id="npcDialog" class="overlay">
+    <div id="npcDialogPanel" class="panel" role="dialog" aria-modal="true" aria-labelledby="npcDialogName">
+      <div class="npcDialogHeader">
+        <div><h2 id="npcDialogName">NPC</h2><div id="npcDialogRole">Villager</div></div>
+        <button class="panelClose" id="closeNpcDialog" aria-label="Close conversation">×</button>
+      </div>
+      <div id="npcDialogText"></div>
+      <div id="npcDialogActions"></div>
+    </div>
+  </div>
+
   <div id="disposePrompt" class="overlay">
     <div id="disposePanel" class="panel" role="dialog" aria-modal="true" aria-labelledby="disposeTitle">
       <div class="inventoryEyebrow">DISPOSE ITEM</div>
@@ -94,7 +116,7 @@
       </div>
       <div class="infoBox" style="margin-bottom:12px">
         <b>Quest</b><br>
-        <span id="mQuest">Defeat 3 Slimes.</span>
+        <span id="mQuest">No active quests.</span>
       </div>
       <div class="infoBox" id="keybindList" style="margin-bottom:12px"></div>
       <div class="menuActions">
@@ -141,7 +163,7 @@
     </div>
   </div>
 </div>
-  <script src="./js/pwa.js?v=52"></script>
-  <script src="./js/runtime-loader.js?v=53"></script>
+  <script src="./js/pwa.js?v=54"></script>
+  <script src="./js/runtime-loader.js?v=54"></script>
 </body>
 </html>

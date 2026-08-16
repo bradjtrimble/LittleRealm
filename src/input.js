@@ -17,6 +17,7 @@ const INPUT_BINDINGS = {
   moveRight:bindingList("moveRight",["KeyD","ArrowRight"]),
   targetNext:bindingList("targetNext",["Tab"]),
   attackTarget:bindingList("attackTarget",["Space","KeyF"]),
+  interact:bindingList("interact",["KeyE"]),
   potion:bindingList("potion",["KeyQ"]),
   clearTarget:bindingList("clearTarget",["Escape"]),
   menu:bindingList("menu",["KeyM"]),
@@ -25,7 +26,7 @@ const INPUT_BINDINGS = {
 
 // Exposed only as read-only diagnostics so a desktop tester can confirm the
 // deployed build from DevTools without digging through bundled source.
-window.LR_BUILD_VERSION="v53-depth-sort-editor";
+window.LR_BUILD_VERSION="v54-quest-builder";
 window.LR_INPUT_BINDINGS=Object.freeze({...INPUT_BINDINGS});
 window.LR_INPUT_STATE=()=>({...input});
 
@@ -114,11 +115,11 @@ function bindingLabel(action){
 function updateKeyboardHelp(){
   const compact=document.getElementById("pcControls");
   if(compact){
-    compact.textContent=`PC CONTROLS  •  MOVE ${bindingLabel("moveUp")}/${bindingLabel("moveLeft")}/${bindingLabel("moveDown")}/${bindingLabel("moveRight")}  •  TARGET ${bindingLabel("targetNext")}  •  ATTACK ${bindingLabel("attackTarget")}  •  POTION ${bindingLabel("potion")}  •  PACK ${bindingLabel("backpack")}  •  CLEAR ${bindingLabel("clearTarget")}  •  MENU ${bindingLabel("menu")}`;
+    compact.textContent=`PC CONTROLS  •  MOVE ${bindingLabel("moveUp")}/${bindingLabel("moveLeft")}/${bindingLabel("moveDown")}/${bindingLabel("moveRight")}  •  TALK ${bindingLabel("interact")}  •  TARGET ${bindingLabel("targetNext")}  •  ATTACK ${bindingLabel("attackTarget")}  •  POTION ${bindingLabel("potion")}  •  PACK ${bindingLabel("backpack")}  •  MENU ${bindingLabel("menu")}`;
   }
   const list=document.getElementById("keybindList");
   if(list){
-    list.innerHTML=`<b>PC Controls</b><br>Move: ${bindingLabel("moveUp")} / ${bindingLabel("moveLeft")} / ${bindingLabel("moveDown")} / ${bindingLabel("moveRight")}<br>Target next mob: ${bindingLabel("targetNext")}<br>Attack target: ${bindingLabel("attackTarget")}<br>Quick potion: ${bindingLabel("potion")}<br>Backpack: ${bindingLabel("backpack")}<br>Clear target / leave combat: ${bindingLabel("clearTarget")}<br>Menu: ${bindingLabel("menu")}`;
+    list.innerHTML=`<b>PC Controls</b><br>Move: ${bindingLabel("moveUp")} / ${bindingLabel("moveLeft")} / ${bindingLabel("moveDown")} / ${bindingLabel("moveRight")}<br>Talk / interact: ${bindingLabel("interact")}<br>Target next mob: ${bindingLabel("targetNext")}<br>Attack target: ${bindingLabel("attackTarget")}<br>Quick potion: ${bindingLabel("potion")}<br>Backpack: ${bindingLabel("backpack")}<br>Clear target / leave combat: ${bindingLabel("clearTarget")}<br>Menu: ${bindingLabel("menu")}`;
   }
 }
 
@@ -140,6 +141,9 @@ function bindKeyboardControls(){
     if(keyMatches("backpack",event)){
       event.preventDefault();
       toggleBackpack();
+    }else if(keyMatches("interact",event)){
+      event.preventDefault();
+      interactWithNearestNpc();
     }else if(keyMatches("targetNext",event)){
       event.preventDefault();
       cycleKeyboardTarget(event.shiftKey);
@@ -155,7 +159,9 @@ function bindKeyboardControls(){
       const backpack=document.getElementById("backpack");
       const lootWindow=document.getElementById("lootWindow");
       const disposePrompt=document.getElementById("disposePrompt");
+      const npcDialog=document.getElementById("npcDialog");
       if(disposePrompt.classList.contains("show")) cancelDisposePrompt();
+      else if(npcDialog?.classList.contains("show")) closeNpcDialogue();
       else if(lootWindow.classList.contains("show")) closeLootWindow();
       else if(backpack.classList.contains("show")) closeBackpack();
       else if(menu.classList.contains("show")) menu.classList.remove("show");

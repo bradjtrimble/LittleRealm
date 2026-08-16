@@ -1,5 +1,7 @@
 const BALANCE = window.LR_BALANCE || {};
 const PROJECT_WORLD_OBJECTS = window.LR_WORLD_OBJECTS || [];
+const PROJECT_NPCS = window.LR_NPCS || [];
+const PROJECT_QUESTS = window.LR_QUESTS || [];
 const VISUAL_CONFIG = window.LR_VISUAL || {};
 
 function visualScaleOr(value,fallback=1){
@@ -46,7 +48,7 @@ function overlayIsShown(id){
 function isGameplayModalOpen(){
   // Backpack and loot are intentionally non-modal floating panels in v51.
   // Only true dialogs should stop movement/combat input.
-  return overlayIsShown("menu") || overlayIsShown("disposePrompt");
+  return overlayIsShown("menu") || overlayIsShown("disposePrompt") || overlayIsShown("npcDialog");
 }
 
 function isLootInteractionOpen(){

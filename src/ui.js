@@ -2,6 +2,8 @@ function closeAll(){
   document.getElementById("menu").classList.remove("show");
   document.getElementById("battle").classList.remove("show");
   document.getElementById("backpack")?.classList.remove("show");
+  closeQuestLog?.();
+  closeNpcDialogue?.();
   closeLootWindow();
   cancelDisposePrompt();
 }
@@ -22,20 +24,8 @@ function updateUI(){
   document.getElementById("mPotions").textContent=state.potions;
   document.getElementById("mKills").textContent=state.kills;
 
-  const questChip=document.getElementById("questChip");
-  questChip.classList.toggle("complete",Boolean(state.questComplete||state.bossDefeated));
-  let q;
-  if(state.bossDefeated){
-    q="Starter zone complete.";
-    document.getElementById("questChip").textContent="Starter zone";
-  }else if(state.questComplete){
-    q="Starter task complete. Explore the farm, wilderness, and goblin camp.";
-    document.getElementById("questChip").textContent="Explore the zone";
-  }else{
-    q=`Defeat ${SLIMES_REQUIRED} Slimes (${state.slimeKills}/${SLIMES_REQUIRED}).`;
-    document.getElementById("questChip").textContent=`Slimes ${state.slimeKills}/${SLIMES_REQUIRED}`;
-  }
-  document.getElementById("mQuest").textContent=q;
+  // Quest chip + menu summary are driven by the data-driven quest system.
+  refreshQuestUI();
 
   if(enemy){
     const heroHp=Math.max(0,state.hp);
@@ -131,6 +121,7 @@ function bindFloatingPanels(){
   floatingPanelsBound=true;
   bindFloatingPanel("backpackPanel","backpackDragHandle","lr-ui-backpack-position-v51");
   bindFloatingPanel("lootPanel","lootDragHandle","lr-ui-loot-position-v51");
+  bindFloatingPanel("questLogPanel","questLogDragHandle","lr-ui-quest-position-v54");
 
   document.addEventListener("pointermove",event=>{
     const drag=floatingPanelDrag;

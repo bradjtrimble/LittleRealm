@@ -7,6 +7,7 @@ function fresh(){
     atk:numberOr(BALANCE.player?.attack,5),def:numberOr(BALANCE.player?.defense,1),
     gold:numberOr(BALANCE.player?.startingGold,8),potions:numberOr(BALANCE.player?.startingPotions,2),kills:0,
     slimeKills:0,questComplete:false,bossDefeated:false,
+    quests:{},
     inventory:createEmptyInventory()
   };
 }
@@ -136,6 +137,8 @@ function updateMovement(dt){
   castleCooldown=Math.max(0,castleCooldown-dt);
   potionCooldown=Math.max(0,potionCooldown-dt);
   attackButtonCooldown=Math.max(0,attackButtonCooldown-dt);
+
+  updateQuestVisits();
 
   const t=tileAtWorld(state.x,state.y);
   if(t===4 && townCooldown<=0){townCooldown=2;townEvent()}
