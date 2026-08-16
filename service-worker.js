@@ -1,4 +1,4 @@
-const CACHE_NAME = "little-realm-v36-bear-slime-refresh";
+const CACHE_NAME = "little-realm-v37-smooth-mob-motion";
 const FILES = [
   "./",
   "./index.html",

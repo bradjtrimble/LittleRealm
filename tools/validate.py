@@ -107,6 +107,12 @@ try:
 except Exception as e:
     failed.append('live config test'); print('FAIL live config test',e)
 
+try:
+    motion=subprocess.run(['node',str(ROOT/'tools'/'mob-motion-test.js')],check=True,capture_output=True,text=True)
+    print(motion.stdout.strip())
+except Exception as e:
+    failed.append('mob motion stability test'); print('FAIL mob motion stability test',e)
+
 if failed:
     print('\nValidation failed:',', '.join(failed)); sys.exit(1)
 print('\nAll protected-system checks passed.')

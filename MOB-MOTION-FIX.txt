@@ -1,0 +1,6 @@
+v37 mob motion stabilization
+- Normal walking cycles only frames 1-3; action frame 4 is attack-only.
+- Idle mobs now stay on the idle frame.
+- Mob facing uses hysteresis and a short hold before changing direction.
+- Wanderers no longer bounce direction every frame when caught on scenery.
+- Added regression test for mob motion stability.

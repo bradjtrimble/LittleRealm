@@ -88,6 +88,8 @@ function spawnMobs(){
       vx:0,vy:0,
       drawVx:0,drawVy:0,
       facing:"down",
+      facingCandidate:"down",
+      facingCandidateTime:0,
       animTime:Math.random()*10,
       moveTimer:Math.random()*2,
       alive:true,
@@ -110,6 +112,8 @@ function spawnMobs(){
     vx:0,vy:0,
     drawVx:0,drawVy:0,
     facing:"down",
+    facingCandidate:"down",
+    facingCandidateTime:0,
     animTime:0,
     moveTimer:999999,
     alive:true,
@@ -122,14 +126,50 @@ function spawnMobs(){
   bossMob=boss;
 }
 
-function drawSheetSprite(c, sheet, ready, x, y, scale=1, facing="down", animT=0, moving=true, rowMap=null, fallbackKind=""){
+function stableMobFacing(mob,vx,vy,dt){
+  const ax=Math.abs(vx), ay=Math.abs(vy);
+  if(ax<1 && ay<1) return mob.facing||"down";
+
+  // Axis hysteresis: when movement is close to diagonal, prefer the current
+  // visual axis instead of flipping left/right/up/down every frame.
+  let candidate;
+  const current=mob.facing||"down";
+  if((current==="left"||current==="right") && ax>=ay*0.72){
+    candidate=vx>=0?"right":"left";
+  }else if((current==="up"||current==="down") && ay>=ax*0.72){
+    candidate=vy>=0?"down":"up";
+  }else{
+    candidate=vectorFacing(vx,vy,current);
+  }
+
+  if(candidate===current){
+    mob.facingCandidate=candidate;
+    mob.facingCandidateTime=0;
+    return current;
+  }
+  if(mob.facingCandidate!==candidate){
+    mob.facingCandidate=candidate;
+    mob.facingCandidateTime=0;
+  }
+  mob.facingCandidateTime=(mob.facingCandidateTime||0)+dt;
+  if(mob.facingCandidateTime>=0.14){
+    mob.facing=candidate;
+    mob.facingCandidateTime=0;
+  }
+  return mob.facing||current;
+}
+
+function drawSheetSprite(c, sheet, ready, x, y, scale=1, facing="down", animT=0, moving=true, rowMap=null, fallbackKind="", attacking=false){
   c.save();
   c.imageSmoothingEnabled = false;
 
   const resolvedMap = rowMap || { down: 0, left: 1, right: 2, up: 3 };
   const row = resolvedMap[facing] ?? 0;
-  const col = moving ? Math.floor(animT * 8) % 4 : 0;
-  const bob = moving ? Math.abs(Math.sin(animT * 8)) * 1.4 : 0;
+  // Column 4 is the action/attack frame. Keep it out of the normal walking
+  // cycle so idle mobs do not flash aggressive poses every half-second.
+  const walkCycle=[0,1,2,1];
+  const col = attacking ? 3 : (moving ? walkCycle[Math.floor(animT * 7) % walkCycle.length] : 0);
+  const bob = moving && !attacking ? Math.abs(Math.sin(animT * 7)) * 1.0 : 0;
 
   c.fillStyle = "rgba(0,0,0,.18)";
   c.beginPath();
@@ -155,7 +195,7 @@ function drawSheetSprite(c, sheet, ready, x, y, scale=1, facing="down", animT=0,
   c.restore();
 }
 
-function drawSlimeSprite(c,x,y,scale=1,facing="down",animT=0,moving=true){
+function drawSlimeSprite(c,x,y,scale=1,facing="down",animT=0,moving=true,attacking=false){
   drawSheetSprite(
     c,
     slimeSheet,
@@ -167,11 +207,12 @@ function drawSlimeSprite(c,x,y,scale=1,facing="down",animT=0,moving=true){
     animT,
     moving,
     { down: 0, left: 1, right: 2, up: 3 },
-    "slime"
+    "slime",
+    attacking
   );
 }
 
-function drawWolfSprite(c,x,y,scale=1,facing="down",animT=0,moving=true){
+function drawWolfSprite(c,x,y,scale=1,facing="down",animT=0,moving=true,attacking=false){
   drawSheetSprite(
     c,
     wolfSheet,
@@ -183,11 +224,12 @@ function drawWolfSprite(c,x,y,scale=1,facing="down",animT=0,moving=true){
     animT,
     moving,
     { down: 0, right: 1, left: 2, up: 3 },
-    "wolf"
+    "wolf",
+    attacking
   );
 }
 
-function drawGoblinSprite(c,x,y,scale=1,facing="down",animT=0,moving=true){
+function drawGoblinSprite(c,x,y,scale=1,facing="down",animT=0,moving=true,attacking=false){
   drawSheetSprite(
     c,
     goblinSheet,
@@ -199,11 +241,12 @@ function drawGoblinSprite(c,x,y,scale=1,facing="down",animT=0,moving=true){
     animT,
     moving,
     { down: 0, right: 1, left: 2, up: 3 },
-    "goblin"
+    "goblin",
+    attacking
   );
 }
 
-function drawBearSprite(c,x,y,scale=1,facing="down",animT=0,moving=true){
+function drawBearSprite(c,x,y,scale=1,facing="down",animT=0,moving=true,attacking=false){
   drawSheetSprite(
     c,
     bearSheet,
@@ -215,7 +258,8 @@ function drawBearSprite(c,x,y,scale=1,facing="down",animT=0,moving=true){
     animT,
     moving,
     { down: 0, right: 1, left: 2, up: 3 },
-    "boss"
+    "boss",
+    attacking
   );
 }
 
@@ -365,12 +409,14 @@ function mobVisualScale(mob){
 
 function drawMob(c,mob,sx,sy){
   const scale=mobVisualScale(mob);
+  const moving=Math.hypot(mob.drawVx||0,mob.drawVy||0)>4;
+  const attacking=(mob.attackAnim||0)>0;
   if(mob.kind==="slime") {
-    drawSlimeSprite(c,sx,sy,0.23*scale,mob.facing||"down",mob.animTime||0,true);
+    drawSlimeSprite(c,sx,sy,0.23*scale,mob.facing||"down",mob.animTime||0,moving,attacking);
   } else if(mob.kind==="goblin") {
-    drawGoblinSprite(c,sx,sy,0.23*scale,mob.facing||"down",mob.animTime||0,true);
+    drawGoblinSprite(c,sx,sy,0.23*scale,mob.facing||"down",mob.animTime||0,moving,attacking);
   } else if(mob.kind==="wolf") {
-    drawWolfSprite(c,sx,sy,0.23*scale,mob.facing||"down",mob.animTime||0,true);
+    drawWolfSprite(c,sx,sy,0.23*scale,mob.facing||"down",mob.animTime||0,moving,attacking);
   } else if(mob.kind==="cow") {
     drawCow(c,sx,sy,1.0*scale);
   } else if(mob.kind==="pig") {
@@ -378,7 +424,7 @@ function drawMob(c,mob,sx,sy){
   } else if(mob.kind==="chicken") {
     drawChicken(c,sx,sy,1.0*scale);
   } else if(mob.kind==="boss") {
-    drawBearSprite(c,sx,sy,0.145*scale,mob.facing||"down",mob.animTime||0,Math.hypot(mob.drawVx||0,mob.drawVy||0)>1 || mob===combatTarget);
+    drawBearSprite(c,sx,sy,0.145*scale,mob.facing||"down",mob.animTime||0,moving,attacking);
   }
 }
 
@@ -387,13 +433,13 @@ function drawBattleSprites(){
   enemyCtx.clearRect(0,0,enemyCanvas.width,enemyCanvas.height);
   drawHero(heroCtx,24,36,0.15,false,0,"down");
   if(!enemy)return;
-  if(enemy.kind==="slime") drawSlimeSprite(enemyCtx,36,39,0.68,"down",performance.now()/1000,true);
-  else if(enemy.kind==="goblin") drawGoblinSprite(enemyCtx,36,39,0.68,"down",performance.now()/1000,true);
-  else if(enemy.kind==="wolf") drawWolfSprite(enemyCtx,36,39,0.68,"down",performance.now()/1000,true);
+  if(enemy.kind==="slime") drawSlimeSprite(enemyCtx,36,39,0.68,"down",performance.now()/1000,false,enemyAttackAnim>0);
+  else if(enemy.kind==="goblin") drawGoblinSprite(enemyCtx,36,39,0.68,"down",performance.now()/1000,false,enemyAttackAnim>0);
+  else if(enemy.kind==="wolf") drawWolfSprite(enemyCtx,36,39,0.68,"down",performance.now()/1000,false,enemyAttackAnim>0);
   else if(enemy.kind==="cow") drawCow(enemyCtx,36,40,1.55);
   else if(enemy.kind==="pig") drawPig(enemyCtx,36,40,1.65);
   else if(enemy.kind==="chicken") drawChicken(enemyCtx,36,40,1.8);
-  else if(enemy.kind==="boss") drawBearSprite(enemyCtx,36,56,0.13,"down",performance.now()/1000,true);
+  else if(enemy.kind==="boss") drawBearSprite(enemyCtx,36,56,0.13,"down",performance.now()/1000,false,enemyAttackAnim>0);
   else drawBoss(enemyCtx,36,38,.95);
 }
 
@@ -406,7 +452,7 @@ function updateMobs(dt){
         mob.alive=true;
         mob.x=mob.homeX; mob.y=mob.homeY;
         mob.vx=0; mob.vy=0; mob.drawVx=0; mob.drawVy=0;
-        mob.facing="down"; mob.aggro=false;
+        mob.facing="down"; mob.facingCandidate="down"; mob.facingCandidateTime=0; mob.aggro=false;
         restoreMobStats(mob);
       }
       continue;
@@ -455,15 +501,23 @@ function updateMobs(dt){
 
     mob.drawVx=vx; mob.drawVy=vy;
     if(Math.hypot(vx,vy)>1){
-      mob.facing=vectorFacing(vx,vy,mob.facing||"down");
+      stableMobFacing(mob,vx,vy,dt);
       mob.animTime=(mob.animTime||0)+dt;
     }else if(isTarget){
-      mob.facing=vectorFacing(state.x-mob.x,state.y-mob.y,mob.facing||"down");
+      stableMobFacing(mob,state.x-mob.x,state.y-mob.y,dt);
+    }else{
+      mob.facingCandidateTime=0;
     }
 
     const nx=mob.x+vx*dt, ny=mob.y+vy*dt;
-    if(canStand(nx,mob.y,10)) mob.x=nx; else mob.vx*=-1;
-    if(canStand(mob.x,ny,10)) mob.y=ny; else mob.vy*=-1;
+    let blocked=false;
+    if(canStand(nx,mob.y,10)) mob.x=nx; else blocked=true;
+    if(canStand(mob.x,ny,10)) mob.y=ny; else blocked=true;
+    if(blocked && !isTarget && !mob.boss){
+      // Do not bounce the stored wander vector back and forth against a wall.
+      // Stop briefly and choose a fresh direction on the next wander decision.
+      mob.vx=0; mob.vy=0; mob.moveTimer=0;
+    }
 
     if(!mob.boss && tileAtWorld(mob.x,mob.y)===4){
       mob.x=mob.homeX; mob.y=mob.homeY;
