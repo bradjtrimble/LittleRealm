@@ -1,4 +1,4 @@
-const CACHE_NAME = "little-realm-v32-roomy-builder-mob-scale";
+const CACHE_NAME = "little-realm-v34-world-builder-visible-fix";
 const FILES = [
   "./",
   "./index.html",

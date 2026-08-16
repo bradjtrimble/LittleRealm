@@ -1267,7 +1267,7 @@ function ensureDeveloperStyles(){
     #devPanel .devTabs{display:grid;grid-template-columns:repeat(3,1fr);gap:6px;padding:8px 12px;border-bottom:1px solid rgba(255,255,255,.1);background:#211a28}
     #devPanel .devTab{border:1px solid rgba(255,255,255,.12);background:#30283a;color:#d9cfdf;border-radius:9px;padding:9px 10px;font-weight:800;cursor:pointer}
     #devPanel .devBody{flex:1;min-height:0;overflow:auto;padding:12px}
-    #devPanel .devView{display:none}.devView.active{display:block}
+    #devPanel .devView{display:none}#devPanel .devView.active{display:block}
     #devPanel .devSection{background:#241e2b;border:1px solid rgba(255,255,255,.08);border-radius:12px;padding:10px;margin-bottom:12px}
     #devPanel .devSectionTitle{padding:0 2px 8px;font-weight:900;color:#d8c1e7;letter-spacing:.06em;text-transform:uppercase;font-size:12px}
     #devPanel .devHint{color:#b9aebe;font-size:11px;margin:-2px 2px 9px;line-height:1.35}

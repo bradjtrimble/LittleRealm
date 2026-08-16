@@ -13,6 +13,7 @@ const required=[
   'devPalette','Existing Objects','findDeveloperMobAt','refreshDeveloperMobPanel','mobTypeScaleKey','MOB_TYPE_SCALE','Selected Mob Type','Visual Scale'
 ];
 for(const s of required) if(!bundle.includes(s)) throw new Error('missing developer feature: '+s);
+if(!bundle.includes('#devPanel .devView{display:none}#devPanel .devView.active{display:block}')) throw new Error('developer tab active-view CSS specificity regression');
 if(!loader.includes('config/world-objects.js')) throw new Error('world object config is not live-loaded');
 
 // Execute the user-editable config in a sandbox instead of testing for the

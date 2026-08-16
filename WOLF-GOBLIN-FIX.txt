@@ -1,0 +1,4 @@
+v33 patch
+- Replaced wolf sprite sheet with fixed 96x96 sheet
+- Replaced goblin sprite sheet with fixed 96x96 sheet
+- Bumped service worker cache name so browsers pull the new art
