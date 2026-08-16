@@ -1,4 +1,4 @@
-const CACHE_NAME = "little-realm-v37-smooth-mob-motion";
+const CACHE_NAME = "little-realm-v38-farm-animal-refresh";
 const FILES = [
   "./",
   "./index.html",
@@ -25,6 +25,9 @@ const FILES = [
   "./assets/mobs/wolf.png",
   "./assets/mobs/goblin.png",
   "./assets/mobs/bear.png",
+  "./assets/mobs/cow.png",
+  "./assets/mobs/pig.png",
+  "./assets/mobs/chicken.png",
   "./assets/environment/cave-entrance.png"
 ];
 

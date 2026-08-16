@@ -1,0 +1,5 @@
+v38 updates:
+- Implemented new pig, chicken, and cow sprite sheets.
+- Passive farm mobs now use animated 4x4 sprite sheets in world and battle.
+- Updated visual settings from uploaded visual-settings(3).js.
+- Improved sprite sheet frame slicing to handle non-divisible sheet sizes cleanly.

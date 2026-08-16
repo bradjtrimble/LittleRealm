@@ -8,12 +8,12 @@ window.LR_VISUAL = {
   "npcs": 1,
   "props": 0.75,
   "mobTypes": {
-    "slime": 1.3,
+    "slime": 0.5,
     "goblin": 1.3,
     "wolf": 1.3,
     "cow": 1.1,
     "pig": 1.1,
     "chicken": 1.1,
-    "snickers": 1.55
+    "snickers": 1.85
   }
 };

@@ -76,6 +76,21 @@ bearSheet.src = "./assets/mobs/bear.png";
 let bearSheetReady = bearSheet.complete && bearSheet.naturalWidth > 0;
 bearSheet.onload = () => { bearSheetReady = true; };
 
+const cowSheet = new Image();
+cowSheet.src = "./assets/mobs/cow.png";
+let cowSheetReady = cowSheet.complete && cowSheet.naturalWidth > 0;
+cowSheet.onload = () => { cowSheetReady = true; };
+
+const pigSheet = new Image();
+pigSheet.src = "./assets/mobs/pig.png";
+let pigSheetReady = pigSheet.complete && pigSheet.naturalWidth > 0;
+pigSheet.onload = () => { pigSheetReady = true; };
+
+const chickenSheet = new Image();
+chickenSheet.src = "./assets/mobs/chicken.png";
+let chickenSheetReady = chickenSheet.complete && chickenSheet.naturalWidth > 0;
+chickenSheet.onload = () => { chickenSheetReady = true; };
+
 const environmentAtlas = new Image();
 environmentAtlas.src = "./assets/environment/environment-atlas.png";
 let environmentAtlasReady = environmentAtlas.complete && environmentAtlas.naturalWidth > 0;
@@ -2241,15 +2256,17 @@ function drawSheetSprite(c, sheet, ready, x, y, scale=1, facing="down", animT=0,
   c.fill();
 
   if(ready && sheet.naturalWidth && sheet.naturalHeight){
-    const frameW = Math.floor(sheet.naturalWidth / 4);
-    const frameH = Math.floor(sheet.naturalHeight / 4);
-    const sx = col * frameW;
-    const sy = row * frameH;
+    const sx0 = Math.round(col * sheet.naturalWidth / 4);
+    const sx1 = Math.round((col + 1) * sheet.naturalWidth / 4);
+    const sy0 = Math.round(row * sheet.naturalHeight / 4);
+    const sy1 = Math.round((row + 1) * sheet.naturalHeight / 4);
+    const frameW = sx1 - sx0;
+    const frameH = sy1 - sy0;
     const dw = frameW * scale;
     const dh = frameH * scale;
     const dx = Math.round(x - dw / 2);
     const dy = Math.round(y - dh + 18 - bob);
-    c.drawImage(sheet, sx, sy, frameW, frameH, dx, dy, dw, dh);
+    c.drawImage(sheet, sx0, sy0, frameW, frameH, dx, dy, dw, dh);
   } else {
     if(fallbackKind === "slime") drawSlime(c,x,y,scale * 2.2);
     else if(fallbackKind === "wolf") drawWolf(c,x,y,scale * 2.0);
@@ -2323,6 +2340,57 @@ function drawBearSprite(c,x,y,scale=1,facing="down",animT=0,moving=true,attackin
     moving,
     { down: 0, right: 1, left: 2, up: 3 },
     "boss",
+    attacking
+  );
+}
+
+function drawCowSprite(c,x,y,scale=1,facing="down",animT=0,moving=true,attacking=false){
+  drawSheetSprite(
+    c,
+    cowSheet,
+    cowSheetReady,
+    x,
+    y,
+    scale,
+    facing,
+    animT,
+    moving,
+    { down: 0, right: 1, left: 2, up: 3 },
+    "cow",
+    attacking
+  );
+}
+
+function drawPigSprite(c,x,y,scale=1,facing="down",animT=0,moving=true,attacking=false){
+  drawSheetSprite(
+    c,
+    pigSheet,
+    pigSheetReady,
+    x,
+    y,
+    scale,
+    facing,
+    animT,
+    moving,
+    { down: 0, right: 1, left: 2, up: 3 },
+    "pig",
+    attacking
+  );
+}
+
+function drawChickenSprite(c,x,y,scale=1,facing="down",animT=0,moving=true,attacking=false){
+  drawSheetSprite(
+    c,
+    chickenSheet,
+    chickenSheetReady,
+    x,
+    y,
+    scale,
+    facing,
+    animT,
+    moving,
+    { down: 0, right: 1, left: 2, up: 3 },
+    "chicken",
     attacking
   );
 }
@@ -2482,11 +2550,11 @@ function drawMob(c,mob,sx,sy){
   } else if(mob.kind==="wolf") {
     drawWolfSprite(c,sx,sy,0.23*scale,mob.facing||"down",mob.animTime||0,moving,attacking);
   } else if(mob.kind==="cow") {
-    drawCow(c,sx,sy,1.0*scale);
+    drawCowSprite(c,sx,sy,0.23*scale,mob.facing||"down",mob.animTime||0,moving,attacking);
   } else if(mob.kind==="pig") {
-    drawPig(c,sx,sy,1.0*scale);
+    drawPigSprite(c,sx,sy,0.23*scale,mob.facing||"down",mob.animTime||0,moving,attacking);
   } else if(mob.kind==="chicken") {
-    drawChicken(c,sx,sy,1.0*scale);
+    drawChickenSprite(c,sx,sy,0.23*scale,mob.facing||"down",mob.animTime||0,moving,attacking);
   } else if(mob.kind==="boss") {
     drawBearSprite(c,sx,sy,0.145*scale,mob.facing||"down",mob.animTime||0,moving,attacking);
   }
@@ -2500,9 +2568,9 @@ function drawBattleSprites(){
   if(enemy.kind==="slime") drawSlimeSprite(enemyCtx,36,39,0.68,"down",performance.now()/1000,false,enemyAttackAnim>0);
   else if(enemy.kind==="goblin") drawGoblinSprite(enemyCtx,36,39,0.68,"down",performance.now()/1000,false,enemyAttackAnim>0);
   else if(enemy.kind==="wolf") drawWolfSprite(enemyCtx,36,39,0.68,"down",performance.now()/1000,false,enemyAttackAnim>0);
-  else if(enemy.kind==="cow") drawCow(enemyCtx,36,40,1.55);
-  else if(enemy.kind==="pig") drawPig(enemyCtx,36,40,1.65);
-  else if(enemy.kind==="chicken") drawChicken(enemyCtx,36,40,1.8);
+  else if(enemy.kind==="cow") drawCowSprite(enemyCtx,36,44,0.48,"down",performance.now()/1000,false,enemyAttackAnim>0);
+  else if(enemy.kind==="pig") drawPigSprite(enemyCtx,36,44,0.48,"down",performance.now()/1000,false,enemyAttackAnim>0);
+  else if(enemy.kind==="chicken") drawChickenSprite(enemyCtx,36,44,0.46,"down",performance.now()/1000,false,enemyAttackAnim>0);
   else if(enemy.kind==="boss") drawBearSprite(enemyCtx,36,56,0.13,"down",performance.now()/1000,false,enemyAttackAnim>0);
   else drawBoss(enemyCtx,36,38,.95);
 }

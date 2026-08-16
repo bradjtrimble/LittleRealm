@@ -71,6 +71,21 @@ bearSheet.src = "./assets/mobs/bear.png";
 let bearSheetReady = bearSheet.complete && bearSheet.naturalWidth > 0;
 bearSheet.onload = () => { bearSheetReady = true; };
 
+const cowSheet = new Image();
+cowSheet.src = "./assets/mobs/cow.png";
+let cowSheetReady = cowSheet.complete && cowSheet.naturalWidth > 0;
+cowSheet.onload = () => { cowSheetReady = true; };
+
+const pigSheet = new Image();
+pigSheet.src = "./assets/mobs/pig.png";
+let pigSheetReady = pigSheet.complete && pigSheet.naturalWidth > 0;
+pigSheet.onload = () => { pigSheetReady = true; };
+
+const chickenSheet = new Image();
+chickenSheet.src = "./assets/mobs/chicken.png";
+let chickenSheetReady = chickenSheet.complete && chickenSheet.naturalWidth > 0;
+chickenSheet.onload = () => { chickenSheetReady = true; };
+
 const environmentAtlas = new Image();
 environmentAtlas.src = "./assets/environment/environment-atlas.png";
 let environmentAtlasReady = environmentAtlas.complete && environmentAtlas.naturalWidth > 0;
