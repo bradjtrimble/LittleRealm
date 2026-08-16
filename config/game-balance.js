@@ -47,9 +47,36 @@ window.LR_BALANCE = {
     xpRequirementGrowthPercent: 35,
     hpPerLevel: 8,
     attackPerLevel: 2,
-    defensePerLevel: 1,
-    mobHpPerPlayerLevel: 2,
-    mobAttackPerPlayerLevel: 0.55
+    defensePerLevel: 1
+  },
+
+  mobLevels: {
+    // Species stats below are authored at each mob's baseLevel. Individual
+    // spawns can vary between levelMin and levelMax like classic MMO zones.
+    hpGrowthPerLevelPercent: 14,
+    attackGrowthPerLevelPercent: 10,
+    armorPerLevel: 0.55,
+    xpGrowthPerLevelPercent: 18,
+
+    // A mob starts receiving an extra danger bonus when it is MORE than three
+    // levels above the player. Every additional level adds another stack.
+    dangerStartsAbovePlayerLevels: 3,
+    dangerHpPerExtraLevelPercent: 12,
+    dangerAttackPerExtraLevelPercent: 9,
+    dangerArmorPerExtraLevel: 0.6,
+    dangerXpPerExtraLevelPercent: 10,
+
+    // Bosses/elite mobs get these multipliers after normal level scaling.
+    bossHpMultiplier: 1.50,
+    bossAttackMultiplier: 1.25,
+    bossArmorMultiplier: 1.25,
+    bossXpMultiplier: 1.75,
+
+    // WoW-like reward falloff for trivial enemies. Five or more levels below
+    // the player awards no XP; each lower level before that reduces XP.
+    noXpWhenBelowPlayerByLevels: 5,
+    lowLevelXpPenaltyPerLevelPercent: 20,
+    higherLevelXpBonusPerLevelPercent: 8
   },
 
   quest: {
@@ -63,6 +90,7 @@ window.LR_BALANCE = {
 
   mobs: {
     slime: {
+      baseLevel: 2, levelMin: 1, levelMax: 3,
       hp: 14,
       attack: 4,
       defense: 0,
@@ -87,6 +115,7 @@ window.LR_BALANCE = {
     },
 
     goblin: {
+      baseLevel: 4, levelMin: 3, levelMax: 5,
       hp: 20,
       attack: 6,
       defense: 1,
@@ -111,6 +140,7 @@ window.LR_BALANCE = {
     },
 
     wolf: {
+      baseLevel: 5, levelMin: 4, levelMax: 6,
       hp: 18,
       attack: 7,
       defense: 1,
@@ -136,6 +166,7 @@ window.LR_BALANCE = {
 
 
     cow: {
+      baseLevel: 2, levelMin: 1, levelMax: 2,
       hp: 12, attack: 1, defense: 0, xp: 4,
       goldMin: 0, goldMax: 0, goldDropChancePercent: 0,
       potionDropChancePercent: 0, potionDropAmount: 0,
@@ -146,6 +177,7 @@ window.LR_BALANCE = {
     },
 
     pig: {
+      baseLevel: 1, levelMin: 1, levelMax: 2,
       hp: 8, attack: 1, defense: 0, xp: 3,
       goldMin: 0, goldMax: 0, goldDropChancePercent: 0,
       potionDropChancePercent: 0, potionDropAmount: 0,
@@ -156,6 +188,7 @@ window.LR_BALANCE = {
     },
 
     chicken: {
+      baseLevel: 1, levelMin: 1, levelMax: 1,
       hp: 4, attack: 1, defense: 0, xp: 2,
       goldMin: 0, goldMax: 0, goldDropChancePercent: 0,
       potionDropChancePercent: 0, potionDropAmount: 0,
@@ -166,10 +199,13 @@ window.LR_BALANCE = {
     },
 
     snickers: {
-      hp: 110,
-      attack: 12,
-      defense: 4,
-      xp: 95,
+      baseLevel: 8, levelMin: 8, levelMax: 8,
+      // These are pre-boss base stats. The boss multipliers above bring
+      // Snickers to roughly the intended boss power for level 8.
+      hp: 70,
+      attack: 10,
+      defense: 3,
+      xp: 55,
       goldMin: 35,
       goldMax: 55,
       goldDropChancePercent: 100,

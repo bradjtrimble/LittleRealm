@@ -2,6 +2,9 @@ function createMobTemplate(name,kind,configKey,fallback,boss=false){
   const cfg=BALANCE.mobs?.[configKey] || {};
   return {
     name,kind,boss,
+    baseLevel:Math.max(1,Math.floor(numberOr(cfg.baseLevel,fallback.baseLevel||1))),
+    levelMin:Math.max(1,Math.floor(numberOr(cfg.levelMin,cfg.baseLevel??fallback.baseLevel??1))),
+    levelMax:Math.max(1,Math.floor(numberOr(cfg.levelMax,cfg.baseLevel??fallback.baseLevel??1))),
     hp:numberOr(cfg.hp,fallback.hp),
     atk:numberOr(cfg.attack,fallback.atk),
     def:numberOr(cfg.defense,fallback.def),
@@ -26,33 +29,107 @@ function createMobTemplate(name,kind,configKey,fallback,boss=false){
 }
 
 const enemyTemplates = [
-  createMobTemplate("Slime","slime","slime",{hp:14,atk:4,def:0,xp:8,gold:[2,5],attackInterval:1.45,aggressive:false,chaseSpeed:45,wanderSpeed:20}),
-  createMobTemplate("Goblin","goblin","goblin",{hp:20,atk:6,def:1,xp:13,gold:[4,8],attackInterval:1.45,aggressive:true,chaseSpeed:58,wanderSpeed:20}),
-  createMobTemplate("Wolf","wolf","wolf",{hp:18,atk:7,def:1,xp:14,gold:[3,7],attackInterval:1.33,aggressive:true,chaseSpeed:72,wanderSpeed:30}),
-  createMobTemplate("Cow","cow","cow",{hp:12,atk:1,def:0,xp:4,gold:[0,0],attackInterval:1.8,aggressive:false,chaseSpeed:28,wanderSpeed:12}),
-  createMobTemplate("Pig","pig","pig",{hp:8,atk:1,def:0,xp:3,gold:[0,0],attackInterval:1.8,aggressive:false,chaseSpeed:30,wanderSpeed:14}),
-  createMobTemplate("Chicken","chicken","chicken",{hp:4,atk:1,def:0,xp:2,gold:[0,0],attackInterval:1.7,aggressive:false,chaseSpeed:34,wanderSpeed:18})
+  createMobTemplate("Slime","slime","slime",{baseLevel:2,hp:14,atk:4,def:0,xp:8,gold:[2,5],attackInterval:1.45,aggressive:false,chaseSpeed:45,wanderSpeed:20}),
+  createMobTemplate("Goblin","goblin","goblin",{baseLevel:4,hp:20,atk:6,def:1,xp:13,gold:[4,8],attackInterval:1.45,aggressive:true,chaseSpeed:58,wanderSpeed:20}),
+  createMobTemplate("Wolf","wolf","wolf",{baseLevel:5,hp:18,atk:7,def:1,xp:14,gold:[3,7],attackInterval:1.33,aggressive:true,chaseSpeed:72,wanderSpeed:30}),
+  createMobTemplate("Cow","cow","cow",{baseLevel:2,hp:12,atk:1,def:0,xp:4,gold:[0,0],attackInterval:1.8,aggressive:false,chaseSpeed:28,wanderSpeed:12}),
+  createMobTemplate("Pig","pig","pig",{baseLevel:1,hp:8,atk:1,def:0,xp:3,gold:[0,0],attackInterval:1.8,aggressive:false,chaseSpeed:30,wanderSpeed:14}),
+  createMobTemplate("Chicken","chicken","chicken",{baseLevel:1,hp:4,atk:1,def:0,xp:2,gold:[0,0],attackInterval:1.7,aggressive:false,chaseSpeed:34,wanderSpeed:18})
 ];
-const bossTemplate = createMobTemplate("Snickers","boss","snickers",{hp:110,atk:12,def:4,xp:95,gold:[35,55],attackInterval:1.55,aggressive:true,chaseSpeed:52,wanderSpeed:0},true);
+const bossTemplate = createMobTemplate("Snickers","boss","snickers",{baseLevel:8,hp:70,atk:10,def:3,xp:55,gold:[35,55],attackInterval:1.55,aggressive:true,chaseSpeed:52,wanderSpeed:0},true);
 
-function mobScaledStats(template){
-  const levelBoost=Math.max(0,state.level-1);
-  const hpPerLevel=numberOr(BALANCE.progression?.mobHpPerPlayerLevel,2);
-  const atkPerLevel=numberOr(BALANCE.progression?.mobAttackPerPlayerLevel,.55);
-  return {
-    maxHp:template.hp+levelBoost*hpPerLevel,
-    atk:template.atk+Math.floor(levelBoost*atkPerLevel),
-    def:template.def
-  };
+function mobSpawnLevel(template,tx=0,ty=0){
+  const min=Math.min(template.levelMin,template.levelMax);
+  const max=Math.max(template.levelMin,template.levelMax);
+  if(min===max) return min;
+  // Stable per spawn point: the same creature location keeps its level after
+  // respawns instead of rerolling whenever the player walks back through.
+  const hash=Math.abs(((tx+17)*73856093)^((ty+31)*19349663)^((template.kind.length+7)*83492791));
+  return min+(hash%(max-min+1));
 }
 
-function restoreMobStats(mob){
-  const stats=mobScaledStats(mob.template);
+function mobDangerSteps(level){
+  const threshold=Math.max(0,Math.floor(numberOr(BALANCE.mobLevels?.dangerStartsAbovePlayerLevels,3)));
+  return Math.max(0,Math.floor(level-state.level-threshold));
+}
+
+function mobLevelColor(level,boss=false){
+  if(boss) return "#ff6b5f";
+  const delta=level-state.level;
+  if(delta>=4) return "#ff5d55";
+  if(delta>=2) return "#ffad4a";
+  if(delta<=-5) return "#8f969f";
+  if(delta<=-3) return "#71c873";
+  return "#f1d56a";
+}
+
+function mobScaledStats(template,level){
+  const cfg=BALANCE.mobLevels||{};
+  const mobLevel=Math.max(1,Math.floor(numberOr(level,template.baseLevel||1)));
+  const levelDelta=mobLevel-(template.baseLevel||1);
+  const hpGrowth=percentOr(cfg.hpGrowthPerLevelPercent,14);
+  const atkGrowth=percentOr(cfg.attackGrowthPerLevelPercent,10);
+  const armorPerLevel=numberOr(cfg.armorPerLevel,.55);
+  const xpGrowth=percentOr(cfg.xpGrowthPerLevelPercent,18);
+
+  let maxHp=Math.max(1,Math.round(template.hp*Math.max(.25,1+levelDelta*hpGrowth)));
+  let atk=Math.max(1,Math.round(template.atk*Math.max(.25,1+levelDelta*atkGrowth)));
+  let def=Math.max(0,Math.round(template.def+levelDelta*armorPerLevel));
+  let xp=Math.max(1,Math.round(template.xp*Math.max(.25,1+levelDelta*xpGrowth)));
+
+  if(template.boss){
+    maxHp=Math.max(1,Math.round(maxHp*numberOr(cfg.bossHpMultiplier,1.5)));
+    atk=Math.max(1,Math.round(atk*numberOr(cfg.bossAttackMultiplier,1.25)));
+    def=Math.max(0,Math.round(def*numberOr(cfg.bossArmorMultiplier,1.25)));
+    xp=Math.max(1,Math.round(xp*numberOr(cfg.bossXpMultiplier,1.75)));
+  }
+
+  const danger=mobDangerSteps(mobLevel);
+  if(danger>0){
+    maxHp=Math.round(maxHp*(1+danger*percentOr(cfg.dangerHpPerExtraLevelPercent,12)));
+    atk=Math.round(atk*(1+danger*percentOr(cfg.dangerAttackPerExtraLevelPercent,9)));
+    def=Math.max(0,Math.round(def+danger*numberOr(cfg.dangerArmorPerExtraLevel,.6)));
+    xp=Math.round(xp*(1+danger*percentOr(cfg.dangerXpPerExtraLevelPercent,10)));
+  }
+
+  return {maxHp,atk,def,xp,danger};
+}
+
+function mobXpReward(mob){
+  if(!mob) return 0;
+  const cfg=BALANCE.mobLevels||{};
+  const base=Math.max(0,Math.floor(numberOr(mob.xp,mob.template?.xp||0)));
+  const diff=mob.level-state.level;
+  const noXpGap=Math.max(1,Math.floor(numberOr(cfg.noXpWhenBelowPlayerByLevels,5)));
+  if(diff<=-noXpGap) return 0;
+  if(diff<0){
+    const penalty=Math.abs(diff)*percentOr(cfg.lowLevelXpPenaltyPerLevelPercent,20);
+    return Math.max(1,Math.round(base*Math.max(0,1-penalty)));
+  }
+  if(diff>0){
+    return Math.max(1,Math.round(base*(1+diff*percentOr(cfg.higherLevelXpBonusPerLevelPercent,8))));
+  }
+  return base;
+}
+
+function restoreMobStats(mob,fullHeal=true){
+  const oldMax=Math.max(1,numberOr(mob.maxHp,1));
+  const oldHp=Math.max(0,numberOr(mob.hp,oldMax));
+  const ratio=Math.max(0,Math.min(1,oldHp/oldMax));
+  const stats=mobScaledStats(mob.template,mob.level);
   mob.maxHp=stats.maxHp;
-  mob.hp=stats.maxHp;
+  mob.hp=fullHeal?stats.maxHp:Math.max(1,Math.round(stats.maxHp*ratio));
   mob.atk=stats.atk;
   mob.def=stats.def;
+  mob.xp=stats.xp;
+  mob.dangerSteps=stats.danger;
   mob.attackAnim=0;
+}
+
+function refreshAliveMobStatsForPlayer(){
+  for(const mob of mobs){
+    if(mob.alive) restoreMobStats(mob,false);
+  }
 }
 
 function spawnMobs(){
@@ -81,6 +158,7 @@ function spawnMobs(){
       id:nextMobId++,
       kind,
       template,
+      level:mobSpawnLevel(template,tx,ty),
       x:tx*TILE+TILE/2,
       y:ty*TILE+TILE/2,
       homeX:tx*TILE+TILE/2,
@@ -105,6 +183,7 @@ function spawnMobs(){
     id:nextMobId++,
     kind:"boss",
     template:bossTemplate,
+    level:mobSpawnLevel(bossTemplate,36,27),
     x:2326,
     y:1750,
     homeX:2326,

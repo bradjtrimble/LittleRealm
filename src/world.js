@@ -800,7 +800,14 @@ function drawWorld(){
       drawMob(ctx,mob,sx,sy);
 
       if(mob===combatTarget || mob===selectedTarget || mob.hp<mob.maxHp){
-        drawWorldHpBar(sx,sy-(mob.boss?38:29)*mScale,mob.hp,mob.maxHp,(mob.boss?52:38)*Math.min(1.5,mScale));
+        const hpY=sy-(mob.boss?38:29)*mScale;
+        ctx.save();
+        ctx.font=mob.boss?"900 8px system-ui":"800 7px system-ui";
+        ctx.textAlign="center";
+        ctx.fillStyle=mobLevelColor(mob.level,mob.boss);
+        ctx.fillText(`Lv ${mob.level}`,Math.round(sx),Math.round(hpY-5));
+        ctx.restore();
+        drawWorldHpBar(sx,hpY,mob.hp,mob.maxHp,(mob.boss?52:38)*Math.min(1.5,mScale));
       }else if(mob.aggro){
         ctx.fillStyle="#f2d15f";
         ctx.beginPath();ctx.arc(sx,sy-26*mScale,4,0,Math.PI*2);ctx.fill();

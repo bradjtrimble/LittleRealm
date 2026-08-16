@@ -40,7 +40,7 @@ function selectMob(mob,showToast=true){
   if(!mob||!mob.alive) return false;
   selectedTarget=mob;
   updateCombatHud();
-  if(showToast) toast(`${mob.template.name} targeted • ${Math.max(0,Math.ceil(mob.hp))}/${mob.maxHp} HP`);
+  if(showToast) toast(`Lv ${mob.level} ${mob.template.name} targeted • ${Math.max(0,Math.ceil(mob.hp))}/${mob.maxHp} HP`);
   return true;
 }
 
@@ -114,7 +114,9 @@ function updateCombatHud(){
 
   if(target){
     hud.classList.add("show");
-    document.getElementById("targetName").textContent=target.template.name;
+    const targetName=document.getElementById("targetName");
+    targetName.textContent=`Lv ${target.level} ${target.template.name}`;
+    targetName.style.color=mobLevelColor(target.level,target.boss);
     document.getElementById("targetHpText").textContent=`${Math.max(0,Math.ceil(target.hp))}/${target.maxHp} HP`;
     document.getElementById("targetHpFill").style.width=`${Math.max(0,100*target.hp/target.maxHp)}%`;
     const d=dist(state.x,state.y,target.x,target.y);
@@ -177,7 +179,7 @@ function engageMob(mob,forced=false){
   enemyAttackTimer=Math.max(enemyAttackTimer,ATTACK_START_DELAY-.08);
   heroFacing=vectorFacing(mob.x-state.x,mob.y-state.y,heroFacing);
   updateCombatHud();
-  if(!forced) toast(`Engaged ${mob.template.name}.`);
+  if(!forced) toast(`Engaged Lv ${mob.level} ${mob.template.name}.`);
   return true;
 }
 
@@ -230,7 +232,8 @@ function defeatWorldMob(mob){
   if(Math.random()<e.goldDropChance) gold=rand(Math.floor(e.gold[0]),Math.floor(e.gold[1]));
   if(e.potionDropAmount>0 && Math.random()<e.potionDropChance) potionDrop=e.potionDropAmount;
 
-  state.xp+=e.xp;
+  const xpReward=mobXpReward(mob);
+  state.xp+=xpReward;
   state.gold+=gold;
   state.potions+=potionDrop;
   state.kills++;
@@ -254,7 +257,7 @@ function defeatWorldMob(mob){
   if(mob.boss){
     toast("You defeated Snickers!");
   }else{
-    const rewards=[`+${e.xp} XP`];
+    const rewards=[xpReward>0?`+${xpReward} XP`:"No XP (trivial level)"];
     if(gold>0) rewards.push(`+${gold} gold`);
     if(potionDrop>0) rewards.push(`+${potionDrop} potion${potionDrop===1?"":"s"}`);
     toast(`Defeated ${e.name}: ${rewards.join(", ")}`);
@@ -385,21 +388,31 @@ function returnPlayerTurn(){
 
 function startMobBattle(mob){
   if(enemy || !mob.alive) return;
-  startBattle({...mob.template},mob);
+  startBattle({...mob.template,level:mob.level},mob);
 }
 
 function startBattle(base,mobRef=null){
   currentMob=mobRef;
   enemy={...base};
-  enemy.hp=base.hp+Math.max(0,state.level-1)*2;
-  enemy.maxHp=enemy.hp;
-  enemy.atk=base.atk+Math.floor((state.level-1)*.6);
+  if(mobRef){
+    enemy.level=mobRef.level;
+    enemy.hp=mobRef.hp;
+    enemy.maxHp=mobRef.maxHp;
+    enemy.atk=mobRef.atk;
+    enemy.def=mobRef.def;
+    enemy.xp=mobXpReward(mobRef);
+  }else{
+    const temp={...base,baseLevel:base.baseLevel||base.level||1,boss:!!base.boss};
+    const stats=mobScaledStats(temp,base.level||temp.baseLevel);
+    enemy.level=base.level||temp.baseLevel;
+    enemy.hp=stats.maxHp; enemy.maxHp=stats.maxHp; enemy.atk=stats.atk; enemy.def=stats.def; enemy.xp=stats.xp;
+  }
   defending=false;
   battleLocked=false;
   attackButtonCooldown=0;
   input={up:false,down:false,left:false,right:false};
 
-  document.getElementById("battleTitle").textContent=`${enemy.name} Encounter`;
+  document.getElementById("battleTitle").textContent=`Lv ${enemy.level||1} ${enemy.name} Encounter`;
   document.getElementById("battleScene").dataset.kind=enemy.kind||"slime";
   document.getElementById("battleFxLayer").innerHTML="";
   showEnemyIntent(false);
@@ -580,6 +593,7 @@ function levelCheck(){
     state.xpNext=Math.floor(state.xpNext*growth);
     state.maxHp+=hpGain;state.hp=state.maxHp;
     state.atk+=atkGain;state.def+=defGain;
+    refreshAliveMobStatsForPlayer();
     setTimeout(()=>toast(`Level up! Level ${state.level}`),650);
   }
 }
