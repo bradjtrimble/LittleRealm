@@ -1,6 +1,6 @@
 # Little Realm project structure
 
-This is the modular source baseline created from the user-confirmed v11 stable build.
+This is the current modular source layout. `src/` is authoritative game code and `js/game.js` is the generated production bundle.
 
 - `config/game-balance.js` — live balance values; editable without rebuilding the game
 - `config/items.js` — item catalog and backpack-facing item metadata
@@ -28,6 +28,8 @@ For code changes: edit the owning `src/` module, run `python3 tools/build.py`, r
 For balance-only changes: edit `config/game-balance.js` and push that single file. No build step is required.
 
 For world/content changes, the preferred workflow is **World Builder → Project → Export World Pack**. The resulting `little-realm-world-pack.json` contains current props, NPCs, quests, visual settings, and combat balance so a batch of editor changes can be applied together.
+
+For release documentation, add a new entry to the top of `CHANGELOG.md`. Keep `README.md` focused on the current project and `docs/` focused on current systems. Do not create per-update `.txt` files in the project root; `tools/project-hygiene-test.py` enforces this during validation.
 
 ## Protected systems
 The seamless terrain renderer, house footprint collision, tree trunk collision, and camera zoom 1.85 remain locked unless a requested feature specifically requires changing them.

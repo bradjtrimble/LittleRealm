@@ -14,7 +14,7 @@ checks=[]
 def check(ok,msg):
     checks.append((ok,msg))
 
-check('id="backpackDragHandle"' in index and 'id="lootDragHandle"' in index,'both panels have drag handles')
+check('id="backpackDragHandle"' in index and 'id="lootDragHandle"' in index and 'id="questLogDragHandle"' in index,'all floating panels have drag handles')
 check('id="closeBackpack"' in index and 'id="closeLootWindow"' in index,'both panels have compact close controls')
 check('id="inventoryDetails"' not in index,'backpack detail furniture removed')
 check('id="lootInventoryGrid"' not in index and 'id="takeAllLoot"' not in index,'loot window only contains dropped items')
@@ -38,6 +38,7 @@ body=m.group(1) if m else ''
 check('resetHeldKeyboardMovement' not in body and 'closeBackpack' not in body,'opening loot does not stop movement or close backpack')
 check('normalizePendingLoot([...pendingLoot,...normalized])' in loot,'new drops merge while loot window remains open')
 check('function bindFloatingPanels()' in ui and 'localStorage.setItem' in ui,'panel positions are draggable and persisted')
+check('constrainFloatingPanel("questLogPanel")' in ui,'quest panel is constrained after viewport resize')
 
 failed=[msg for ok,msg in checks if not ok]
 for ok,msg in checks:

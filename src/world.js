@@ -86,6 +86,30 @@ const sceneryNPCs=[];
 const sceneryProps=[];
 let solidRects=[];
 
+// drawWorld reuses these small wrapper records. This keeps depth sorting simple
+// while avoiding a fresh object allocation for every visible actor/prop frame.
+const visibleWorldRenderables=[];
+const worldRenderablePool=[];
+let worldRenderableCount=0;
+
+function resetWorldRenderables(){
+  visibleWorldRenderables.length=0;
+  worldRenderableCount=0;
+}
+
+function queueWorldRenderable(kind,depth,obj){
+  let item=worldRenderablePool[worldRenderableCount];
+  if(!item){
+    item={kind:"",depth:0,obj:null};
+    worldRenderablePool[worldRenderableCount]=item;
+  }
+  item.kind=kind;
+  item.depth=depth;
+  item.obj=obj;
+  visibleWorldRenderables.push(item);
+  worldRenderableCount++;
+}
+
 const PROP_SPECS = {
   signpost:{sx:0,sy:0,sw:79,sh:116,w:42,h:56},
   lamppost:{sx:124,sy:0,sw:69,sh:128,w:38,h:60},
@@ -904,52 +928,52 @@ function drawWorld(){
   }
 
   // Y-sort scenery, mobs, and the player so overlap feels like an RPG world.
-  const renderables=[];
+  resetWorldRenderables();
 
   for(const tree of sceneryTrees){
     const sx=tree.x-camX, sy=tree.y-camY;
     if(sx<-120||sy<-130||sx>viewW+120||sy>viewH+90) continue;
-    renderables.push({kind:"tree",depth:tree.y+58,obj:tree});
+    queueWorldRenderable("tree",tree.y+58,tree);
   }
 
   for(const house of sceneryHouses){
     const sx=house.x-camX, sy=house.y-camY;
     if(sx<-house.spec.w||sy<-house.spec.h||sx>viewW+60||sy>viewH+60) continue;
-    renderables.push({kind:"house",depth:house.y+house.spec.h-5,obj:house});
+    queueWorldRenderable("house",house.y+house.spec.h-5,house);
   }
 
   for(const fence of sceneryFences){
     const sx=fence.x-camX, sy=fence.y-camY;
     if(sx<-100||sy<-100||sx>viewW+100||sy>viewH+100) continue;
-    renderables.push({kind:"fence",depth:fence.y+35,obj:fence});
+    queueWorldRenderable("fence",fence.y+35,fence);
   }
   for(const sign of scenerySigns){
     const sx=sign.x-camX, sy=sign.y-camY;
     if(sx<-80||sy<-80||sx>viewW+80||sy>viewH+80) continue;
-    renderables.push({kind:"sign",depth:sign.y+40,obj:sign});
+    queueWorldRenderable("sign",sign.y+40,sign);
   }
   for(const prop of sceneryProps){
     const sx=prop.x-camX, sy=prop.y-camY;
     if(sx<-180||sy<-180||sx>viewW+180||sy>viewH+180) continue;
-    renderables.push({kind:"prop",depth:worldObjectRenderDepth(prop,state.y),obj:prop});
+    queueWorldRenderable("prop",worldObjectRenderDepth(prop,state.y),prop);
   }
   for(const npc of sceneryNPCs){
     const sx=npc.x-camX, sy=npc.y-camY;
     if(sx<-60||sy<-80||sx>viewW+60||sy>viewH+60) continue;
-    renderables.push({kind:"npc",depth:npcRenderDepth(npc,state.y),obj:npc});
+    queueWorldRenderable("npc",npcRenderDepth(npc,state.y),npc);
   }
 
   for(const mob of mobs){
     if(!mob.alive) continue;
     const sx=mob.x-camX, sy=mob.y-camY;
     if(sx<-60||sy<-60||sx>viewW+60||sy>viewH+60) continue;
-    renderables.push({kind:"mob",depth:mob.y,obj:mob});
+    queueWorldRenderable("mob",mob.y,mob);
   }
 
-  renderables.push({kind:"hero",depth:state.y,obj:null});
-  renderables.sort((a,b)=>a.depth-b.depth);
+  queueWorldRenderable("hero",state.y,null);
+  visibleWorldRenderables.sort((a,b)=>a.depth-b.depth);
 
-  for(const item of renderables){
+  for(const item of visibleWorldRenderables){
     if(item.kind==="tree"){
       drawTreeObject(item.obj,camX,camY);
     }else if(item.kind==="house"){

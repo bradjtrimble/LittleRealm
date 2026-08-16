@@ -28,6 +28,7 @@ let enemyAttackAnim=0;
 let potionCooldown=0;
 let combatFx=[];
 let bossMob=null;
+let combatHudSignature="";
 
 function combatHitChancePercent(base,levelAdvantage,perLevel,rankAdjustment=0){
   const cfg=BALANCE.mobLevels||{};
@@ -92,8 +93,13 @@ function getHudTarget(){
 function updateOpenCombat(dt){
   playerAttackAnim=Math.max(0,playerAttackAnim-dt);
   enemyAttackAnim=Math.max(0,enemyAttackAnim-dt);
-  for(const fx of combatFx) fx.life-=dt;
-  combatFx=combatFx.filter(fx=>fx.life>0);
+  let liveFx=0;
+  for(let i=0;i<combatFx.length;i++){
+    const fx=combatFx[i];
+    fx.life-=dt;
+    if(fx.life>0) combatFx[liveFx++]=fx;
+  }
+  combatFx.length=liveFx;
 
   if(!combatTarget){updateCombatHud();return}
   if(!combatTarget.alive){disengageCombat(false);return}
@@ -149,39 +155,66 @@ function targetThreatInfo(mob){
 }
 
 function updateCombatHud(){
+  const target=getHudTarget();
+  let signature;
+  let targetDistance=0;
+  let targetDisplayName="";
+  let threat=null;
+  let hitChance=0;
+  let near=null;
+
+  if(target){
+    targetDistance=dist(state.x,state.y,target.x,target.y);
+    targetDisplayName=mobDisplayName(target);
+    threat=targetThreatInfo(target);
+    hitChance=Math.round(playerHitChanceAgainst(target));
+    signature=[
+      "target",target.id,targetDisplayName,target.level,target.hp,target.maxHp,target.def,
+      target.boss?1:0,target.elite?1:0,threat.cls,hitChance,
+      Math.ceil(targetDistance),targetDistance>ATTACK_RANGE?1:0,targetDistance>MAX_ENGAGE_RANGE?1:0,
+      combatTarget&&combatTarget.alive?1:0,
+      attackButtonCooldown>0?attackButtonCooldown.toFixed(1):"ready"
+    ].join("|");
+  }else{
+    near=findNearestMob(MAX_ENGAGE_RANGE);
+    signature=`none|${near?.id||""}|${attackButtonCooldown>0?attackButtonCooldown.toFixed(1):"ready"}`;
+  }
+
+  // updateOpenCombat runs every frame. Most frames do not change any visible
+  // target HUD value, so avoid repeated DOM queries/writes until the rendered
+  // state actually changes.
+  if(signature===combatHudSignature) return;
+
   const hud=document.getElementById("targetHud");
   const action=document.getElementById("actionHint");
   if(!hud||!action) return;
-
-  const target=getHudTarget();
+  combatHudSignature=signature;
   action.classList.remove("ready","engaged","cooldown","targeted");
 
   if(target){
     hud.classList.add("show");
     const targetName=document.getElementById("targetName");
-    targetName.textContent=`Lv ${target.level} ${mobDisplayName(target)}`;
+    targetName.textContent=`Lv ${target.level} ${targetDisplayName}`;
     targetName.style.color=mobLevelColor(target.level,target.boss,target.elite);
     document.getElementById("targetHpText").textContent=`${Math.max(0,Math.ceil(target.hp))}/${target.maxHp} HP`;
     document.getElementById("targetHpFill").style.width=`${Math.max(0,100*target.hp/target.maxHp)}%`;
-    const threat=targetThreatInfo(target);
     const threatEl=document.getElementById("targetThreat");
     threatEl.textContent=threat.label;
     threatEl.className=`threat-${threat.cls}`;
-    document.getElementById("targetCombatStats").textContent=`DEF ${target.def} • HIT ${Math.round(playerHitChanceAgainst(target))}%`;
-    const d=dist(state.x,state.y,target.x,target.y);
+    document.getElementById("targetCombatStats").textContent=`DEF ${target.def} • HIT ${hitChance}%`;
 
     if(combatTarget && combatTarget.alive){
-      document.getElementById("combatHint").textContent=d>ATTACK_RANGE?"Closing to melee range…":"In combat • move away to escape";
+      document.getElementById("combatHint").textContent=targetDistance>ATTACK_RANGE?"Closing to melee range…":"In combat • move away to escape";
       action.innerHTML="LEAVE<br>COMBAT";
       action.classList.add("engaged");
       return;
     }
 
-    document.getElementById("combatHint").textContent=d>MAX_ENGAGE_RANGE?`Targeted • ${Math.ceil(d)} away • move closer`:`Targeted • ${Math.ceil(d)} away • ready to attack`;
+    document.getElementById("combatHint").textContent=targetDistance>MAX_ENGAGE_RANGE?`Targeted • ${Math.ceil(targetDistance)} away • move closer`:`Targeted • ${Math.ceil(targetDistance)} away • ready to attack`;
     if(attackButtonCooldown>0){
       action.innerHTML=`ATTACK<br>${attackButtonCooldown.toFixed(1)}s`;
       action.classList.add("cooldown");
-    }else if(d<=MAX_ENGAGE_RANGE){
+    }else if(targetDistance<=MAX_ENGAGE_RANGE){
       action.innerHTML="ATTACK<br>TARGET";
       action.classList.add("ready");
     }else{
@@ -192,7 +225,6 @@ function updateCombatHud(){
   }
 
   hud.classList.remove("show");
-  const near=findNearestMob(MAX_ENGAGE_RANGE);
   if(attackButtonCooldown>0){
     action.innerHTML=`ATTACK<br>${attackButtonCooldown.toFixed(1)}s`;
     action.classList.add("cooldown");

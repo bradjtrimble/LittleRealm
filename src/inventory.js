@@ -8,6 +8,7 @@ let pendingDisposeSlot = null;
 let inventoryPointerDrag = null;
 let suppressInventoryClick = false;
 let inventoryInteractionsBound = false;
+let normalizedInventoryRef = null;
 
 function createEmptyInventory(){
   return Array.from({length:INVENTORY_SLOT_COUNT},()=>null);
@@ -48,7 +49,12 @@ function normalizeInventory(value){
 
 function ensureInventoryState(){
   if(!state) return;
+  // Inventory mutations are centralized in this module. Normalize only when a
+  // new array enters state (new game/load) instead of reallocating every slot
+  // during routine count/capacity queries.
+  if(state.inventory===normalizedInventoryRef) return;
   state.inventory=normalizeInventory(state.inventory);
+  normalizedInventoryRef=state.inventory;
 }
 
 function getInventoryUsedSlots(){

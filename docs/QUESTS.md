@@ -6,7 +6,7 @@ Quest content is data-driven and is intended to be authored through **World Buil
 
 - `config/npcs.js` — NPC placement, sprite, facing, greeting, role, collision, and interaction radius.
 - `config/quests.js` — quest definitions, objectives, NPC links, dialogue, rewards, prerequisites, and chains.
-- `src/quests.js` — generic quest runtime, progress tracking, NPC dialogue, quest markers, quest log, and objective event hooks.
+- `src/quests.js` — generic quest runtime, progress tracking, NPC dialogue, quest markers, quest log, HUD tracking, and objective event hooks.
 - `assets/npcs/` — NPC sprite sheets.
 
 ## Supported objective types
@@ -27,16 +27,26 @@ The runtime derives these states from the definition and player save data:
 - `ready` — all objectives are satisfied and the quest can be turned in.
 - `completed` — finished for non-repeatable quests.
 
-NPCs show `!` when they have an available quest and `?` when they can receive a completed quest.
+NPC markers use three states:
 
-## Starter quests
+- Gold `!` — an available quest can be accepted.
+- Gold `?` — an active quest is ready to turn in here.
+- Grey `?` — an incomplete Talk objective currently asks the player to speak with this NPC.
 
-The v54 content seeds two quests for testing the system:
+## Quest tracking
 
-1. **Lilly's Slime Samples** — collect 3 Slime Gel and return to Lilly.
-2. **Jorge's Slime Problem** — after Lilly's quest, defeat 5 slimes and return to Jorge.
+Accepted quests are tracked on the side of the screen by default. Every active quest in the Quest Log has a **Track** checkbox. Unchecking it hides that quest from the HUD tracker without abandoning or changing its progress. Multiple quests can be tracked at the same time, and every objective in a multi-objective quest is shown independently.
 
-These intentionally exercise inventory objectives, kill objectives, prerequisites, rewards, NPC markers, dialogue, and turn-ins.
+Tracking preference is stored with runtime quest progress in `state.quests`. Older saves that do not yet have a `tracked` flag treat active quests as tracked by default.
+
+## Current integrated quest content
+
+The v56 World Pack contains four quests:
+
+1. **Welcome Traveler** — Mayor Buck asks the player to speak with Lilly, Jorge, Farmer, Rhea, and Torren.
+2. **Lilly's Slime Samples** — after Welcome Traveler, collect 20 Slime Gel and return to Lilly.
+3. **Jorge's Slime Problem** — after Welcome Traveler, defeat 5 slimes and return to Jorge.
+4. **Wolf Hunt** — the Farmer asks the player to defeat 15 wolves.
 
 ## Save data
 

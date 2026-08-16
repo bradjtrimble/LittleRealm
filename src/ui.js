@@ -147,5 +147,6 @@ function bindFloatingPanels(){
   window.addEventListener("resize",()=>{
     constrainFloatingPanel("backpackPanel");
     constrainFloatingPanel("lootPanel");
+    constrainFloatingPanel("questLogPanel");
   });
 }

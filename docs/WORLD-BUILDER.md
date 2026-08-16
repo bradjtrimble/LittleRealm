@@ -40,3 +40,7 @@ Local drafts now save the same combined content. Old v1 prop-only drafts are mig
 ## NPC visual selection (v55)
 
 NPCs now participate in the Selection tab alongside props. Selecting an NPC exposes live Sprite Height, model/facing, a visual collision hitbox editor, and a draggable Y-sort depth line. The placeholder NPC is a real 4x4 sprite sheet at `assets/npcs/npc-placeholder.png`, so it uses the same rendering and sizing path as named NPC models.
+
+## Quest tracking (v56)
+
+Accepted quests are tracked by default. The in-game Quest Log has a per-quest **Track** checkbox, and the side tracker can display multiple active quests and all objectives for each quest. Talk objectives also add a grey `?` marker above NPCs that still need to be spoken to.

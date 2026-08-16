@@ -270,6 +270,7 @@ let pendingDisposeSlot = null;
 let inventoryPointerDrag = null;
 let suppressInventoryClick = false;
 let inventoryInteractionsBound = false;
+let normalizedInventoryRef = null;
 
 function createEmptyInventory(){
   return Array.from({length:INVENTORY_SLOT_COUNT},()=>null);
@@ -310,7 +311,12 @@ function normalizeInventory(value){
 
 function ensureInventoryState(){
   if(!state) return;
+  // Inventory mutations are centralized in this module. Normalize only when a
+  // new array enters state (new game/load) instead of reallocating every slot
+  // during routine count/capacity queries.
+  if(state.inventory===normalizedInventoryRef) return;
   state.inventory=normalizeInventory(state.inventory);
+  normalizedInventoryRef=state.inventory;
 }
 
 function getInventoryUsedSlots(){
@@ -1100,6 +1106,30 @@ const scenerySigns=[];
 const sceneryNPCs=[];
 const sceneryProps=[];
 let solidRects=[];
+
+// drawWorld reuses these small wrapper records. This keeps depth sorting simple
+// while avoiding a fresh object allocation for every visible actor/prop frame.
+const visibleWorldRenderables=[];
+const worldRenderablePool=[];
+let worldRenderableCount=0;
+
+function resetWorldRenderables(){
+  visibleWorldRenderables.length=0;
+  worldRenderableCount=0;
+}
+
+function queueWorldRenderable(kind,depth,obj){
+  let item=worldRenderablePool[worldRenderableCount];
+  if(!item){
+    item={kind:"",depth:0,obj:null};
+    worldRenderablePool[worldRenderableCount]=item;
+  }
+  item.kind=kind;
+  item.depth=depth;
+  item.obj=obj;
+  visibleWorldRenderables.push(item);
+  worldRenderableCount++;
+}
 
 const PROP_SPECS = {
   signpost:{sx:0,sy:0,sw:79,sh:116,w:42,h:56},
@@ -1919,52 +1949,52 @@ function drawWorld(){
   }
 
   // Y-sort scenery, mobs, and the player so overlap feels like an RPG world.
-  const renderables=[];
+  resetWorldRenderables();
 
   for(const tree of sceneryTrees){
     const sx=tree.x-camX, sy=tree.y-camY;
     if(sx<-120||sy<-130||sx>viewW+120||sy>viewH+90) continue;
-    renderables.push({kind:"tree",depth:tree.y+58,obj:tree});
+    queueWorldRenderable("tree",tree.y+58,tree);
   }
 
   for(const house of sceneryHouses){
     const sx=house.x-camX, sy=house.y-camY;
     if(sx<-house.spec.w||sy<-house.spec.h||sx>viewW+60||sy>viewH+60) continue;
-    renderables.push({kind:"house",depth:house.y+house.spec.h-5,obj:house});
+    queueWorldRenderable("house",house.y+house.spec.h-5,house);
   }
 
   for(const fence of sceneryFences){
     const sx=fence.x-camX, sy=fence.y-camY;
     if(sx<-100||sy<-100||sx>viewW+100||sy>viewH+100) continue;
-    renderables.push({kind:"fence",depth:fence.y+35,obj:fence});
+    queueWorldRenderable("fence",fence.y+35,fence);
   }
   for(const sign of scenerySigns){
     const sx=sign.x-camX, sy=sign.y-camY;
     if(sx<-80||sy<-80||sx>viewW+80||sy>viewH+80) continue;
-    renderables.push({kind:"sign",depth:sign.y+40,obj:sign});
+    queueWorldRenderable("sign",sign.y+40,sign);
   }
   for(const prop of sceneryProps){
     const sx=prop.x-camX, sy=prop.y-camY;
     if(sx<-180||sy<-180||sx>viewW+180||sy>viewH+180) continue;
-    renderables.push({kind:"prop",depth:worldObjectRenderDepth(prop,state.y),obj:prop});
+    queueWorldRenderable("prop",worldObjectRenderDepth(prop,state.y),prop);
   }
   for(const npc of sceneryNPCs){
     const sx=npc.x-camX, sy=npc.y-camY;
     if(sx<-60||sy<-80||sx>viewW+60||sy>viewH+60) continue;
-    renderables.push({kind:"npc",depth:npcRenderDepth(npc,state.y),obj:npc});
+    queueWorldRenderable("npc",npcRenderDepth(npc,state.y),npc);
   }
 
   for(const mob of mobs){
     if(!mob.alive) continue;
     const sx=mob.x-camX, sy=mob.y-camY;
     if(sx<-60||sy<-60||sx>viewW+60||sy>viewH+60) continue;
-    renderables.push({kind:"mob",depth:mob.y,obj:mob});
+    queueWorldRenderable("mob",mob.y,mob);
   }
 
-  renderables.push({kind:"hero",depth:state.y,obj:null});
-  renderables.sort((a,b)=>a.depth-b.depth);
+  queueWorldRenderable("hero",state.y,null);
+  visibleWorldRenderables.sort((a,b)=>a.depth-b.depth);
 
-  for(const item of renderables){
+  for(const item of visibleWorldRenderables){
     if(item.kind==="tree"){
       drawTreeObject(item.obj,camX,camY);
     }else if(item.kind==="house"){
@@ -2106,8 +2136,15 @@ function normalizeQuestDefinition(raw,index=0){
       .filter(item=>item&&typeof item.id==="string"&&item.id)
       .map(item=>({id:item.id,qty:Math.max(1,Math.floor(numberOr(item.qty,1))) }))
   };
-  quest.prerequisite=quest.prerequisite?String(quest.prerequisite):null;
-  quest.nextQuest=quest.nextQuest?String(quest.nextQuest):null;
+  if(Array.isArray(quest.prerequisite)){
+    quest.prerequisite=quest.prerequisite
+      .map(id=>String(id||"").trim())
+      .filter(Boolean);
+    if(!quest.prerequisite.length) quest.prerequisite=null;
+  }else{
+    quest.prerequisite=quest.prerequisite?String(quest.prerequisite).trim():null;
+  }
+  quest.nextQuest=quest.nextQuest?String(quest.nextQuest).trim():null;
   quest.repeatable=!!quest.repeatable;
   return quest;
 }
@@ -2430,7 +2467,10 @@ function toggleQuestLog(){
   const overlay=document.getElementById("questLog");
   if(!overlay) return;
   overlay.classList.toggle("show");
-  if(overlay.classList.contains("show")) renderQuestLog();
+  if(overlay.classList.contains("show")){
+    renderQuestLog();
+    constrainFloatingPanel?.("questLogPanel");
+  }
 }
 
 function closeQuestLog(){
@@ -2924,7 +2964,7 @@ function developerWorldPack(){
   return {
     format:"little-realm-world-pack",
     schemaVersion:1,
-    build:"v56-quest-tracking",
+    build:"v58-project-cleanup",
     exportedAt:new Date().toISOString(),
     worldObjects:sceneryProps.map(cloneWorldObject),
     npcs:sceneryNPCs.map(cloneNpc),
@@ -5296,6 +5336,7 @@ let enemyAttackAnim=0;
 let potionCooldown=0;
 let combatFx=[];
 let bossMob=null;
+let combatHudSignature="";
 
 function combatHitChancePercent(base,levelAdvantage,perLevel,rankAdjustment=0){
   const cfg=BALANCE.mobLevels||{};
@@ -5360,8 +5401,13 @@ function getHudTarget(){
 function updateOpenCombat(dt){
   playerAttackAnim=Math.max(0,playerAttackAnim-dt);
   enemyAttackAnim=Math.max(0,enemyAttackAnim-dt);
-  for(const fx of combatFx) fx.life-=dt;
-  combatFx=combatFx.filter(fx=>fx.life>0);
+  let liveFx=0;
+  for(let i=0;i<combatFx.length;i++){
+    const fx=combatFx[i];
+    fx.life-=dt;
+    if(fx.life>0) combatFx[liveFx++]=fx;
+  }
+  combatFx.length=liveFx;
 
   if(!combatTarget){updateCombatHud();return}
   if(!combatTarget.alive){disengageCombat(false);return}
@@ -5417,39 +5463,66 @@ function targetThreatInfo(mob){
 }
 
 function updateCombatHud(){
+  const target=getHudTarget();
+  let signature;
+  let targetDistance=0;
+  let targetDisplayName="";
+  let threat=null;
+  let hitChance=0;
+  let near=null;
+
+  if(target){
+    targetDistance=dist(state.x,state.y,target.x,target.y);
+    targetDisplayName=mobDisplayName(target);
+    threat=targetThreatInfo(target);
+    hitChance=Math.round(playerHitChanceAgainst(target));
+    signature=[
+      "target",target.id,targetDisplayName,target.level,target.hp,target.maxHp,target.def,
+      target.boss?1:0,target.elite?1:0,threat.cls,hitChance,
+      Math.ceil(targetDistance),targetDistance>ATTACK_RANGE?1:0,targetDistance>MAX_ENGAGE_RANGE?1:0,
+      combatTarget&&combatTarget.alive?1:0,
+      attackButtonCooldown>0?attackButtonCooldown.toFixed(1):"ready"
+    ].join("|");
+  }else{
+    near=findNearestMob(MAX_ENGAGE_RANGE);
+    signature=`none|${near?.id||""}|${attackButtonCooldown>0?attackButtonCooldown.toFixed(1):"ready"}`;
+  }
+
+  // updateOpenCombat runs every frame. Most frames do not change any visible
+  // target HUD value, so avoid repeated DOM queries/writes until the rendered
+  // state actually changes.
+  if(signature===combatHudSignature) return;
+
   const hud=document.getElementById("targetHud");
   const action=document.getElementById("actionHint");
   if(!hud||!action) return;
-
-  const target=getHudTarget();
+  combatHudSignature=signature;
   action.classList.remove("ready","engaged","cooldown","targeted");
 
   if(target){
     hud.classList.add("show");
     const targetName=document.getElementById("targetName");
-    targetName.textContent=`Lv ${target.level} ${mobDisplayName(target)}`;
+    targetName.textContent=`Lv ${target.level} ${targetDisplayName}`;
     targetName.style.color=mobLevelColor(target.level,target.boss,target.elite);
     document.getElementById("targetHpText").textContent=`${Math.max(0,Math.ceil(target.hp))}/${target.maxHp} HP`;
     document.getElementById("targetHpFill").style.width=`${Math.max(0,100*target.hp/target.maxHp)}%`;
-    const threat=targetThreatInfo(target);
     const threatEl=document.getElementById("targetThreat");
     threatEl.textContent=threat.label;
     threatEl.className=`threat-${threat.cls}`;
-    document.getElementById("targetCombatStats").textContent=`DEF ${target.def} • HIT ${Math.round(playerHitChanceAgainst(target))}%`;
-    const d=dist(state.x,state.y,target.x,target.y);
+    document.getElementById("targetCombatStats").textContent=`DEF ${target.def} • HIT ${hitChance}%`;
 
     if(combatTarget && combatTarget.alive){
-      document.getElementById("combatHint").textContent=d>ATTACK_RANGE?"Closing to melee range…":"In combat • move away to escape";
+      document.getElementById("combatHint").textContent=targetDistance>ATTACK_RANGE?"Closing to melee range…":"In combat • move away to escape";
       action.innerHTML="LEAVE<br>COMBAT";
       action.classList.add("engaged");
       return;
     }
 
-    document.getElementById("combatHint").textContent=d>MAX_ENGAGE_RANGE?`Targeted • ${Math.ceil(d)} away • move closer`:`Targeted • ${Math.ceil(d)} away • ready to attack`;
+    document.getElementById("combatHint").textContent=targetDistance>MAX_ENGAGE_RANGE?`Targeted • ${Math.ceil(targetDistance)} away • move closer`:`Targeted • ${Math.ceil(targetDistance)} away • ready to attack`;
     if(attackButtonCooldown>0){
       action.innerHTML=`ATTACK<br>${attackButtonCooldown.toFixed(1)}s`;
       action.classList.add("cooldown");
-    }else if(d<=MAX_ENGAGE_RANGE){
+    }else if(targetDistance<=MAX_ENGAGE_RANGE){
       action.innerHTML="ATTACK<br>TARGET";
       action.classList.add("ready");
     }else{
@@ -5460,7 +5533,6 @@ function updateCombatHud(){
   }
 
   hud.classList.remove("show");
-  const near=findNearestMob(MAX_ENGAGE_RANGE);
   if(attackButtonCooldown>0){
     action.innerHTML=`ATTACK<br>${attackButtonCooldown.toFixed(1)}s`;
     action.classList.add("cooldown");
@@ -6108,33 +6180,92 @@ function bindFloatingPanels(){
   window.addEventListener("resize",()=>{
     constrainFloatingPanel("backpackPanel");
     constrainFloatingPanel("lootPanel");
+    constrainFloatingPanel("questLogPanel");
   });
 }
 
-function save(){
-  const saveData={...state};
-  localStorage.setItem("littleRealmMobileSaveV3",JSON.stringify(saveData));
-  toast("Game saved.");
+function loadedWholeNumber(value,fallback,min=0){
+  const fallbackValue=Math.max(min,Math.floor(numberOr(fallback,min)));
+  const n=Number(value);
+  if(!Number.isFinite(n)) return fallbackValue;
+  const whole=Math.floor(n);
+  return whole>=min?whole:fallbackValue;
 }
-function load(){
-  const raw=localStorage.getItem("littleRealmMobileSaveV3");
-  if(!raw){toast("No v3 save found.");return}
+
+function normalizeLoadedState(raw){
+  const base=fresh();
+  const source=raw&&typeof raw==="object"&&!Array.isArray(raw)?raw:{};
+  const next={...base,...source};
+
+  next.level=loadedWholeNumber(source.level,base.level,1);
+  next.xp=loadedWholeNumber(source.xp,base.xp,0);
+  next.xpNext=loadedWholeNumber(source.xpNext,base.xpNext,1);
+  next.maxHp=loadedWholeNumber(source.maxHp,base.maxHp,1);
+  next.hp=clamp(loadedWholeNumber(source.hp,base.hp,0),0,next.maxHp);
+  next.atk=loadedWholeNumber(source.atk,base.atk,0);
+  next.def=loadedWholeNumber(source.def,base.def,0);
+  next.gold=loadedWholeNumber(source.gold,base.gold,0);
+  next.potions=loadedWholeNumber(source.potions,base.potions,0);
+  next.kills=loadedWholeNumber(source.kills,base.kills,0);
+  next.slimeKills=loadedWholeNumber(source.slimeKills,base.slimeKills,0);
+  next.questComplete=booleanOr(source.questComplete,base.questComplete);
+  next.bossDefeated=booleanOr(source.bossDefeated,base.bossDefeated);
+  next.quests=source.quests&&typeof source.quests==="object"&&!Array.isArray(source.quests)?source.quests:{};
+  next.inventory=Array.isArray(source.inventory)?source.inventory:base.inventory;
+
+  const x=numberOr(source.x,base.x);
+  const y=numberOr(source.y,base.y);
+  if(Number.isFinite(x)&&Number.isFinite(y)&&canStand(x,y)){
+    next.x=x;
+    next.y=y;
+  }else{
+    next.x=base.x;
+    next.y=base.y;
+  }
+  return next;
+}
+
+function save(){
   try{
-    state={...fresh(),...JSON.parse(raw)};
+    localStorage.setItem("littleRealmMobileSaveV3",JSON.stringify({...state}));
+    toast("Game saved.");
+    return true;
+  }catch(_err){
+    toast("Could not save game on this device.");
+    return false;
+  }
+}
+
+function load(){
+  let raw;
+  try{
+    raw=localStorage.getItem("littleRealmMobileSaveV3");
+  }catch(_err){
+    toast("Could not access saved games on this device.");
+    return false;
+  }
+  if(!raw){toast("No v3 save found.");return false}
+
+  try{
+    state=normalizeLoadedState(JSON.parse(raw));
     ensureInventoryState();
+    lastSafePos={x:state.x,y:state.y};
     enemy=null;
     currentMob=null;
     combatTarget=null;
     selectedTarget=null;
     combatFx=[];
+    combatHudSignature="";
     attackButtonCooldown=0;
     input={up:false,down:false,left:false,right:false};
     spawnMobs();
     closeAll();
     updateUI();
     toast("Game loaded.");
-  }catch(e){
+    return true;
+  }catch(_err){
     toast("Could not load save.");
+    return false;
   }
 }
 
@@ -6166,7 +6297,7 @@ const INPUT_BINDINGS = {
 
 // Exposed only as read-only diagnostics so a desktop tester can confirm the
 // deployed build from DevTools without digging through bundled source.
-window.LR_BUILD_VERSION="v56-quest-tracking";
+window.LR_BUILD_VERSION="v58-project-cleanup";
 window.LR_INPUT_BINDINGS=Object.freeze({...INPUT_BINDINGS});
 window.LR_INPUT_STATE=()=>({...input});
 

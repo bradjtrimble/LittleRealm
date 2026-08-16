@@ -32,6 +32,17 @@ def extract_function(src,name):
 def sha(data): return hashlib.sha256(data).hexdigest()
 
 failed=[]
+
+try:
+    hygiene=subprocess.run(['python3',str(ROOT/'tools'/'project-hygiene-test.py')],check=True,capture_output=True,text=True)
+    print(hygiene.stdout.strip())
+except subprocess.CalledProcessError as e:
+    failed.append('project hygiene test')
+    detail=(e.stderr or e.stdout or str(e)).strip()
+    print('FAIL project hygiene test',detail)
+except Exception as e:
+    failed.append('project hygiene test'); print('FAIL project hygiene test',e)
+
 # Production JS syntax
 try:
     subprocess.run(['node','--check',str(BUNDLE)],check=True,capture_output=True,text=True)
@@ -191,6 +202,16 @@ try:
     print(startup.stdout.strip())
 except Exception as e:
     failed.append('combat tuning startup safety test'); print('FAIL combat tuning startup safety test',e)
+
+try:
+    maintenance=subprocess.run(['node',str(ROOT/'tools'/'maintenance-test.js')],check=True,capture_output=True,text=True)
+    print(maintenance.stdout.strip())
+except subprocess.CalledProcessError as e:
+    failed.append('maintenance regression test')
+    detail=(e.stderr or e.stdout or str(e)).strip()
+    print('FAIL maintenance regression test',detail)
+except Exception as e:
+    failed.append('maintenance regression test'); print('FAIL maintenance regression test',e)
 
 if failed:
     print('\nValidation failed:',', '.join(failed)); sys.exit(1)

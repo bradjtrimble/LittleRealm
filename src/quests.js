@@ -41,8 +41,15 @@ function normalizeQuestDefinition(raw,index=0){
       .filter(item=>item&&typeof item.id==="string"&&item.id)
       .map(item=>({id:item.id,qty:Math.max(1,Math.floor(numberOr(item.qty,1))) }))
   };
-  quest.prerequisite=quest.prerequisite?String(quest.prerequisite):null;
-  quest.nextQuest=quest.nextQuest?String(quest.nextQuest):null;
+  if(Array.isArray(quest.prerequisite)){
+    quest.prerequisite=quest.prerequisite
+      .map(id=>String(id||"").trim())
+      .filter(Boolean);
+    if(!quest.prerequisite.length) quest.prerequisite=null;
+  }else{
+    quest.prerequisite=quest.prerequisite?String(quest.prerequisite).trim():null;
+  }
+  quest.nextQuest=quest.nextQuest?String(quest.nextQuest).trim():null;
   quest.repeatable=!!quest.repeatable;
   return quest;
 }
@@ -365,7 +372,10 @@ function toggleQuestLog(){
   const overlay=document.getElementById("questLog");
   if(!overlay) return;
   overlay.classList.toggle("show");
-  if(overlay.classList.contains("show")) renderQuestLog();
+  if(overlay.classList.contains("show")){
+    renderQuestLog();
+    constrainFloatingPanel?.("questLogPanel");
+  }
 }
 
 function closeQuestLog(){
