@@ -1118,8 +1118,8 @@ function drawWorldCombatFx(camX,camY){
     const sx=fx.x-camX;
     const sy=fx.y-camY-progress*26;
     ctx.globalAlpha=Math.max(0,1-progress*.82);
-    ctx.fillStyle=fx.kind==="heal"?"#72ef9a":fx.kind==="crit"?"#ffd15a":"#fff1e2";
-    ctx.strokeStyle="rgba(0,0,0,.75)";
+    ctx.fillStyle=fx.kind==="heal"?"#72ef9a":fx.kind==="crit"?"#ffd15a":fx.kind==="hurt"?"#ff8d86":fx.kind==="miss"?"#c9d2dc":"#fff1e2";
+    ctx.strokeStyle="rgba(0,0,0,.80)";
     ctx.lineWidth=3;
     ctx.strokeText(fx.text,sx,sy);
     ctx.fillText(fx.text,sx,sy);
@@ -1244,7 +1244,7 @@ function drawWorld(){
       }
 
       ctx.fillStyle="rgba(0,0,0,.20)";
-      ctx.beginPath();ctx.ellipse(sx,sy+12,13,5,0,0,Math.PI*2);ctx.fill();
+      ctx.beginPath();ctx.ellipse(sx,sy+12,13*Math.min(1.6,mScale),5*Math.min(1.4,mScale),0,0,Math.PI*2);ctx.fill();
       drawMob(ctx,mob,sx,sy);
 
       if(mob===combatTarget || mob===selectedTarget || mob.hp<mob.maxHp){
@@ -1253,7 +1253,7 @@ function drawWorld(){
         ctx.font=mob.boss?"900 8px system-ui":"800 7px system-ui";
         ctx.textAlign="center";
         ctx.fillStyle=mobLevelColor(mob.level,mob.boss,mob.elite);
-        ctx.fillText(`Lv ${mob.level}${mob.elite?" Elite":""}`,Math.round(sx),Math.round(hpY-5));
+        ctx.fillText(`Lv ${mob.level}${mob.elite?" Elite":""} • ${mobDisplayName(mob)}`,Math.round(sx),Math.round(hpY-5));
         ctx.restore();
         drawWorldHpBar(sx,hpY,mob.hp,mob.maxHp,(mob.boss?52:38)*Math.min(1.5,mScale));
       }else if(mob.aggro){
@@ -3228,6 +3228,17 @@ function updateOpenCombat(dt){
   updateCombatHud();
 }
 
+function targetThreatInfo(mob){
+  const delta=(mob?.level||1)-state.level;
+  if(mob?.boss) return {label:"BOSS",cls:"boss"};
+  if(mob?.elite) return {label:"ELITE",cls:"elite"};
+  if(delta>=4) return {label:"DEADLY",cls:"deadly"};
+  if(delta>=2) return {label:"DANGEROUS",cls:"dangerous"};
+  if(delta<=-5) return {label:"TRIVIAL",cls:"trivial"};
+  if(delta<=-2) return {label:"LOW",cls:"low"};
+  return {label:"EVEN",cls:"even"};
+}
+
 function updateCombatHud(){
   const hud=document.getElementById("targetHud");
   const action=document.getElementById("actionHint");
@@ -3243,6 +3254,11 @@ function updateCombatHud(){
     targetName.style.color=mobLevelColor(target.level,target.boss,target.elite);
     document.getElementById("targetHpText").textContent=`${Math.max(0,Math.ceil(target.hp))}/${target.maxHp} HP`;
     document.getElementById("targetHpFill").style.width=`${Math.max(0,100*target.hp/target.maxHp)}%`;
+    const threat=targetThreatInfo(target);
+    const threatEl=document.getElementById("targetThreat");
+    threatEl.textContent=threat.label;
+    threatEl.className=`threat-${threat.cls}`;
+    document.getElementById("targetCombatStats").textContent=`DEF ${target.def} • HIT ${Math.round(playerHitChanceAgainst(target))}%`;
     const d=dist(state.x,state.y,target.x,target.y);
 
     if(combatTarget && combatTarget.alive){
@@ -3351,7 +3367,7 @@ function performEnemyAutoAttack(mob){
   const high=Math.max(ENEMY_DAMAGE_MIN,ENEMY_DAMAGE_MAX);
   let dmg=Math.max(1,mob.atk+rand(low,high)-state.def);
   state.hp=Math.max(0,state.hp-dmg);
-  addCombatFx(state.x,state.y-20,`${dmg}`,"damage");
+  addCombatFx(state.x,state.y-20,`-${dmg}`,"hurt");
   updateUI();
   if(state.hp<=0) worldCombatDeath();
 }
@@ -3777,12 +3793,17 @@ function updateUI(){
   document.getElementById("xpText").textContent=`${state.xp}/${state.xpNext}`;
   document.getElementById("hpFill").style.width=`${Math.max(0,100*state.hp/state.maxHp)}%`;
   document.getElementById("xpFill").style.width=`${Math.min(100,100*state.xp/state.xpNext)}%`;
+  document.getElementById("hudAtk").textContent=state.atk;
+  document.getElementById("hudDef").textContent=state.def;
+  document.getElementById("hud").classList.toggle("lowHp",state.hp/state.maxHp<=0.30);
 
   document.getElementById("mAtk").textContent=state.atk;
   document.getElementById("mDef").textContent=state.def;
   document.getElementById("mPotions").textContent=state.potions;
   document.getElementById("mKills").textContent=state.kills;
 
+  const questChip=document.getElementById("questChip");
+  questChip.classList.toggle("complete",Boolean(state.questComplete||state.bossDefeated));
   let q;
   if(state.bossDefeated){
     q="Starter zone complete.";
@@ -3868,7 +3889,7 @@ const INPUT_BINDINGS = {
 
 // Exposed only as read-only diagnostics so a desktop tester can confirm the
 // deployed build from DevTools without digging through bundled source.
-window.LR_BUILD_VERSION="v20-backpack-inventory";
+window.LR_BUILD_VERSION="v47-polish-pass";
 window.LR_INPUT_BINDINGS=Object.freeze({...INPUT_BINDINGS});
 window.LR_INPUT_STATE=()=>({...input});
 

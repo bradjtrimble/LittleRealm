@@ -1,0 +1,6 @@
+v46 combat rebalance
+- Integrated the user-tuned game-balance.js as the new project baseline.
+- Hostile mobs are substantially tougher at equal level.
+- Goblins remain stronger than wolves.
+- Snickers keeps the stronger boss multipliers from the tuned balance file.
+- Combat Test / World Builder tuning remains available for further iteration.

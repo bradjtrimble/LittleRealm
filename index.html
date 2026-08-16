@@ -8,7 +8,7 @@
   <link rel="icon" type="image/png" sizes="192x192" href="./assets/icons/icon-192.png">
   <link rel="icon" type="image/png" sizes="512x512" href="./assets/icons/icon-512.png">
   <title>Little Realm RPG</title>
-  <link rel="stylesheet" href="./style.css?v=43">
+  <link rel="stylesheet" href="./style.css?v=47">
 </head>
 <body>
 <div id="gameShell">
@@ -16,9 +16,10 @@
 
   <div id="hud">
     <div class="hudTop">
-      <span>Lv <span id="lvl">1</span></span>
-      <span><span id="gold">0</span> gold</span>
+      <span class="hudLevel">Lv <span id="lvl">1</span></span>
+      <span class="hudGold"><span id="gold">0</span> gold</span>
     </div>
+    <div id="hudStats"><span>ATK <b id="hudAtk">5</b></span><span>DEF <b id="hudDef">1</b></span></div>
     <div class="small" style="margin-top:5px">HP <span id="hpText">30/30</span></div>
     <div class="bar"><div id="hpFill" class="fill"></div></div>
     <div class="small" style="margin-top:5px">XP <span id="xpText">0/25</span></div>
@@ -30,7 +31,7 @@
   <div id="questChip">Slimes 0/3</div>
   <div id="toast"></div>
   <div id="pcControls" aria-hidden="true"></div>
-  <div id="buildBadge" aria-hidden="true">v43 • LEVEL COMBAT + ELITES</div>
+  <div id="buildBadge" aria-hidden="true">v47 • POLISH PASS</div>
 
   <div id="dpad">
     <div class="pad" id="up">▲</div>
@@ -43,6 +44,7 @@
 
   <div id="targetHud">
     <div id="targetHudTop"><span id="targetName">Target</span><span id="targetHpText">0/0</span></div>
+    <div id="targetMeta"><span id="targetThreat">EVEN</span><span id="targetCombatStats"></span></div>
     <div id="targetHpTrack"><div id="targetHpFill"></div></div>
     <div id="combatHint">Auto-attacking</div>
   </div>
@@ -121,7 +123,7 @@
     </div>
   </div>
 </div>
-  <script src="./js/pwa.js?v=43"></script>
-  <script src="./js/runtime-loader.js?v=43"></script>
+  <script src="./js/pwa.js?v=47"></script>
+  <script src="./js/runtime-loader.js?v=47"></script>
 </body>
 </html>

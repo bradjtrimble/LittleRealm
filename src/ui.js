@@ -11,12 +11,17 @@ function updateUI(){
   document.getElementById("xpText").textContent=`${state.xp}/${state.xpNext}`;
   document.getElementById("hpFill").style.width=`${Math.max(0,100*state.hp/state.maxHp)}%`;
   document.getElementById("xpFill").style.width=`${Math.min(100,100*state.xp/state.xpNext)}%`;
+  document.getElementById("hudAtk").textContent=state.atk;
+  document.getElementById("hudDef").textContent=state.def;
+  document.getElementById("hud").classList.toggle("lowHp",state.hp/state.maxHp<=0.30);
 
   document.getElementById("mAtk").textContent=state.atk;
   document.getElementById("mDef").textContent=state.def;
   document.getElementById("mPotions").textContent=state.potions;
   document.getElementById("mKills").textContent=state.kills;
 
+  const questChip=document.getElementById("questChip");
+  questChip.classList.toggle("complete",Boolean(state.questComplete||state.bossDefeated));
   let q;
   if(state.bossDefeated){
     q="Starter zone complete.";

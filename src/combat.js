@@ -137,6 +137,17 @@ function updateOpenCombat(dt){
   updateCombatHud();
 }
 
+function targetThreatInfo(mob){
+  const delta=(mob?.level||1)-state.level;
+  if(mob?.boss) return {label:"BOSS",cls:"boss"};
+  if(mob?.elite) return {label:"ELITE",cls:"elite"};
+  if(delta>=4) return {label:"DEADLY",cls:"deadly"};
+  if(delta>=2) return {label:"DANGEROUS",cls:"dangerous"};
+  if(delta<=-5) return {label:"TRIVIAL",cls:"trivial"};
+  if(delta<=-2) return {label:"LOW",cls:"low"};
+  return {label:"EVEN",cls:"even"};
+}
+
 function updateCombatHud(){
   const hud=document.getElementById("targetHud");
   const action=document.getElementById("actionHint");
@@ -152,6 +163,11 @@ function updateCombatHud(){
     targetName.style.color=mobLevelColor(target.level,target.boss,target.elite);
     document.getElementById("targetHpText").textContent=`${Math.max(0,Math.ceil(target.hp))}/${target.maxHp} HP`;
     document.getElementById("targetHpFill").style.width=`${Math.max(0,100*target.hp/target.maxHp)}%`;
+    const threat=targetThreatInfo(target);
+    const threatEl=document.getElementById("targetThreat");
+    threatEl.textContent=threat.label;
+    threatEl.className=`threat-${threat.cls}`;
+    document.getElementById("targetCombatStats").textContent=`DEF ${target.def} • HIT ${Math.round(playerHitChanceAgainst(target))}%`;
     const d=dist(state.x,state.y,target.x,target.y);
 
     if(combatTarget && combatTarget.alive){
@@ -260,7 +276,7 @@ function performEnemyAutoAttack(mob){
   const high=Math.max(ENEMY_DAMAGE_MIN,ENEMY_DAMAGE_MAX);
   let dmg=Math.max(1,mob.atk+rand(low,high)-state.def);
   state.hp=Math.max(0,state.hp-dmg);
-  addCombatFx(state.x,state.y-20,`${dmg}`,"damage");
+  addCombatFx(state.x,state.y-20,`-${dmg}`,"hurt");
   updateUI();
   if(state.hp<=0) worldCombatDeath();
 }

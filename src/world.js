@@ -670,8 +670,8 @@ function drawWorldCombatFx(camX,camY){
     const sx=fx.x-camX;
     const sy=fx.y-camY-progress*26;
     ctx.globalAlpha=Math.max(0,1-progress*.82);
-    ctx.fillStyle=fx.kind==="heal"?"#72ef9a":fx.kind==="crit"?"#ffd15a":"#fff1e2";
-    ctx.strokeStyle="rgba(0,0,0,.75)";
+    ctx.fillStyle=fx.kind==="heal"?"#72ef9a":fx.kind==="crit"?"#ffd15a":fx.kind==="hurt"?"#ff8d86":fx.kind==="miss"?"#c9d2dc":"#fff1e2";
+    ctx.strokeStyle="rgba(0,0,0,.80)";
     ctx.lineWidth=3;
     ctx.strokeText(fx.text,sx,sy);
     ctx.fillText(fx.text,sx,sy);
@@ -796,7 +796,7 @@ function drawWorld(){
       }
 
       ctx.fillStyle="rgba(0,0,0,.20)";
-      ctx.beginPath();ctx.ellipse(sx,sy+12,13,5,0,0,Math.PI*2);ctx.fill();
+      ctx.beginPath();ctx.ellipse(sx,sy+12,13*Math.min(1.6,mScale),5*Math.min(1.4,mScale),0,0,Math.PI*2);ctx.fill();
       drawMob(ctx,mob,sx,sy);
 
       if(mob===combatTarget || mob===selectedTarget || mob.hp<mob.maxHp){
@@ -805,7 +805,7 @@ function drawWorld(){
         ctx.font=mob.boss?"900 8px system-ui":"800 7px system-ui";
         ctx.textAlign="center";
         ctx.fillStyle=mobLevelColor(mob.level,mob.boss,mob.elite);
-        ctx.fillText(`Lv ${mob.level}${mob.elite?" Elite":""}`,Math.round(sx),Math.round(hpY-5));
+        ctx.fillText(`Lv ${mob.level}${mob.elite?" Elite":""} • ${mobDisplayName(mob)}`,Math.round(sx),Math.round(hpY-5));
         ctx.restore();
         drawWorldHpBar(sx,hpY,mob.hp,mob.maxHp,(mob.boss?52:38)*Math.min(1.5,mScale));
       }else if(mob.aggro){

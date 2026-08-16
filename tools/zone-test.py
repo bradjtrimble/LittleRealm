@@ -11,7 +11,7 @@ checks={
   'zone labels':all(s in world for s in ['Starter Town','Farm','Slime Spawns','Goblin Camp',"Snickers' Cave"]),
   'snickers cave entrance':'caveEntrance' in world and "Snickers' Cave" in world,
   'future NPC placeholders':'Quest Giver' in world and 'Shopkeeper' in world and 'Blacksmith' in world,
-  'farm animals configured':all(s in balance for s in ['cow: {','pig: {','chicken: {']),
+  'farm animals configured':all((f'{s}: {{' in balance or f'"{s}": {{' in balance) for s in ['cow','pig','chicken']),
   'farm animal spawns':all(s in mobs for s in ['["cow",4,20]','["pig",6,21]','["chicken",5,23]']),
   'regional hostile spawns':all(s in mobs for s in ['["slime",18,5]','["goblin",34,6]','["wolf",15,17]'])
 }

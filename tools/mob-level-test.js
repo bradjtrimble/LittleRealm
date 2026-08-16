@@ -4,15 +4,17 @@ const root=path.resolve(__dirname,'..');
 const mobs=fs.readFileSync(path.join(root,'src','mobs.js'),'utf8');
 const combat=fs.readFileSync(path.join(root,'src','combat.js'),'utf8');
 const cfg=fs.readFileSync(path.join(root,'config','game-balance.js'),'utf8');
+const vm=require('vm');
+const sandbox={window:{}}; vm.createContext(sandbox); vm.runInContext(cfg,sandbox); const balance=sandbox.window.LR_BALANCE||{};
 const world=fs.readFileSync(path.join(root,'src','world.js'),'utf8');
 const checks=[
-  ['mob level config',/mobLevels:\s*\{/.test(cfg) && /baseLevel:\s*8/.test(cfg)],
+  ['mob level config',!!balance.mobLevels && Number(balance.mobs?.snickers?.baseLevel)===8],
   ['stable spawn levels',/function mobSpawnLevel/.test(mobs) && /level:mobSpawnLevel/.test(mobs)],
   ['level-scaled stats',/function mobScaledStats\(template,level,elite=false\)/.test(mobs) && /hpGrowthPerLevelPercent/.test(mobs)],
   ['4+ level danger stacks',/function mobDangerSteps/.test(mobs) && /dangerStartsAbovePlayerLevels/.test(mobs)],
   ['boss stat multipliers',/bossHpMultiplier/.test(mobs) && /bossAttackMultiplier/.test(mobs) && /bossArmorMultiplier/.test(mobs)],
   ['infinite-grind XP floor',/function mobXpReward/.test(mobs) && /trivialXpStartsAboveMobLevels/.test(cfg) && /return Math\.max\(1,Math\.floor\(mob\.level\)\)/.test(mobs)],
-  ['goblins above wolves',/goblin:\s*\{[\s\S]*?baseLevel:\s*5, levelMin:\s*4, levelMax:\s*6/.test(cfg) && /wolf:\s*\{[\s\S]*?baseLevel:\s*4, levelMin:\s*3, levelMax:\s*5/.test(cfg)],
+  ['goblins above wolves',Number(balance.mobs?.goblin?.baseLevel)===5 && Number(balance.mobs?.goblin?.levelMin)===4 && Number(balance.mobs?.goblin?.levelMax)===6 && Number(balance.mobs?.wolf?.baseLevel)===4 && Number(balance.mobs?.wolf?.levelMin)===3 && Number(balance.mobs?.wolf?.levelMax)===5],
   ['level-based aggro',/function mobAggroRanges/.test(mobs) && /aggroRangePerLevelDifference/.test(cfg)],
   ['elite rank system',/function rollMobElite/.test(mobs) && /eliteHpMultiplier/.test(cfg) && /Elite/.test(world)],
   ['level hit miss',/function playerHitChanceAgainst/.test(combat) && /function mobHitChanceAgainstPlayer/.test(combat) && /\"MISS\"/.test(combat)],
