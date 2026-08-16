@@ -1,4 +1,4 @@
-/* Integrated from Little Realm World Pack v55 */
+/* Integrated from Little Realm World Pack v56 */
 window.LR_WORLD_OBJECTS = [
   {
     "id": "town-well",

@@ -1,4 +1,4 @@
-const CACHE_NAME = "little-realm-v55-npc-selection";
+const CACHE_NAME = "little-realm-v56-quest-tracking";
 const FILES = [
   "./",
   "./index.html",

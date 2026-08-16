@@ -8,7 +8,7 @@ const questSrc=fs.readFileSync(path.join(root,'config/quests.js'),'utf8');
 
 for(const required of [
   'normalizeQuestDefinition','acceptQuest','completeQuest','notifyQuestKill','notifyQuestTalk','updateQuestVisits',
-  'openNpcDialogue','getNpcQuestMarker','refreshDeveloperQuestPanel','renderDeveloperQuestEditor',
+  'openNpcDialogue','getNpcQuestMarker','getNpcQuestMarkerInfo','questIsTracked','setQuestTracked','trackedQuests','refreshDeveloperQuestPanel','renderDeveloperQuestEditor',
   'exportDeveloperWorldPack','little-realm-world-pack.json','data-dev-view="quests"','data-dev-view="npcs"','data-dev-view="project"'
 ]) if(!bundle.includes(required)) throw new Error('missing quest/NPC feature: '+required);
 for(const required of ['config/npcs.js','config/quests.js']) if(!loader.includes(required)) throw new Error('runtime loader missing '+required);
@@ -22,7 +22,7 @@ const npcs=sandbox.window.LR_NPCS,quests=sandbox.window.LR_QUESTS;
 if(!Array.isArray(npcs)||npcs.length<2) throw new Error('LR_NPCS must contain NPCs');
 if(!Array.isArray(quests)||quests.length<2) throw new Error('LR_QUESTS must contain starter quests');
 const ids=new Set(npcs.map(n=>n.id));
-for(const id of ['lilly','jorge']) if(!ids.has(id)) throw new Error('missing NPC '+id);
+for(const id of ['lilly','jorge','mayor_buck']) if(!ids.has(id)) throw new Error('missing NPC '+id);
 const qids=new Set();
 for(const q of quests){
   if(!q.id||qids.has(q.id)) throw new Error('invalid/duplicate quest id');qids.add(q.id);
@@ -33,5 +33,8 @@ for(const q of quests){
 const lilly=quests.find(q=>q.id==='lilly_slime_samples');
 const jorge=quests.find(q=>q.id==='jorge_slime_problem');
 if(lilly?.objectives?.[0]?.type!=='collect'||lilly.objectives[0].target!=='slimeGel'||Number(lilly.objectives[0].amount)<1) throw new Error('Lilly slime-sample quest incorrect');
-if(jorge?.objectives?.[0]?.type!=='kill'||jorge.objectives[0].target!=='slime'||jorge.objectives[0].amount!==5||jorge.prerequisite!==lilly.id) throw new Error('Jorge starter quest chain incorrect');
+if(jorge?.objectives?.[0]?.type!=='kill'||jorge.objectives[0].target!=='slime'||jorge.objectives[0].amount!==5||jorge.prerequisite!=='welcome_traveler') throw new Error('Jorge quest prerequisite/content incorrect');
+const welcome=quests.find(q=>q.id==='welcome_traveler');
+if(!welcome||welcome.giverNpc!=='mayor_buck'||welcome.turnInNpc!=='mayor_buck'||welcome.objectives.length!==5||welcome.objectives.some(o=>o.type!=='talk')) throw new Error('Welcome Traveler quest incorrect');
+if(lilly.prerequisite!=='welcome_traveler') throw new Error('Lilly quest prerequisite should be Welcome Traveler');
 console.log(`PASS quest builder + NPC content (${npcs.length} NPCs, ${quests.length} quests)`);

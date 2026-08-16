@@ -1753,8 +1753,10 @@ function npcSpriteImage(path){
 }
 
 function npcQuestMarker(npc){
-  if(typeof getNpcQuestMarker!=="function") return "";
-  return getNpcQuestMarker(npc?.id)||"";
+  if(typeof getNpcQuestMarkerInfo==="function") return getNpcQuestMarkerInfo(npc?.id);
+  if(typeof getNpcQuestMarker!=="function") return null;
+  const symbol=getNpcQuestMarker(npc?.id)||"";
+  return symbol?{symbol,kind:symbol==="?"?"ready":"available"}:null;
 }
 
 function drawNpcObject(obj,camX,camY){
@@ -1792,11 +1794,11 @@ function drawNpcObject(obj,camX,camY){
   }
 
   const marker=npcQuestMarker(obj);
-  if(marker){
-    const ready=marker==="?";
+  if(marker?.symbol){
+    const markerColor=marker.kind==="talk"?"#a8a7ae":marker.kind==="ready"?"#ffe17b":"#ffd45b";
     ctx.font="900 15px system-ui";ctx.textAlign="center";
-    ctx.lineWidth=3;ctx.strokeStyle="rgba(35,24,15,.82)";ctx.strokeText(marker,x,topY-7);
-    ctx.fillStyle=ready?"#ffe17b":"#ffd45b";ctx.fillText(marker,x,topY-7);ctx.textAlign="start";
+    ctx.lineWidth=3;ctx.strokeStyle="rgba(35,24,15,.82)";ctx.strokeText(marker.symbol,x,topY-7);
+    ctx.fillStyle=markerColor;ctx.fillText(marker.symbol,x,topY-7);ctx.textAlign="start";
   }
   ctx.restore();
 }
@@ -2182,11 +2184,26 @@ function questsForNpc(npcId,kind="giver"){
   return questDefinitions.filter(quest=>(kind==="turnin"?quest.turnInNpc:quest.giverNpc)===npcId);
 }
 
+function getNpcQuestMarkerInfo(npcId){
+  if(!state||!npcId) return null;
+  if(questsForNpc(npcId,"turnin").some(quest=>getQuestStatus(quest)==="ready")) return {symbol:"?",kind:"ready"};
+  if(questsForNpc(npcId,"giver").some(quest=>getQuestStatus(quest)==="available")) return {symbol:"!",kind:"available"};
+
+  // Active talk objectives use a muted grey question mark so players can
+  // identify who still needs to be spoken to without confusing that NPC
+  // with a normal gold quest turn-in marker.
+  const talkTarget=questDefinitions.some(quest=>{
+    if(getQuestStatus(quest)!=="active") return false;
+    return quest.objectives.some((objective,index)=>
+      objective.type==="talk"&&objective.target===npcId&&!questObjectiveComplete(quest,index)
+    );
+  });
+  if(talkTarget) return {symbol:"?",kind:"talk"};
+  return null;
+}
+
 function getNpcQuestMarker(npcId){
-  if(!state||!npcId) return "";
-  if(questsForNpc(npcId,"turnin").some(quest=>getQuestStatus(quest)==="ready")) return "?";
-  if(questsForNpc(npcId,"giver").some(quest=>getQuestStatus(quest)==="available")) return "!";
-  return "";
+  return getNpcQuestMarkerInfo(npcId)?.symbol||"";
 }
 
 function questEscape(value){
@@ -2234,7 +2251,8 @@ function acceptQuest(id){
     objectives:quest.objectives.map(()=>0),
     completedCount:Math.max(0,Math.floor(numberOr(old.completedCount,0))),
     acceptedAt:Date.now(),
-    readyAnnounced:false
+    readyAnnounced:false,
+    tracked:true
   };
   toast(`Quest accepted: ${quest.title}`);
   refreshQuestUI();
@@ -2290,7 +2308,8 @@ function completeQuest(id){
     objectives:quest.objectives.map(()=>0),
     completedCount,
     completedAt:Date.now(),
-    readyAnnounced:false
+    readyAnnounced:false,
+    tracked:false
   };
 
   toast(`Quest complete: ${quest.title}`);
@@ -2350,6 +2369,26 @@ function activeQuests(){
   return questDefinitions.filter(quest=>["active","ready"].includes(getQuestStatus(quest)));
 }
 
+function questIsTracked(questOrId){
+  const quest=typeof questOrId==="string"?getQuestDefinition(questOrId):questOrId;
+  if(!quest) return false;
+  const record=questRecord(quest.id);
+  return !!record&&record.status==="active"&&record.tracked!==false;
+}
+
+function trackedQuests(){
+  return activeQuests().filter(quest=>questIsTracked(quest));
+}
+
+function setQuestTracked(id,tracked){
+  const quest=getQuestDefinition(id);
+  const record=questRecord(id);
+  if(!quest||!record||record.status!=="active") return false;
+  record.tracked=!!tracked;
+  refreshQuestUI();
+  return true;
+}
+
 function refreshQuestReadyAnnouncements(){
   for(const quest of activeQuests()){
     const record=questRecord(quest.id);
@@ -2374,13 +2413,18 @@ function renderQuestLog(){
   }
   body.innerHTML=`${active.map(quest=>{
     const ready=getQuestStatus(quest)==="ready";
-    return `<article class="questLogEntry${ready?" ready":""}"><div class="questLogTitle">${questEscape(quest.title)}${ready?'<span>READY</span>':''}</div><div class="questLogDesc">${questEscape(quest.description)}</div><div class="questObjectives">${quest.objectives.map((_,index)=>`<div>${questEscape(questObjectiveText(quest,index))}</div>`).join("")}</div><div class="questRewards">Reward: ${questEscape(questRewardText(quest))}</div><button class="questAbandon" data-abandon-quest="${questEscape(quest.id)}">Abandon</button></article>`;
+    const tracked=questIsTracked(quest);
+    return `<article class="questLogEntry${ready?" ready":""}"><div class="questLogTitle"><div class="questLogTitleText">${questEscape(quest.title)}</div><div class="questLogMeta">${ready?'<span class="questReadyBadge">READY</span>':''}<label class="questTrackToggle" title="Show this quest in the on-screen tracker"><input type="checkbox" data-track-quest="${questEscape(quest.id)}"${tracked?' checked':''}><span>Track</span></label></div></div><div class="questLogDesc">${questEscape(quest.description)}</div><div class="questObjectives">${quest.objectives.map((_,index)=>`<div class="questObjectiveRow${questObjectiveComplete(quest,index)?" complete":""}"><span class="questObjectiveMark">${questObjectiveComplete(quest,index)?"✓":"•"}</span><span>${questEscape(questObjectiveText(quest,index))}</span></div>`).join("")}</div><div class="questRewards">Reward: ${questEscape(questRewardText(quest))}</div><button class="questAbandon" data-abandon-quest="${questEscape(quest.id)}">Abandon</button></article>`;
   }).join("")}${completed.length?`<div class="questCompletedHeading">Completed</div>${completed.map(q=>`<div class="questCompletedItem">✓ ${questEscape(q.title)}</div>`).join("")}`:""}`;
+  body.querySelectorAll("[data-track-quest]").forEach(input=>input.onchange=()=>{
+    setQuestTracked(input.dataset.trackQuest,input.checked);
+  });
   body.querySelectorAll("[data-abandon-quest]").forEach(button=>button.onclick=()=>{
     const id=button.dataset.abandonQuest;
     if(confirm(`Abandon ${getQuestDefinition(id)?.title||"this quest"}?`)) abandonQuest(id);
   });
 }
+
 
 function toggleQuestLog(){
   const overlay=document.getElementById("questLog");
@@ -2466,24 +2510,30 @@ function refreshQuestUI(){
   if(!state) return;
   refreshQuestReadyAnnouncements();
   const active=activeQuests();
-  const tracked=active[0]||null;
+  const tracked=trackedQuests();
   const chip=document.getElementById("questChip");
   if(chip){
-    if(!tracked){
-      chip.textContent="Quests";
+    if(!tracked.length){
+      chip.innerHTML=active.length
+        ?`<div class="questTrackerEmpty"><b>Quests</b><span>${active.length} active • 0 tracked</span></div>`
+        :'<div class="questTrackerEmpty"><b>Quests</b></div>';
       chip.classList.remove("complete");
     }else{
-      const ready=getQuestStatus(tracked)==="ready";
-      const objective=tracked.objectives[0];
-      const short=ready?`✓ ${tracked.title}`:`${tracked.title}: ${questObjectiveProgress(tracked,0)}/${objective.amount}`;
-      chip.textContent=short;
-      chip.classList.toggle("complete",ready);
+      chip.innerHTML=tracked.map(quest=>{
+        const ready=getQuestStatus(quest)==="ready";
+        const rows=quest.objectives.map((_,index)=>{
+          const complete=questObjectiveComplete(quest,index);
+          return `<div class="questTrackerObjective${complete?" complete":""}"><span>${complete?"✓":"•"}</span>${questEscape(questObjectiveText(quest,index))}</div>`;
+        }).join("");
+        return `<section class="questTrackerEntry${ready?" ready":""}"><div class="questTrackerTitle">${ready?'<span class="questTrackerReady">✓</span>':''}${questEscape(quest.title)}</div><div class="questTrackerObjectives">${rows}</div></section>`;
+      }).join("");
+      chip.classList.toggle("complete",tracked.every(quest=>getQuestStatus(quest)==="ready"));
     }
   }
   const menuQuest=document.getElementById("mQuest");
   if(menuQuest){
-    menuQuest.textContent=tracked
-      ?`${tracked.title} — ${tracked.objectives.map((_,index)=>questObjectiveText(tracked,index)).join(" • ")}`
+    menuQuest.textContent=active.length
+      ?active.map(quest=>`${quest.title} — ${quest.objectives.map((_,index)=>questObjectiveText(quest,index)).join(" • ")}`).join(" | ")
       :"No active quests. Talk to NPCs with a ! marker.";
   }
   if(document.getElementById("questLog")?.classList.contains("show")) renderQuestLog();
@@ -2874,7 +2924,7 @@ function developerWorldPack(){
   return {
     format:"little-realm-world-pack",
     schemaVersion:1,
-    build:"v55-npc-selection",
+    build:"v56-quest-tracking",
     exportedAt:new Date().toISOString(),
     worldObjects:sceneryProps.map(cloneWorldObject),
     npcs:sceneryNPCs.map(cloneNpc),
@@ -6116,7 +6166,7 @@ const INPUT_BINDINGS = {
 
 // Exposed only as read-only diagnostics so a desktop tester can confirm the
 // deployed build from DevTools without digging through bundled source.
-window.LR_BUILD_VERSION="v55-npc-selection";
+window.LR_BUILD_VERSION="v56-quest-tracking";
 window.LR_INPUT_BINDINGS=Object.freeze({...INPUT_BINDINGS});
 window.LR_INPUT_STATE=()=>({...input});
 

@@ -1,4 +1,4 @@
-/* Integrated from Little Realm World Pack v55 */
+/* Integrated from Little Realm World Pack v56 */
 window.LR_NPCS = [
   {
     "id": "lilly",
@@ -28,7 +28,7 @@ window.LR_NPCS = [
     "sprite": "./assets/npcs/jorge.png",
     "x": 480,
     "y": 328,
-    "facing": "left",
+    "facing": "down",
     "solid": true,
     "displayHeight": 53,
     "greeting": "Good to see you. The roads are safer when everyone lends a hand.",
@@ -95,7 +95,7 @@ window.LR_NPCS = [
     "y": 530,
     "facing": "right",
     "solid": true,
-    "displayHeight": 100,
+    "displayHeight": 55,
     "shirt": "#6e9c5e",
     "greeting": "There's always something happening beyond the town road.",
     "interactRadius": 58,
@@ -117,7 +117,7 @@ window.LR_NPCS = [
     "y": 522,
     "facing": "left",
     "solid": true,
-    "displayHeight": 44,
+    "displayHeight": 55,
     "shirt": "#8a6651",
     "greeting": "Come back when the forge is open and I'll show you what I can make.",
     "interactRadius": 58,
@@ -139,7 +139,7 @@ window.LR_NPCS = [
     "y": 1336,
     "facing": "right",
     "solid": true,
-    "displayHeight": 44,
+    "displayHeight": 55,
     "shirt": "#b28b43",
     "greeting": "Mind the animals and watch your step around the trough.",
     "interactRadius": 58,
@@ -151,5 +151,26 @@ window.LR_NPCS = [
     },
     "depthMode": "ysort",
     "depthY": 12
+  },
+  {
+    "name": "Mayor Buck",
+    "role": "Major",
+    "sprite": "./assets/npcs/npc-placeholder.png",
+    "displayHeight": 58,
+    "greeting": "Greetings!",
+    "id": "mayor_buck",
+    "x": 448,
+    "y": 480,
+    "facing": "down",
+    "solid": true,
+    "interactRadius": 58,
+    "hitbox": {
+      "x": -6,
+      "y": -7,
+      "w": 12,
+      "h": 14
+    },
+    "depthMode": "ysort",
+    "depthY": 8
   }
 ];

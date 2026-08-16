@@ -131,6 +131,27 @@ except subprocess.CalledProcessError as e:
 except Exception as e:
     failed.append('quest builder test'); print('FAIL quest builder test',e)
 
+
+try:
+    quest_tracker=subprocess.run(['node',str(ROOT/'tools'/'quest-tracker-test.js')],check=True,capture_output=True,text=True)
+    print(quest_tracker.stdout.strip())
+except subprocess.CalledProcessError as e:
+    failed.append('quest tracking UI test')
+    detail=(e.stderr or e.stdout or str(e)).strip()
+    print('FAIL quest tracking UI test',detail)
+except Exception as e:
+    failed.append('quest tracking UI test'); print('FAIL quest tracking UI test',e)
+
+try:
+    npc_selection=subprocess.run(['node',str(ROOT/'tools'/'npc-selection-test.js')],check=True,capture_output=True,text=True)
+    print(npc_selection.stdout.strip())
+except subprocess.CalledProcessError as e:
+    failed.append('NPC selection + placeholder test')
+    detail=(e.stderr or e.stdout or str(e)).strip()
+    print('FAIL NPC selection + placeholder test',detail)
+except Exception as e:
+    failed.append('NPC selection + placeholder test'); print('FAIL NPC selection + placeholder test',e)
+
 try:
     depth_sort=subprocess.run(['node',str(ROOT/'tools'/'depth-sort-test.js')],check=True,capture_output=True,text=True)
     print(depth_sort.stdout.strip())

@@ -76,13 +76,15 @@ html,body{
   position:absolute;
   top:max(64px, calc(env(safe-area-inset-top) + 64px));
   right:10px;
-  max-width:42vw;
-  padding:7px 9px;
+  width:min(270px,44vw);
+  max-height:min(52vh,430px);
+  overflow:auto;
+  padding:6px;
   border:1px solid var(--border);
-  background:rgba(15,18,22,.76);
+  background:rgba(15,18,22,.80);
   border-radius:10px;
   font-size:11px;
-  text-align:right;
+  text-align:left;
 }
 #toast{
   position:absolute;
@@ -745,7 +747,7 @@ button:focus-visible{outline:2px solid #b9d7ff;outline-offset:2px}
 .bar{height:9px;border:1px solid rgba(255,255,255,.07);box-shadow:inset 0 1px 3px rgba(0,0,0,.35)}
 .fill{transition:width .16s linear}
 #questChip{box-shadow:0 6px 18px rgba(0,0,0,.22);transition:background .18s,border-color .18s}
-#questChip.complete{background:rgba(41,92,57,.84);border-color:rgba(123,226,151,.42)}
+#questChip.complete{border-color:rgba(123,226,151,.42)}
 #toast{z-index:30;box-shadow:0 8px 24px rgba(0,0,0,.32);font-weight:700}
 #targetHud{
   width:min(260px,58vw);
@@ -1169,8 +1171,18 @@ button.action.danger{background:#8b3e4a;border-color:rgba(255,173,173,.32)}
 #menu{z-index:30}
 
 /* v54 quests + NPC conversations ----------------------------------------- */
-#questChip{cursor:pointer;pointer-events:auto;user-select:none}
-#questChip:hover{filter:brightness(1.12)}
+#questChip{cursor:pointer;pointer-events:auto;user-select:none;scrollbar-width:thin}
+#questChip:hover{filter:brightness(1.08)}
+.questTrackerEntry{padding:5px 6px 6px;border-radius:7px;background:rgba(255,255,255,.035)}
+.questTrackerEntry+.questTrackerEntry{margin-top:5px;border-top:1px solid rgba(255,255,255,.08)}
+.questTrackerEntry.ready{background:rgba(71,112,76,.20)}
+.questTrackerTitle{display:flex;align-items:center;gap:4px;color:#fff;font-size:10.5px;font-weight:900;line-height:1.25}
+.questTrackerReady{color:#9ce5ab}
+.questTrackerObjectives{display:grid;gap:1px;margin-top:3px;color:#e2d9e6;font-size:9px;line-height:1.28}
+.questTrackerObjective{display:grid;grid-template-columns:10px 1fr;gap:2px;align-items:start}
+.questTrackerObjective.complete{color:#9bcfa5}
+.questTrackerEmpty{display:flex;align-items:center;justify-content:space-between;gap:8px;padding:2px 3px;color:#eee}
+.questTrackerEmpty span{color:#b7acbd;font-size:8.5px}
 #questLog.floatingOverlay{
   padding:0;
   background:transparent;
@@ -1196,9 +1208,16 @@ button.action.danger{background:#8b3e4a;border-color:rgba(255,173,173,.32)}
 .questLogEntry{position:relative;margin-bottom:7px;padding:9px;border:1px solid rgba(255,255,255,.09);border-radius:8px;background:rgba(255,255,255,.045)}
 .questLogEntry.ready{border-color:rgba(255,216,92,.34);background:rgba(255,216,92,.07)}
 .questLogTitle{display:flex;align-items:center;justify-content:space-between;gap:8px;font-size:12px;font-weight:900;color:#fff}
-.questLogTitle span{padding:2px 5px;border-radius:999px;background:#6a5823;color:#ffeaa0;font-size:8px;letter-spacing:.08em}
+.questLogTitleText{min-width:0}
+.questLogMeta{display:flex;align-items:center;gap:6px;flex:0 0 auto}
+.questReadyBadge{padding:2px 5px;border-radius:999px;background:#6a5823;color:#ffeaa0;font-size:8px;letter-spacing:.08em}
+.questTrackToggle{display:inline-flex;align-items:center;gap:4px;color:#d9cedf;font-size:9px;font-weight:800;cursor:pointer;user-select:none}
+.questTrackToggle input{width:13px;height:13px;margin:0;accent-color:#8fd3a0}
 .questLogDesc{margin:5px 0 7px;color:#cfc1d7;font-size:10px;line-height:1.35}
 .questObjectives{display:grid;gap:3px;color:#f0e7f3;font-size:10px}
+.questObjectiveRow{display:grid;grid-template-columns:12px 1fr;gap:3px;align-items:start}
+.questObjectiveRow.complete{color:#9bcfa5}
+.questObjectiveMark{font-weight:900;text-align:center}
 .questRewards{margin-top:7px;color:#bfb0c7;font-size:9px}
 .questAbandon{margin-top:7px;border:1px solid rgba(255,255,255,.10);border-radius:6px;background:rgba(120,55,65,.48);color:#f4dde0;padding:5px 7px;font-size:9px;font-weight:800;cursor:pointer}
 .questCompletedHeading{margin:10px 2px 5px;color:#b9a9c1;font-size:9px;font-weight:900;letter-spacing:.10em;text-transform:uppercase}
@@ -1221,6 +1240,7 @@ button.action.danger{background:#8b3e4a;border-color:rgba(255,173,173,.32)}
 .npcNoQuest{padding:8px 2px;color:#a99cad;font-size:10px}
 
 @media(max-width:620px){
+  #questChip{width:min(250px,64vw);max-height:45vh}
   #questLogPanel{top:96px;right:7px;width:min(300px,calc(100vw - 14px));max-height:calc(100vh - 106px)}
   #questLogBody{max-height:calc(100vh - 160px)}
   #npcDialogPanel{width:calc(100vw - 12px);max-height:74vh}

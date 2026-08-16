@@ -1,8 +1,8 @@
 {
   "format": "little-realm-world-pack",
   "schemaVersion": 1,
-  "build": "v55-npc-selection",
-  "exportedAt": "2026-08-16T20:29:29.972Z",
+  "build": "v56-quest-tracking",
+  "exportedAt": "2026-08-16T21:07:04.004Z",
   "worldObjects": [
     {
       "id": "town-well",
@@ -640,7 +640,7 @@
       "sprite": "./assets/npcs/jorge.png",
       "x": 480,
       "y": 328,
-      "facing": "left",
+      "facing": "down",
       "solid": true,
       "displayHeight": 53,
       "greeting": "Good to see you. The roads are safer when everyone lends a hand.",
@@ -707,7 +707,7 @@
       "y": 530,
       "facing": "right",
       "solid": true,
-      "displayHeight": 100,
+      "displayHeight": 55,
       "shirt": "#6e9c5e",
       "greeting": "There's always something happening beyond the town road.",
       "interactRadius": 58,
@@ -729,7 +729,7 @@
       "y": 522,
       "facing": "left",
       "solid": true,
-      "displayHeight": 44,
+      "displayHeight": 55,
       "shirt": "#8a6651",
       "greeting": "Come back when the forge is open and I'll show you what I can make.",
       "interactRadius": 58,
@@ -751,7 +751,7 @@
       "y": 1336,
       "facing": "right",
       "solid": true,
-      "displayHeight": 44,
+      "displayHeight": 55,
       "shirt": "#b28b43",
       "greeting": "Mind the animals and watch your step around the trough.",
       "interactRadius": 58,
@@ -763,6 +763,27 @@
       },
       "depthMode": "ysort",
       "depthY": 12
+    },
+    {
+      "name": "Mayor Buck",
+      "role": "Major",
+      "sprite": "./assets/npcs/npc-placeholder.png",
+      "displayHeight": 58,
+      "greeting": "Greetings!",
+      "id": "mayor_buck",
+      "x": 448,
+      "y": 480,
+      "facing": "down",
+      "solid": true,
+      "interactRadius": 58,
+      "hitbox": {
+        "x": -6,
+        "y": -7,
+        "w": 12,
+        "h": 14
+      },
+      "depthMode": "ysort",
+      "depthY": 8
     }
   ],
   "quests": [
@@ -787,8 +808,8 @@
         "gold": 8,
         "items": []
       },
-      "prerequisite": null,
-      "nextQuest": "jorge_slime_problem",
+      "prerequisite": "welcome_traveler",
+      "nextQuest": null,
       "repeatable": false
     },
     {
@@ -811,7 +832,7 @@
         "gold": 12,
         "items": []
       },
-      "prerequisite": "lilly_slime_samples",
+      "prerequisite": "welcome_traveler",
       "nextQuest": null,
       "repeatable": false
     },
@@ -833,6 +854,50 @@
       "rewards": {
         "xp": 30,
         "gold": 10,
+        "items": []
+      },
+      "prerequisite": null,
+      "nextQuest": null,
+      "repeatable": false
+    },
+    {
+      "id": "welcome_traveler",
+      "title": "Welcome Traveler",
+      "description": "Introduce yourself to the people of Little Realm",
+      "giverNpc": "mayor_buck",
+      "turnInNpc": "mayor_buck",
+      "openingDialogue": "Welcome to Little Realm! We are pleased to have you. Please get to know the other folks around town, I'm sure they will be delighted to meet you!",
+      "completionDialogue": "I'm glad you made some new friends! Enjoy your stay!",
+      "objectives": [
+        {
+          "type": "talk",
+          "target": "lilly",
+          "amount": 1
+        },
+        {
+          "type": "talk",
+          "target": "jorge",
+          "amount": 1
+        },
+        {
+          "type": "talk",
+          "target": "farmer",
+          "amount": 1
+        },
+        {
+          "type": "talk",
+          "target": "rhea",
+          "amount": 1
+        },
+        {
+          "type": "talk",
+          "target": "torren",
+          "amount": 1
+        }
+      ],
+      "rewards": {
+        "xp": 25,
+        "gold": 0,
         "items": []
       },
       "prerequisite": null,
@@ -1134,6 +1199,5 @@
         "wanderDelayMaxSeconds": 4
       }
     }
-  },
-  "integratedAt": "2026-08-16T20:33:00.000Z"
+  }
 }

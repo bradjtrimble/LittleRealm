@@ -738,8 +738,10 @@ function npcSpriteImage(path){
 }
 
 function npcQuestMarker(npc){
-  if(typeof getNpcQuestMarker!=="function") return "";
-  return getNpcQuestMarker(npc?.id)||"";
+  if(typeof getNpcQuestMarkerInfo==="function") return getNpcQuestMarkerInfo(npc?.id);
+  if(typeof getNpcQuestMarker!=="function") return null;
+  const symbol=getNpcQuestMarker(npc?.id)||"";
+  return symbol?{symbol,kind:symbol==="?"?"ready":"available"}:null;
 }
 
 function drawNpcObject(obj,camX,camY){
@@ -777,11 +779,11 @@ function drawNpcObject(obj,camX,camY){
   }
 
   const marker=npcQuestMarker(obj);
-  if(marker){
-    const ready=marker==="?";
+  if(marker?.symbol){
+    const markerColor=marker.kind==="talk"?"#a8a7ae":marker.kind==="ready"?"#ffe17b":"#ffd45b";
     ctx.font="900 15px system-ui";ctx.textAlign="center";
-    ctx.lineWidth=3;ctx.strokeStyle="rgba(35,24,15,.82)";ctx.strokeText(marker,x,topY-7);
-    ctx.fillStyle=ready?"#ffe17b":"#ffd45b";ctx.fillText(marker,x,topY-7);ctx.textAlign="start";
+    ctx.lineWidth=3;ctx.strokeStyle="rgba(35,24,15,.82)";ctx.strokeText(marker.symbol,x,topY-7);
+    ctx.fillStyle=markerColor;ctx.fillText(marker.symbol,x,topY-7);ctx.textAlign="start";
   }
   ctx.restore();
 }

@@ -1,4 +1,4 @@
-/* Integrated from Little Realm World Pack v55 */
+/* Integrated from Little Realm World Pack v56 */
 window.LR_QUESTS = [
   {
     "id": "lilly_slime_samples",
@@ -21,8 +21,8 @@ window.LR_QUESTS = [
       "gold": 8,
       "items": []
     },
-    "prerequisite": null,
-    "nextQuest": "jorge_slime_problem",
+    "prerequisite": "welcome_traveler",
+    "nextQuest": null,
     "repeatable": false
   },
   {
@@ -45,7 +45,7 @@ window.LR_QUESTS = [
       "gold": 12,
       "items": []
     },
-    "prerequisite": "lilly_slime_samples",
+    "prerequisite": "welcome_traveler",
     "nextQuest": null,
     "repeatable": false
   },
@@ -67,6 +67,50 @@ window.LR_QUESTS = [
     "rewards": {
       "xp": 30,
       "gold": 10,
+      "items": []
+    },
+    "prerequisite": null,
+    "nextQuest": null,
+    "repeatable": false
+  },
+  {
+    "id": "welcome_traveler",
+    "title": "Welcome Traveler",
+    "description": "Introduce yourself to the people of Little Realm",
+    "giverNpc": "mayor_buck",
+    "turnInNpc": "mayor_buck",
+    "openingDialogue": "Welcome to Little Realm! We are pleased to have you. Please get to know the other folks around town, I'm sure they will be delighted to meet you!",
+    "completionDialogue": "I'm glad you made some new friends! Enjoy your stay!",
+    "objectives": [
+      {
+        "type": "talk",
+        "target": "lilly",
+        "amount": 1
+      },
+      {
+        "type": "talk",
+        "target": "jorge",
+        "amount": 1
+      },
+      {
+        "type": "talk",
+        "target": "farmer",
+        "amount": 1
+      },
+      {
+        "type": "talk",
+        "target": "rhea",
+        "amount": 1
+      },
+      {
+        "type": "talk",
+        "target": "torren",
+        "amount": 1
+      }
+    ],
+    "rewards": {
+      "xp": 25,
+      "gold": 0,
       "items": []
     },
     "prerequisite": null,
