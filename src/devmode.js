@@ -382,7 +382,7 @@ function developerWorldPack(){
   return {
     format:"little-realm-world-pack",
     schemaVersion:1,
-    build:"v58.1-project-cleanup-fix",
+    build:"v58.2-repository-cleanup",
     exportedAt:new Date().toISOString(),
     worldObjects:sceneryProps.map(cloneWorldObject),
     npcs:sceneryNPCs.map(cloneNpc),

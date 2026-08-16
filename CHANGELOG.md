@@ -1,14 +1,22 @@
 # Little Realm Changelog
 
+## v58.2 — Repository Structure Cleanup
+
+- Removed 66 obsolete root-level duplicates left from the pre-folder project layout. Runtime code, source modules, configs, tests, documentation, and assets now have one authoritative location.
+- Removed unused legacy root artifacts (`house-atlas.png`, `house_A.png`, `house_B.png`, and the old root `static.yml`).
+- Expanded project hygiene validation to catch duplicate root files that shadow organized files under `assets/`, `config/`, `docs/`, `js/`, `src/`, or `tools/`.
+- Replaced the release-note-only migration helper with `tools/cleanup-legacy.py`, which safely removes both known old update notes and known pre-v58.2 root duplicates after an in-place upgrade.
+- Corrected the README/workflow policy: GitHub Actions validates the repository but does not silently mutate source files; cleanup is an explicit migration step.
+- Bumped build/cache metadata to `v58.2-repository-cleanup`. No gameplay, balance, world content, quest behavior, combat behavior, or save mechanics were intentionally changed.
+
+Release history is kept here so the project root stays clean. New entries should be added at the top; do not create a separate update-note `.txt` file for each release.
+
 ## v58.1 — Project Cleanup Migration Fix
 
 - Fixed an in-place-upgrade edge case: copying/extracting v58 over an older project does not remove files that no longer exist in the archive, so legacy root release-note `.txt` files could remain and make the new hygiene validation fail.
-- Added `tools/cleanup-legacy-notes.py`, which removes only the known pre-v58 release-note files and is safe to run repeatedly.
-- GitHub Pages now runs the legacy-note cleanup before validation, so repositories upgraded by overlaying files can still validate and deploy cleanly.
-- Kept the hygiene test strict after cleanup, so genuinely new root-level `.txt` clutter is still caught.
+- Added a safe allow-listed migration helper for removing known pre-v58 release-note files after in-place upgrades.
+- Kept the hygiene test strict so root-level `.txt` clutter is caught during validation.
 - No gameplay, balance, content, rendering, save-format, or World Builder behavior changed.
-
-Release history is kept here so the project root stays clean. New entries should be added at the top; do not create a separate update-note `.txt` file for each release.
 
 ## v58 — Project Cleanup
 

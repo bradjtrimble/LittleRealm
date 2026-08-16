@@ -1,7 +1,7 @@
 {
   "format": "little-realm-world-pack",
   "schemaVersion": 1,
-  "build": "v58.1-project-cleanup-fix",
+  "build": "v58.2-repository-cleanup",
   "exportedAt": "2026-08-16T21:07:04.004Z",
   "worldObjects": [
     {

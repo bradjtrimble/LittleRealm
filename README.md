@@ -2,7 +2,7 @@
 
 Little Realm is a browser-based top-down RPG with a modular JavaScript source tree, data-driven world/content configuration, and an in-game World Builder.
 
-**Current build:** `v58.1-project-cleanup-fix`
+**Current build:** `v58.2-repository-cleanup`
 
 ## Run the game
 
@@ -38,7 +38,7 @@ Then open the local server address shown by Python.
 
 ### Updating an older project in-place
 
-ZIP extraction and file-copy updates do not delete files that disappeared from a newer release. If v58+ is copied over a v57-or-older folder/repository, the old root release-note `.txt` files can therefore remain behind. Run `python3 tools/cleanup-legacy-notes.py` once after an in-place upgrade. The GitHub Pages workflow also runs this safe, allow-listed cleanup before validation so legacy notes cannot break deployment.
+ZIP extraction and file-copy updates do not delete files that disappeared from a newer release. If a newer Little Realm package is copied over an older folder/repository, obsolete root files can therefore remain behind. Run `python3 tools/cleanup-legacy.py` once after an in-place upgrade, then run `python3 tools/validate.py`. The cleanup is allow-list based and removes only known legacy Little Realm files. GitHub Actions validates repository hygiene but does not modify or commit your source tree.
 
 ## World Builder workflow
 

@@ -2964,7 +2964,7 @@ function developerWorldPack(){
   return {
     format:"little-realm-world-pack",
     schemaVersion:1,
-    build:"v58.1-project-cleanup-fix",
+    build:"v58.2-repository-cleanup",
     exportedAt:new Date().toISOString(),
     worldObjects:sceneryProps.map(cloneWorldObject),
     npcs:sceneryNPCs.map(cloneNpc),
@@ -6297,7 +6297,7 @@ const INPUT_BINDINGS = {
 
 // Exposed only as read-only diagnostics so a desktop tester can confirm the
 // deployed build from DevTools without digging through bundled source.
-window.LR_BUILD_VERSION="v58.1-project-cleanup-fix";
+window.LR_BUILD_VERSION="v58.2-repository-cleanup";
 window.LR_INPUT_BINDINGS=Object.freeze({...INPUT_BINDINGS});
 window.LR_INPUT_STATE=()=>({...input});
 
