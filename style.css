@@ -780,3 +780,200 @@ button.action{transition:filter .15s,transform .12s,border-color .15s}
   #targetHud{top:max(92px,calc(env(safe-area-inset-top) + 92px));width:min(245px,70vw)}
   #targetCombatStats{display:none}
 }
+
+/* v50 loot window + inventory drag/drop -------------------------------- */
+#lootWindow{z-index:25}
+#lootPanel{
+  width:min(820px,96vw);
+  padding:16px;
+  overflow:hidden;
+  background:linear-gradient(180deg,#3b2d49,#292033);
+}
+.lootHeader,.lootBagHeader{
+  display:flex;
+  align-items:flex-end;
+  justify-content:space-between;
+  gap:12px;
+}
+.lootHeader{margin-bottom:12px}
+.lootHeader h2{margin:0;font-size:26px}
+.lootHint,.lootBagTip{
+  color:#cbbfd1;
+  font-size:10px;
+  line-height:1.35;
+}
+.lootHint{text-align:right;max-width:220px}
+.lootWorkspace{
+  display:grid;
+  grid-template-columns:minmax(170px,.72fr) minmax(320px,1.45fr);
+  gap:12px;
+}
+.lootDropSection,.lootBagSection{
+  min-width:0;
+  padding:11px;
+  border:1px solid rgba(255,255,255,.09);
+  border-radius:13px;
+  background:rgba(14,11,18,.28);
+}
+.lootSectionTitle,.lootBagHeader{
+  margin-bottom:9px;
+  color:#eadff0;
+  font-size:10px;
+  font-weight:900;
+  letter-spacing:.08em;
+  text-transform:uppercase;
+}
+#lootGrid{
+  display:grid;
+  grid-template-columns:repeat(2,minmax(0,1fr));
+  gap:8px;
+  min-height:92px;
+}
+.lootSlot{
+  position:relative;
+  min-height:88px;
+  border:2px solid rgba(236,214,174,.2);
+  border-radius:11px;
+  background:linear-gradient(145deg,#241c2d,#17131e);
+  color:#fff;
+  padding:7px 7px 24px;
+  cursor:grab;
+  touch-action:none;
+}
+.lootSlot:active{cursor:grabbing}
+.lootSlot:hover{border-color:#d8ae62;box-shadow:inset 0 0 0 2px rgba(246,197,100,.12)}
+.lootItemIcon{
+  display:block;
+  width:56px;
+  height:56px;
+  max-width:76%;
+  margin:0 auto 3px;
+  object-fit:contain;
+  image-rendering:pixelated;
+  filter:drop-shadow(0 2px 2px rgba(0,0,0,.35));
+  pointer-events:none;
+}
+.lootItemSymbol{
+  display:flex;
+  width:52px;
+  height:52px;
+  margin:0 auto 5px;
+  align-items:center;
+  justify-content:center;
+  border-radius:9px;
+  background:#80552e;
+  color:#fff0cf;
+  font-size:22px;
+  font-weight:950;
+  pointer-events:none;
+}
+.lootItemName{
+  display:block;
+  overflow:hidden;
+  color:#f5edf8;
+  font-size:10px;
+  font-weight:900;
+  text-align:center;
+  text-overflow:ellipsis;
+  white-space:nowrap;
+}
+.lootItemQty{
+  position:absolute;
+  right:6px;
+  bottom:5px;
+  padding:2px 5px;
+  border-radius:6px;
+  background:rgba(0,0,0,.76);
+  color:#fff;
+  font-size:9px;
+  font-weight:900;
+}
+.lootEmpty{
+  grid-column:1/-1;
+  display:flex;
+  min-height:88px;
+  align-items:center;
+  justify-content:center;
+  color:#b9adbf;
+  font-size:11px;
+  text-align:center;
+}
+#lootInventoryGrid{
+  display:grid;
+  grid-template-columns:repeat(5,minmax(0,1fr));
+  gap:6px;
+}
+#lootInventoryGrid .inventorySlot{touch-action:none}
+.lootBagTip{margin-top:8px}
+.lootActions{
+  display:grid;
+  grid-template-columns:1fr 1fr;
+  gap:8px;
+  margin-top:12px;
+}
+button.action.secondary{background:#51425f}
+button.action.danger{background:#8b3e4a;border-color:rgba(255,173,173,.32)}
+
+.inventoryDragging .inventorySlot,.lootDragging .lootSlot{cursor:grabbing}
+.itemDragGhost{
+  position:fixed;
+  z-index:2000;
+  width:58px;
+  height:58px;
+  transform:translate(-50%,-50%);
+  pointer-events:none;
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  border:2px solid #d8ae62;
+  border-radius:11px;
+  background:rgba(24,18,30,.94);
+  box-shadow:0 12px 28px rgba(0,0,0,.5);
+}
+.itemDragGhost .dragIcon{width:46px;height:46px;object-fit:contain;image-rendering:pixelated;filter:drop-shadow(0 2px 2px rgba(0,0,0,.35))}
+.itemDragGhost .dragSymbol{display:flex;width:42px;height:42px;align-items:center;justify-content:center;border-radius:8px;background:#80552e;font-weight:950}
+.itemDragGhost>span:last-child{
+  position:absolute;
+  right:-5px;
+  bottom:-5px;
+  min-width:20px;
+  padding:2px 5px;
+  border-radius:7px;
+  background:#111;
+  color:#fff;
+  font-size:10px;
+  font-weight:900;
+  text-align:center;
+}
+
+#disposePrompt{z-index:35;background:rgba(0,0,0,.76)}
+#disposePanel{width:min(390px,92vw);text-align:center}
+#disposePanel h2{margin:2px 0 12px}
+#disposeItemName{
+  padding:10px;
+  border:1px solid rgba(255,255,255,.1);
+  border-radius:10px;
+  background:rgba(0,0,0,.2);
+  color:#fff1cf;
+  font-size:15px;
+  font-weight:900;
+}
+#disposeItemText{margin:10px 0 14px;color:#d7cadc;font-size:11px;line-height:1.4}
+.disposeActions{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+
+@media (max-width:650px){
+  #lootPanel{width:min(520px,96vw);max-height:94vh;overflow:auto;padding:12px}
+  .lootHeader{align-items:flex-start}
+  .lootHint{max-width:145px}
+  .lootWorkspace{grid-template-columns:1fr}
+  #lootGrid{grid-template-columns:repeat(3,minmax(0,1fr));min-height:0}
+  .lootSlot{min-height:82px}
+  #lootInventoryGrid{gap:5px}
+  .lootBagTip{font-size:9px}
+}
+@media (max-width:420px){
+  #lootGrid{grid-template-columns:repeat(2,minmax(0,1fr))}
+  .lootHeader h2{font-size:22px}
+  .lootHint{font-size:9px}
+  .lootActions{grid-template-columns:1fr}
+}

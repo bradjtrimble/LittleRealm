@@ -1,12 +1,12 @@
-# Loot foundation
+# Loot system
 
-Little Realm now keeps loot content separate from combat logic.
+Little Realm keeps loot content separate from combat logic. Mob deaths roll item drops, then the player decides whether to collect them from the loot window.
 
 ## Where to add content
 
 1. Add the item definition to `config/items.js`.
 2. Add that item ID to one or more tables in `config/loot-tables.js`.
-3. Refresh the game. Both config files are loaded fresh at startup, so item and drop-table edits do not require rebuilding `js/game.js`.
+3. Refresh the game. Both config files are loaded fresh at startup, so routine item and drop-table edits do not require rebuilding `js/game.js`.
 
 ## Item example
 
@@ -32,31 +32,42 @@ slime: [
 ]
 ```
 
-Each entry rolls independently. A successful roll is added through the backpack API, so normal stacking and slot limits apply automatically.
+Each entry rolls independently. Optional entry conditions are `requiresElite`, `requiresBoss`, `minLevel`, and `maxLevel`.
 
-Optional entry conditions are `requiresElite`, `requiresBoss`, `minLevel`, and `maxLevel`.
+## Player loot flow
+
+- XP, gold, and legacy potion rewards are awarded immediately when the mob is defeated.
+- Item drops are rolled but are **not** placed directly in the backpack.
+- If at least one item rolls, the loot window opens.
+- Clicking a loot item takes it using normal auto-stacking.
+- Dragging a loot item onto a backpack slot places as much as possible into that exact slot. The target must be empty or already contain the same item.
+- **Take All** collects everything that fits.
+- **Leave Remaining Loot** closes the window and abandons anything still there.
+- The world mob AI pauses while the loot window or disposal confirmation is open.
 
 ## Mob-to-table mapping
 
 By default each mob uses its balance config key as its loot-table key: `slime`, `goblin`, `wolf`, `cow`, `pig`, `chicken`, and `snickers`.
 
-If a mob ever needs a different table, add a string such as `lootTable: "forestGoblin"` to that mob's block in `config/game-balance.js`, then create a matching table in `config/loot-tables.js`.
+If a mob needs a different table, add a string such as `lootTable: "forestGoblin"` to that mob's block in `config/game-balance.js`, then create a matching table in `config/loot-tables.js`.
 
 ## Runtime API
 
-`window.LR_LOOT` exposes stable helpers for future systems:
+`window.LR_LOOT` exposes helpers for future systems:
 
 - `getTable(tableId)`
 - `rollTable(tableId, context)`
-- `grantDrops(drops)`
-- `grantMobLoot(mob)`
+- `rollMobLoot(mob)` — roll only; does not touch inventory
+- `grantDrops(drops)` — direct scripted grant
+- `grantMobLoot(mob)` — compatibility helper for scripted direct grants
+- `openWindow(drops, sourceLabel)`
+- `closeWindow()`
+- `takeAt(index, targetSlot?)`
+- `takeAll()`
+- `getPending()`
 - `formatDrops(drops)`
 - `validate()`
 
-This lets future chests, gathering, quests, fishing, bosses, or scripted rewards use the same loot pipeline instead of modifying inventory directly.
+## Current live loot
 
-## Current behavior
-
-Slimes now have the first live loot entry: **Slime Gel** at a 70% independent drop chance for **1–2** gel. The other default mob tables remain empty. Existing XP, gold, and potion rewards are unchanged. Successful item drops are placed in the backpack automatically. If the backpack cannot hold the full quantity, the victory message reports the uncollected overflow instead of silently claiming it was received.
-
-Item definitions can also set an optional `icon` path. When present, the backpack shows that artwork in the slot and item-details panel; `symbol` remains the fallback for items without artwork.
+Slimes have the first live loot entry: **Slime Gel** at a 70% independent drop chance for **1–2** gel. Other default mob tables remain empty.

@@ -1,0 +1,11 @@
+Little Realm v50 — Loot Window + Backpack Drag/Drop
+
+- Mob item drops now open a loot window instead of entering the backpack automatically.
+- XP, gold, and legacy potion rewards remain automatic.
+- Loot can be clicked to auto-stack or dragged into a specific backpack slot.
+- Take All collects everything that fits.
+- Closing the loot window leaves/discards any uncollected drops.
+- Backpack stacks can be moved, swapped, and combined by dragging between slots.
+- Dragging a backpack stack outside the active bag panel opens a disposal confirmation.
+- Confirmed disposal removes the entire dragged stack.
+- Mob AI pauses while loot/disposal UI is open.

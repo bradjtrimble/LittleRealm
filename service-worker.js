@@ -1,4 +1,4 @@
-const CACHE_NAME = "little-realm-v49-slime-gel";
+const CACHE_NAME = "little-realm-v50-loot-window";
 const FILES = [
   "./",
   "./index.html",

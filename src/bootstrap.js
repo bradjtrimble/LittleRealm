@@ -27,10 +27,14 @@ document.getElementById("quickPotion").onclick=useQuickPotion;
 
 document.getElementById("backpackBtn").onclick=toggleBackpack;
 document.getElementById("closeBackpack").onclick=closeBackpack;
-document.getElementById("inventoryGrid").onclick=event=>{
-  const slot=event.target.closest?.("[data-slot]");
-  if(slot) selectInventorySlot(Number(slot.dataset.slot));
-};
+document.getElementById("inventoryGrid").onclick=handleInventoryGridClick;
+document.getElementById("lootGrid").onclick=handleLootGridClick;
+document.getElementById("takeAllLoot").onclick=takeAllLoot;
+document.getElementById("closeLootWindow").onclick=closeLootWindow;
+document.getElementById("disposeCancel").onclick=cancelDisposePrompt;
+document.getElementById("disposeConfirm").onclick=confirmDisposePrompt;
+bindInventoryInteractions();
+bindLootInteractions();
 game.addEventListener("pointerdown",handleWorldTap);
 document.getElementById("menuBtn").onclick=()=>{
   input={up:false,down:false,left:false,right:false};

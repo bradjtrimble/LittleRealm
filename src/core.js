@@ -39,6 +39,18 @@ function booleanOr(value,fallback){
   return typeof value==="boolean"?value:fallback;
 }
 
+function overlayIsShown(id){
+  return !!document.getElementById(id)?.classList.contains("show");
+}
+
+function isGameplayModalOpen(){
+  return overlayIsShown("menu") || overlayIsShown("backpack") || overlayIsShown("lootWindow") || overlayIsShown("disposePrompt");
+}
+
+function isLootInteractionOpen(){
+  return overlayIsShown("lootWindow") || overlayIsShown("disposePrompt");
+}
+
 const game = document.getElementById("game");
 const ctx = game.getContext("2d");
 const heroCanvas = document.getElementById("heroBattleSprite");

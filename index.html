@@ -8,7 +8,7 @@
   <link rel="icon" type="image/png" sizes="192x192" href="./assets/icons/icon-192.png">
   <link rel="icon" type="image/png" sizes="512x512" href="./assets/icons/icon-512.png">
   <title>Little Realm RPG</title>
-  <link rel="stylesheet" href="./style.css?v=47">
+  <link rel="stylesheet" href="./style.css?v=50">
 </head>
 <body>
 <div id="gameShell">
@@ -31,7 +31,7 @@
   <div id="questChip">Slimes 0/3</div>
   <div id="toast"></div>
   <div id="pcControls" aria-hidden="true"></div>
-  <div id="buildBadge" aria-hidden="true">v49 • SLIME GEL</div>
+  <div id="buildBadge" aria-hidden="true">v50 • LOOT WINDOW</div>
 
   <div id="dpad">
     <div class="pad" id="up">▲</div>
@@ -62,6 +62,46 @@
       <div id="inventoryGrid" aria-label="Backpack inventory"></div>
       <div id="inventoryDetails"><div class="inventoryDetailEmpty">Select an item to inspect it.</div></div>
       <button class="action" id="closeBackpack">Close Backpack</button>
+    </div>
+  </div>
+
+  <div id="lootWindow" class="overlay">
+    <div id="lootPanel" class="panel">
+      <div class="lootHeader">
+        <div>
+          <div class="inventoryEyebrow">DEFEATED <span id="lootSourceName">ENEMY</span></div>
+          <h2>Loot</h2>
+        </div>
+        <div class="lootHint">Drag loot into a backpack slot</div>
+      </div>
+      <div class="lootWorkspace">
+        <section class="lootDropSection" aria-label="Dropped loot">
+          <div class="lootSectionTitle">Dropped Items</div>
+          <div id="lootGrid"></div>
+        </section>
+        <section class="lootBagSection" aria-label="Backpack">
+          <div class="lootBagHeader"><span>Backpack</span><span id="lootInventoryCapacity">0 / 20 slots</span></div>
+          <div id="lootInventoryGrid" aria-label="Backpack inventory while looting"></div>
+          <div class="lootBagTip">Drag backpack items between slots to organize them. Drag a backpack item outside this window to dispose of it.</div>
+        </section>
+      </div>
+      <div class="lootActions">
+        <button class="action" id="takeAllLoot">Take All</button>
+        <button class="action secondary" id="closeLootWindow">Leave Remaining Loot</button>
+      </div>
+    </div>
+  </div>
+
+  <div id="disposePrompt" class="overlay">
+    <div id="disposePanel" class="panel" role="dialog" aria-modal="true" aria-labelledby="disposeTitle">
+      <div class="inventoryEyebrow">DISPOSE ITEM</div>
+      <h2 id="disposeTitle">Are you sure?</h2>
+      <div id="disposeItemName"></div>
+      <div id="disposeItemText">Dispose this item? This cannot be undone.</div>
+      <div class="disposeActions">
+        <button class="action secondary" id="disposeCancel">Keep Item</button>
+        <button class="action danger" id="disposeConfirm">Dispose</button>
+      </div>
     </div>
   </div>
 
@@ -123,7 +163,7 @@
     </div>
   </div>
 </div>
-  <script src="./js/pwa.js?v=49"></script>
-  <script src="./js/runtime-loader.js?v=49"></script>
+  <script src="./js/pwa.js?v=50"></script>
+  <script src="./js/runtime-loader.js?v=50"></script>
 </body>
 </html>

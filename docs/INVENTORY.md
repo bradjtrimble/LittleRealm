@@ -1,6 +1,6 @@
 # Backpack / Inventory
 
-Little Realm v20 adds a slot-based backpack foundation for future mob drops.
+Little Realm uses a slot-based backpack that supports stacking, exact-slot placement, rearranging, and disposal.
 
 - Slot count: `config/game-balance.js` → `inventory.slots`
 - Default stack size: `config/game-balance.js` → `inventory.defaultStackLimit`
@@ -8,6 +8,31 @@ Little Realm v20 adds a slot-based backpack foundation for future mob drops.
 - Runtime module: `src/inventory.js`
 - Player inventory is saved in `state.inventory`. Existing saves are upgraded to an empty backpack automatically.
 
-Future drop code should call `addItem(itemId, quantity)` and check the returned `remaining` value rather than mutating inventory slots directly.
+## Drag behavior
 
-The global diagnostic API `window.LR_INVENTORY` exposes add/remove/count/capacity helpers for testing.
+- Drag a backpack stack onto an empty slot to move it.
+- Drag it onto the same item to combine stacks up to that item's stack limit.
+- Drag it onto a different item to swap the two slots.
+- While the loot window is open, the same backpack drag behavior works in the embedded bag grid.
+- Drag a backpack stack outside the active backpack/loot panel to request disposal.
+- Disposal always asks for confirmation and removes the entire dragged stack only after the player confirms.
+
+## Loot placement
+
+Loot can target an exact backpack slot through `placeItemInInventorySlot`. An external loot stack can enter an empty slot or merge with the same item. It will not displace a different backpack item; the player must move that item first.
+
+## Runtime API
+
+`window.LR_INVENTORY` exposes:
+
+- `addItem(itemId, quantity)`
+- `removeItem(itemId, quantity)`
+- `getItemCount(itemId)`
+- `canAddItem(itemId, quantity)`
+- `getUsedSlots()`
+- `getSlotCount()`
+- `getSlots()`
+- `placeInSlot(itemId, quantity, slotIndex)`
+- `moveSlot(fromIndex, toIndex)`
+- `disposeSlot(slotIndex)`
+- `requestDispose(slotIndex)`

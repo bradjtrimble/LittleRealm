@@ -690,6 +690,7 @@ function drawBattleSprites(){
 }
 
 function updateMobs(dt){
+  if(isLootInteractionOpen()) return;
   for(const mob of mobs){
     if(!mob.alive){
       if(mob.boss) continue;

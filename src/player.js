@@ -104,7 +104,7 @@ function moveHeroVector(dx,dy,amount){
 }
 
 function updateMovement(dt){
-  if(document.getElementById("menu").classList.contains("show") || document.getElementById("backpack").classList.contains("show")) {
+  if(isGameplayModalOpen()) {
     isHeroMoving=false;
     return;
   }

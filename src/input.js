@@ -25,7 +25,7 @@ const INPUT_BINDINGS = {
 
 // Exposed only as read-only diagnostics so a desktop tester can confirm the
 // deployed build from DevTools without digging through bundled source.
-window.LR_BUILD_VERSION="v49-slime-gel";
+window.LR_BUILD_VERSION="v50-loot-window";
 window.LR_INPUT_BINDINGS=Object.freeze({...INPUT_BINDINGS});
 window.LR_INPUT_STATE=()=>({...input});
 
@@ -66,7 +66,7 @@ function cycleKeyboardTarget(reverse=false){
 }
 
 function attackTargetFromKeyboard(){
-  if(document.getElementById("menu").classList.contains("show") || document.getElementById("backpack").classList.contains("show")) return;
+  if(isGameplayModalOpen()) return;
   if(combatTarget && combatTarget.alive){
     // Combat is automatic once engaged. Repeated key presses never create
     // additional attacks and therefore cannot bypass the global cooldown.
@@ -127,7 +127,7 @@ function bindKeyboardControls(){
   window.addEventListener("keydown",event=>{
     if(isEditableKeyTarget(event.target)) return;
 
-    const overlayOpen=document.getElementById("menu").classList.contains("show") || document.getElementById("backpack").classList.contains("show");
+    const overlayOpen=isGameplayModalOpen();
     if(!overlayOpen){
       if(keyMatches("moveUp",event)){event.preventDefault();input.up=true;}
       if(keyMatches("moveDown",event)){event.preventDefault();input.down=true;}
@@ -154,7 +154,11 @@ function bindKeyboardControls(){
       event.preventDefault();
       const menu=document.getElementById("menu");
       const backpack=document.getElementById("backpack");
-      if(backpack.classList.contains("show")) closeBackpack();
+      const lootWindow=document.getElementById("lootWindow");
+      const disposePrompt=document.getElementById("disposePrompt");
+      if(disposePrompt.classList.contains("show")) cancelDisposePrompt();
+      else if(lootWindow.classList.contains("show")) closeLootWindow();
+      else if(backpack.classList.contains("show")) closeBackpack();
       else if(menu.classList.contains("show")) menu.classList.remove("show");
       else clearTargetFromKeyboard();
     }else if(keyMatches("menu",event)){

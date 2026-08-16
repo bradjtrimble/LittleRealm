@@ -41,8 +41,22 @@ try{
   if(grant.added.length!==2||grant.overflow.length!==0) throw new Error('mob loot grant failed');
   if(global.LR_INVENTORY.getItemCount('slimeGel')!==2||global.LR_INVENTORY.getItemCount('slimeCore')!==1) throw new Error('loot did not reach inventory');
 
+  const beforeRollOnly=global.LR_INVENTORY.getItemCount('slimeGel');
+  const rolledOnly=global.LR_LOOT.rollMobLoot({level:2,elite:false,boss:false,template:{configKey:'slime',lootTable:'slime'}},()=>0);
+  if(rolledOnly.rolled.length!==2) throw new Error('rollMobLoot did not return rolled drops');
+  if(global.LR_INVENTORY.getItemCount('slimeGel')!==beforeRollOnly) throw new Error('rollMobLoot should not auto-grant items');
+
+  global.LR_LOOT.openWindow([{itemId:'slimeGel',qty:3}],'Test Slime');
+  if(!get('lootWindow').classList.contains('show')) throw new Error('loot window did not open');
+  if(global.LR_LOOT.getPending()[0]?.qty!==3) throw new Error('loot window pending stack mismatch');
+  const targeted=global.LR_LOOT.takeAt(0,7);
+  if(targeted.added!==3||global.LR_INVENTORY.getSlots()[7]?.id!=='slimeGel') throw new Error('drag-target loot placement failed');
+  if(get('lootWindow').classList.contains('show')) throw new Error('loot window should close when all loot is collected');
+
   const combatSrc=fs.readFileSync(path.join(ROOT,'src','combat.js'),'utf8');
-  if(!combatSrc.includes('const lootReward=grantMobLoot(mob);')) throw new Error('open-world mob death is not hooked to loot');
-  if(!combatSrc.includes('const lootReward=grantMobLoot(currentMob||e);')) throw new Error('battle victory is not hooked to loot');
+  if(!combatSrc.includes('const lootReward=rollMobLoot(mob);')) throw new Error('open-world mob death is not hooked to loot rolling');
+  if(!combatSrc.includes('openLootWindow(lootReward.rolled,mobDisplayName(mob))')) throw new Error('open-world mob death does not present rolled loot');
+  if(!combatSrc.includes('const lootReward=rollMobLoot(currentMob||e);')) throw new Error('battle victory is not hooked to loot rolling');
+  if(!combatSrc.includes('openLootWindow(lootReward.rolled')) throw new Error('battle victory does not present rolled loot');
   console.log('PASS loot foundation test');
 }catch(e){console.error('FAIL loot foundation test\n'+(e.stack||e));process.exit(1)}

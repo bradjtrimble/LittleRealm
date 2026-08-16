@@ -1,8 +1,13 @@
 // Data-driven loot foundation. Item definitions live in config/items.js and
-// drop rules live in config/loot-tables.js. Combat only asks this module to
-// grant a mob's loot; it never needs to know individual item IDs or chances.
+// drop rules live in config/loot-tables.js. Mob deaths roll here, then the
+// player chooses what to move into the backpack from the loot window.
 const LOOT_TABLES = window.LR_LOOT_TABLES || {};
 const warnedLootProblems = new Set();
+let pendingLoot = [];
+let pendingLootSource = "Defeated enemy";
+let lootPointerDrag = null;
+let suppressLootClick = false;
+let lootInteractionsBound = false;
 
 function lootWarnOnce(key,message){
   if(warnedLootProblems.has(key)) return;
@@ -73,17 +78,24 @@ function lootTableIdForMob(mob){
     : (template.configKey||mob.kind||template.kind||"");
 }
 
-function grantMobLoot(mob,rng=Math.random){
+function rollMobLoot(mob,rng=Math.random){
   const tableId=lootTableIdForMob(mob);
-  if(!tableId) return {tableId:"",rolled:[],added:[],overflow:[]};
+  if(!tableId) return {tableId:"",rolled:[]};
   const template=mob?.template||mob||{};
   const rolled=rollLootTable(tableId,{
     level:mob?.level??template.level??template.baseLevel??1,
     elite:!!(mob?.elite??template.elite),
     boss:!!(mob?.boss||template.boss)
   },rng);
-  const granted=grantLootDrops(rolled);
-  return {tableId,rolled,...granted};
+  return {tableId,rolled};
+}
+
+// Kept for developer tools and future scripted rewards that intentionally
+// bypass the loot window. Normal mob deaths use rollMobLoot + openLootWindow.
+function grantMobLoot(mob,rng=Math.random){
+  const result=rollMobLoot(mob,rng);
+  const granted=grantLootDrops(result.rolled);
+  return {...result,...granted};
 }
 
 function formatLootDrops(drops){
@@ -91,6 +103,168 @@ function formatLootDrops(drops){
     const def=getItemDefinition(drop.itemId);
     return `${drop.qty}× ${def.name}`;
   }).join(", ");
+}
+
+function normalizePendingLoot(drops){
+  const totals=new Map();
+  for(const drop of Array.isArray(drops)?drops:[]){
+    if(!drop||typeof drop.itemId!=="string"||!ITEM_DEFS[drop.itemId]) continue;
+    const qty=Math.max(0,Math.floor(numberOr(drop.qty,0)));
+    if(qty>0) totals.set(drop.itemId,(totals.get(drop.itemId)||0)+qty);
+  }
+  return [...totals].map(([itemId,qty])=>({itemId,qty}));
+}
+
+function isLootWindowOpen(){
+  return !!document.getElementById("lootWindow")?.classList.contains("show");
+}
+
+function renderLootInventory(){
+  if(!isLootWindowOpen()) return;
+  renderInventoryGrid(document.getElementById("lootInventoryGrid"));
+  updateBackpackHud();
+}
+
+function renderLootWindow(){
+  const source=document.getElementById("lootSourceName");
+  if(source) source.textContent=pendingLootSource;
+  const grid=document.getElementById("lootGrid");
+  if(grid){
+    if(!pendingLoot.length){
+      grid.innerHTML='<div class="lootEmpty">Nothing left to collect.</div>';
+    }else{
+      grid.innerHTML=pendingLoot.map((drop,index)=>{
+        const def=getItemDefinition(drop.itemId);
+        return `<button class="lootSlot" data-loot-index="${index}" aria-label="Take ${drop.qty} ${inventoryEscape(def.name)}">${itemVisualMarkup(def,"lootItemIcon","lootItemSymbol")}<span class="lootItemName">${inventoryEscape(def.name)}</span><span class="lootItemQty">×${drop.qty}</span></button>`;
+      }).join("");
+    }
+  }
+  renderLootInventory();
+}
+
+function openLootWindow(drops,sourceLabel="Defeated enemy"){
+  const normalized=normalizePendingLoot(drops);
+  if(!normalized.length) return false;
+  pendingLoot=normalized;
+  pendingLootSource=String(sourceLabel||"Defeated enemy");
+  resetHeldKeyboardMovement?.();
+  input={up:false,down:false,left:false,right:false};
+  isHeroMoving=false;
+  closeBackpack?.();
+  document.getElementById("menu")?.classList.remove("show");
+  document.getElementById("lootWindow")?.classList.add("show");
+  renderLootWindow();
+  return true;
+}
+
+function closeLootWindow(){
+  pendingLoot=[];
+  pendingLootSource="Defeated enemy";
+  document.getElementById("lootWindow")?.classList.remove("show");
+}
+
+function takeLootAtIndex(index,targetSlot=null){
+  const i=Math.floor(numberOr(index,-1));
+  const drop=pendingLoot[i];
+  if(!drop) return {added:0,remaining:0};
+  const result=targetSlot==null
+    ?addItem(drop.itemId,drop.qty)
+    :placeItemInInventorySlot(drop.itemId,drop.qty,targetSlot);
+
+  if(result.added<=0){
+    if(targetSlot!=null) toast?.("That backpack slot cannot accept this item.");
+    else toast?.("Your backpack is full.");
+    return result;
+  }
+
+  drop.qty=result.remaining;
+  if(drop.qty<=0) pendingLoot.splice(i,1);
+  if(!pendingLoot.length){
+    closeLootWindow();
+  }else{
+    renderLootWindow();
+  }
+  return result;
+}
+
+function takeAllLoot(){
+  if(!pendingLoot.length) return;
+  for(let i=pendingLoot.length-1;i>=0;i--){
+    const drop=pendingLoot[i];
+    const result=addItem(drop.itemId,drop.qty);
+    drop.qty=result.remaining;
+    if(drop.qty<=0) pendingLoot.splice(i,1);
+  }
+  if(!pendingLoot.length) closeLootWindow();
+  else{
+    renderLootWindow();
+    toast?.("Your backpack does not have room for all of the loot.");
+  }
+}
+
+function createLootDragGhost(drop){
+  const def=getItemDefinition(drop.itemId);
+  const ghost=document.createElement("div");
+  ghost.className="itemDragGhost lootDragGhost";
+  ghost.innerHTML=`${itemVisualMarkup(def,"dragIcon","dragSymbol")}<span>${drop.qty}</span>`;
+  document.body.appendChild(ghost);
+  return ghost;
+}
+
+function lootDragPointerDown(event){
+  if(event.button!=null&&event.button!==0) return;
+  const slot=event.target.closest?.(".lootSlot[data-loot-index]");
+  if(!slot) return;
+  const index=Number(slot.dataset.lootIndex);
+  if(!pendingLoot[index]) return;
+  lootPointerDrag={pointerId:event.pointerId,index,startX:event.clientX,startY:event.clientY,active:false,ghost:null};
+  slot.setPointerCapture?.(event.pointerId);
+}
+
+function lootDragPointerMove(event){
+  const drag=lootPointerDrag;
+  if(!drag||event.pointerId!==drag.pointerId) return;
+  const distance=Math.hypot(event.clientX-drag.startX,event.clientY-drag.startY);
+  if(!drag.active&&distance<6) return;
+  if(!drag.active){
+    const drop=pendingLoot[drag.index];
+    if(!drop){lootPointerDrag=null;return;}
+    drag.active=true;
+    drag.ghost=createLootDragGhost(drop);
+    document.getElementById("lootGrid")?.classList.add("lootDragging");
+  }
+  event.preventDefault?.();
+  positionItemDragGhost(drag.ghost,event.clientX,event.clientY);
+}
+
+function lootDragPointerUp(event){
+  const drag=lootPointerDrag;
+  if(!drag||event.pointerId!==drag.pointerId) return;
+  lootPointerDrag=null;
+  document.getElementById("lootGrid")?.classList.remove("lootDragging");
+  drag.ghost?.remove?.();
+  if(!drag.active) return;
+  event.preventDefault?.();
+  suppressLootClick=true;
+  setTimeout(()=>{suppressLootClick=false;},0);
+  const target=document.elementFromPoint?.(event.clientX,event.clientY)||null;
+  const targetSlot=target?.closest?.(".inventorySlot[data-slot]");
+  if(targetSlot) takeLootAtIndex(drag.index,Number(targetSlot.dataset.slot));
+}
+
+function handleLootGridClick(event){
+  if(suppressLootClick){event.preventDefault?.();return;}
+  const slot=event.target.closest?.(".lootSlot[data-loot-index]");
+  if(slot) takeLootAtIndex(Number(slot.dataset.lootIndex));
+}
+
+function bindLootInteractions(){
+  if(lootInteractionsBound) return;
+  lootInteractionsBound=true;
+  document.getElementById("lootGrid")?.addEventListener("pointerdown",lootDragPointerDown);
+  document.addEventListener("pointermove",lootDragPointerMove,{passive:false});
+  document.addEventListener("pointerup",lootDragPointerUp,{passive:false});
+  document.addEventListener("pointercancel",lootDragPointerUp,{passive:false});
 }
 
 function validateLootConfig(){
@@ -124,12 +298,18 @@ function validateLootConfig(){
 }
 
 // Stable API for tests, developer tools, future chests, gathering, bosses,
-// quests, and any other system that needs to roll or grant item loot.
+// quests, and any other system that needs to roll or present item loot.
 window.LR_LOOT=Object.freeze({
   getTable:getLootTable,
   rollTable:rollLootTable,
+  rollMobLoot,
   grantDrops:grantLootDrops,
   grantMobLoot,
+  openWindow:openLootWindow,
+  closeWindow:closeLootWindow,
+  takeAt:takeLootAtIndex,
+  takeAll:takeAllLoot,
+  getPending:()=>pendingLoot.map(drop=>({...drop})),
   formatDrops:formatLootDrops,
   validate:validateLootConfig
 });

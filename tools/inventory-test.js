@@ -20,5 +20,14 @@ try{
   if(global.LR_INVENTORY.getUsedSlots()!==2) throw new Error('105 items should consume two 99-stack slots');
   const removed=global.LR_INVENTORY.removeItem('testDrop',100);
   if(removed!==100||global.LR_INVENTORY.getItemCount('testDrop')!==5) throw new Error('remove item failed');
-  console.log('PASS backpack inventory test');
+
+  if(!global.LR_INVENTORY.moveSlot(0,6)) throw new Error('moving a stack to an empty slot failed');
+  if(global.LR_INVENTORY.getSlots()[6]?.qty!==5||global.LR_INVENTORY.getSlots()[0]) throw new Error('slot move state mismatch');
+  const placed=global.LR_INVENTORY.placeInSlot('slimeGel',12,4);
+  if(placed.added!==12||placed.remaining!==0||global.LR_INVENTORY.getSlots()[4]?.qty!==12) throw new Error('specific-slot placement failed');
+  const blocked=global.LR_INVENTORY.placeInSlot('slimeGel',1,6);
+  if(blocked.added!==0||!blocked.blocked) throw new Error('different-item occupied slot should block external placement');
+  const disposed=global.LR_INVENTORY.disposeSlot(4);
+  if(disposed?.id!=='slimeGel'||disposed.qty!==12||global.LR_INVENTORY.getSlots()[4]) throw new Error('dispose slot failed');
+  console.log('PASS backpack inventory drag/drop test');
 }catch(e){console.error('FAIL backpack inventory test\n'+(e.stack||e));process.exit(1)}
