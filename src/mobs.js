@@ -220,7 +220,7 @@ function drawSlimeSprite(c,x,y,scale=1,facing="down",animT=0,moving=true,attacki
     facing,
     animT,
     moving,
-    { down: 0, left: 1, right: 2, up: 3 },
+    { down: 0, right: 1, left: 2, up: 3 },
     "slime",
     attacking
   );

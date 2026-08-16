@@ -11,9 +11,9 @@ window.LR_VISUAL = {
     "slime": 0.5,
     "goblin": 1.3,
     "wolf": 1.3,
-    "cow": 1.1,
-    "pig": 1.1,
-    "chicken": 1.1,
+    "cow": 0.85,
+    "pig": 0.65,
+    "chicken": 0.5,
     "snickers": 1.85
   }
 };

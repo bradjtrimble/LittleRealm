@@ -8,6 +8,7 @@ const checks=[
   ["attack frame separated",src.includes("const walkCycle=[0,1,2,1]") && src.includes("attacking ? 3")],
   ["idle mobs do not walk-cycle",src.includes("const moving=Math.hypot(mob.drawVx||0,mob.drawVy||0)>4")],
   ["wall bounce removed",src.includes("mob.vx=0; mob.vy=0; mob.moveTimer=0")],
+  ["slime side directions mapped correctly",src.includes("{ down: 0, right: 1, left: 2, up: 3 },\n    \"slime\"")],
 ];
 let bad=false;
 for(const [name,ok] of checks){console.log((ok?"PASS":"FAIL"),name);if(!ok)bad=true;}

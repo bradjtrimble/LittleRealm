@@ -1,4 +1,4 @@
-const CACHE_NAME = "little-realm-v39-grounded-mobs";
+const CACHE_NAME = "little-realm-v41-visual-settings-update";
 const FILES = [
   "./",
   "./index.html",

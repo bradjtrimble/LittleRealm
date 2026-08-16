@@ -1,0 +1,4 @@
+v40 update
+- Fixed slime left/right sprite row mapping.
+- Slimes now face the same direction they are moving.
+- Added a regression check for slime side-direction mapping.

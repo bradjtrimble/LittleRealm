@@ -1,0 +1,3 @@
+v41 update
+- Applied uploaded visual-settings(4).js as the new default visual scale baseline.
+- Cow 0.85x, Pig 0.65x, Chicken 0.50x, Slime 0.50x, Snickers 1.85x.
