@@ -182,6 +182,43 @@ function worldObjectRenderDepth(obj,heroY){
   return obj.y+worldObjectDepthY(obj);
 }
 
+const NPC_PLACEHOLDER_SPRITE = "./assets/npcs/npc-placeholder.png";
+
+function npcDepthMode(npc){
+  const raw=String(npc?.depthMode||"ysort").toLowerCase();
+  if(raw==="background" || raw==="back") return "behind";
+  if(raw==="foreground" || raw==="overlay") return "front";
+  return WORLD_OBJECT_DEPTH_MODES.has(raw)?raw:"ysort";
+}
+
+function defaultNpcDepthY(npc){
+  const hb=npc?.hitbox;
+  const bottom=Number(hb?.y)+Number(hb?.h);
+  return Number.isFinite(bottom)?Math.max(8,bottom):12;
+}
+
+function npcDepthY(npc){
+  return numberOr(npc?.depthY,defaultNpcDepthY(npc));
+}
+
+function npcRenderDepth(npc,heroY){
+  const mode=npcDepthMode(npc);
+  if(mode==="ground") return -1000000000;
+  if(mode==="behind") return heroY-0.25;
+  if(mode==="front") return heroY+0.25;
+  return npc.y+npcDepthY(npc);
+}
+
+function npcDisplayHeight(npc){
+  return Math.max(24,numberOr(npc?.displayHeight,58))*VISUAL_SCALE.npcs;
+}
+
+function npcVisualBounds(npc){
+  const h=npcDisplayHeight(npc);
+  const halfW=Math.max(10,h*.34);
+  return {x:npc.x-halfW,y:npc.y-h+14,w:halfW*2,h:h};
+}
+
 const MOB_SPAWN_TILES = new Set([
   "18,5","21,4","24,6","19,8","22,9","26,5",
   "34,6","37,5","39,8","35,9","40,6",
@@ -202,7 +239,7 @@ function normalizeNpcRecord(raw,index=0){
   npc.id=String(npc.id||`npc-${index+1}`).trim().replace(/\s+/g,"-").toLowerCase();
   npc.name=String(npc.name||npc.id||"NPC");
   npc.role=String(npc.role||"Villager");
-  npc.sprite=typeof npc.sprite==="string"?npc.sprite:"";
+  npc.sprite=(typeof npc.sprite==="string"&&npc.sprite.trim())?npc.sprite:NPC_PLACEHOLDER_SPRITE;
   npc.x=numberOr(npc.x,START_X);
   npc.y=numberOr(npc.y,START_Y);
   npc.facing=["down","left","right","up"].includes(npc.facing)?npc.facing:"down";
@@ -210,6 +247,15 @@ function normalizeNpcRecord(raw,index=0){
   npc.displayHeight=Math.max(24,numberOr(npc.displayHeight,58));
   npc.greeting=String(npc.greeting||`Hello. I'm ${npc.name}.`);
   npc.interactRadius=Math.max(20,numberOr(npc.interactRadius,58));
+  const hb=npc.hitbox&&typeof npc.hitbox==="object"?npc.hitbox:{};
+  npc.hitbox={
+    x:numberOr(hb.x,-6),
+    y:numberOr(hb.y,-7),
+    w:Math.max(2,numberOr(hb.w,12)),
+    h:Math.max(2,numberOr(hb.h,14))
+  };
+  npc.depthMode=npcDepthMode(npc);
+  npc.depthY=numberOr(npc.depthY,defaultNpcDepthY(npc));
   return npc;
 }
 
@@ -233,7 +279,7 @@ function rebuildNpcCollision(){
 function findNpcAtWorld(wx,wy){
   let best=null,bestScore=Infinity;
   for(const npc of sceneryNPCs){
-    const h=Math.max(30,numberOr(npc.displayHeight,58)*VISUAL_SCALE.npcs);
+    const h=Math.max(30,npcDisplayHeight(npc));
     const dx=Math.abs(wx-npc.x);
     const dy=wy-npc.y;
     const halfW=Math.max(18,h*.30);
@@ -701,7 +747,7 @@ function drawNpcObject(obj,camX,camY){
   const facingRows={down:0,left:1,right:2,up:3};
   const row=facingRows[obj.facing]??0;
   const image=npcSpriteImage(obj.sprite);
-  const displayH=Math.max(24,numberOr(obj.displayHeight,58))*VISUAL_SCALE.npcs;
+  const displayH=npcDisplayHeight(obj);
   let topY=y-displayH+12;
 
   ctx.save();
@@ -718,7 +764,9 @@ function drawNpcObject(obj,camX,camY){
       ctx.drawImage(image,meta.sx,meta.sy,meta.sw,meta.sh,Math.round(x-dw/2),Math.round(topY),Math.round(dw),Math.round(dh));
     }
   }else{
-    const scale=VISUAL_SCALE.npcs;
+    // Emergency fallback if a sprite asset fails to load. It uses the same
+    // per-NPC displayHeight as real sprite sheets so placeholder sizing stays consistent.
+    const scale=displayH/18;
     ctx.translate(x,y+15);ctx.scale(scale,scale);ctx.translate(-x,-(y+15));
     ctx.fillStyle="#d9ad84"; ctx.fillRect(x-5,y-11,10,9);
     ctx.fillStyle="#5a3d2d"; ctx.fillRect(x-6,y-13,12,4); ctx.fillRect(x-6,y-9,2,5);
@@ -886,7 +934,7 @@ function drawWorld(){
   for(const npc of sceneryNPCs){
     const sx=npc.x-camX, sy=npc.y-camY;
     if(sx<-60||sy<-80||sx>viewW+60||sy>viewH+60) continue;
-    renderables.push({kind:"npc",depth:npc.y+15,obj:npc});
+    renderables.push({kind:"npc",depth:npcRenderDepth(npc,state.y),obj:npc});
   }
 
   for(const mob of mobs){

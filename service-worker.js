@@ -1,4 +1,4 @@
-const CACHE_NAME = "little-realm-v54-quest-builder";
+const CACHE_NAME = "little-realm-v55-npc-selection";
 const FILES = [
   "./",
   "./index.html",
@@ -27,6 +27,7 @@ const FILES = [
   "./assets/characters/player.png",
   "./assets/npcs/lilly.png",
   "./assets/npcs/jorge.png",
+  "./assets/npcs/npc-placeholder.png",
   "./assets/mobs/slime.png",
   "./assets/mobs/wolf.png",
   "./assets/mobs/goblin.png",

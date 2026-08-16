@@ -54,7 +54,7 @@ function ensureDeveloperStyles(){
     #devPanel .devPropButton{min-width:0;border:1px solid rgba(255,255,255,.12);background:#30283a;color:#eee;border-radius:9px;padding:5px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:4px;cursor:pointer;min-height:76px}
     #devPanel .devPropButton canvas{width:52px;height:52px;image-rendering:pixelated;background:rgba(255,255,255,.025);border-radius:5px}
     #devPanel .devPropButton span{font-size:10px;line-height:1.05;max-width:100%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;text-transform:capitalize}
-    #devPanel #devObjectList{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:6px;max-height:260px;overflow:auto}
+    #devPanel #devObjectList,#devPanel #devSelectionList{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:6px;max-height:260px;overflow:auto}
     #devPanel .devObjectChip{border:1px solid rgba(255,255,255,.12);background:#2e2736;color:#e9dff0;border-radius:8px;padding:7px 9px;font-size:11px;cursor:pointer;text-align:left;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
     #devPanel .devObjectChip.active{outline:2px solid #63e6ff;background:#385a64}
     #devPanel #devScalePanel{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:9px}
@@ -96,7 +96,7 @@ function ensureDeveloperStyles(){
     #devPanel .devProjectBig{display:grid;grid-template-columns:1fr 1fr;gap:8px}.devProjectBig button{border:1px solid rgba(255,255,255,.14);background:#5a4869;color:#fff;border-radius:9px;padding:10px;font-weight:850}.devProjectBig .primary{grid-column:1/-1;background:#38606a}.devProjectBig .danger{background:#713b47}.devProjectNote{padding:9px;border:1px solid rgba(99,230,255,.14);border-radius:9px;background:rgba(99,230,255,.05);color:#cbd9dd;font-size:10px;line-height:1.4}
     body.devMode #pcControls{opacity:.25}
     @media(max-width:1100px){#devPanel{width:min(650px,68vw)!important}#devPanel #devPalette{grid-template-columns:repeat(5,minmax(0,1fr))!important}}
-    @media(max-width:760px){#devPanel .devTabs{grid-template-columns:repeat(2,1fr)}#devPanel .devCombatGrid{grid-template-columns:repeat(2,minmax(0,1fr))}#devPanel .devStatPreview{grid-template-columns:repeat(2,minmax(0,1fr))}#devPanel{width:calc(100vw - 12px)!important;right:6px!important;top:6px!important;height:calc(100vh - 12px)!important}#devPanel #devPalette{grid-template-columns:repeat(4,minmax(0,1fr))!important}#devPanel #devObjectList{grid-template-columns:repeat(2,minmax(0,1fr))}#devPanel #devScalePanel{grid-template-columns:1fr}.devQuad{grid-template-columns:repeat(2,1fr)!important}}
+    @media(max-width:760px){#devPanel .devTabs{grid-template-columns:repeat(2,1fr)}#devPanel .devCombatGrid{grid-template-columns:repeat(2,minmax(0,1fr))}#devPanel .devStatPreview{grid-template-columns:repeat(2,minmax(0,1fr))}#devPanel{width:calc(100vw - 12px)!important;right:6px!important;top:6px!important;height:calc(100vh - 12px)!important}#devPanel #devPalette{grid-template-columns:repeat(4,minmax(0,1fr))!important}#devPanel #devObjectList,#devPanel #devSelectionList{grid-template-columns:repeat(2,minmax(0,1fr))}#devPanel #devScalePanel{grid-template-columns:1fr}.devQuad{grid-template-columns:repeat(2,1fr)!important}}
   `;
   document.head.appendChild(style);
 }
@@ -160,40 +160,72 @@ function devWorldFromPointer(event){
 function snapDev(v){ return Math.round(v/devSnap)*devSnap; }
 function clampDev(v,min,max){ return Math.max(min,Math.min(max,v)); }
 
-function ensureDeveloperHitbox(obj){
+function developerSelectedEntity(){
+  return devSelected||devSelectedNpc||null;
+}
+function developerIsNpc(entity){
+  return !!entity && sceneryNPCs.includes(entity);
+}
+function developerEntityBounds(entity){
+  if(!entity) return {x:0,y:0,w:32,h:32};
+  if(developerIsNpc(entity)) return npcVisualBounds(entity);
+  const spec=worldObjectSpec(entity)||{w:32,h:32};
+  return {x:entity.x,y:entity.y,w:spec.w,h:spec.h};
+}
+function developerEntityOffsetLimits(entity){
+  const b=developerEntityBounds(entity);
+  return {minX:b.x-entity.x,maxX:b.x+b.w-entity.x,minY:b.y-entity.y,maxY:b.y+b.h-entity.y};
+}
+function developerEntityDepthMode(entity){
+  return developerIsNpc(entity)?npcDepthMode(entity):worldObjectDepthMode(entity);
+}
+function developerEntityDefaultDepthY(entity){
+  return developerIsNpc(entity)?defaultNpcDepthY(entity):defaultWorldObjectDepthY(entity);
+}
+function rebuildDeveloperEntityCollision(entity){
+  if(developerIsNpc(entity)) rebuildNpcCollision();
+  else rebuildWorldObjectCollision();
+}
+
+function ensureDeveloperHitbox(obj=developerSelectedEntity()){
   if(!obj) return null;
-  const spec=worldObjectSpec(obj)||{w:32,h:32};
   if(!obj.hitbox){
-    const hitH=Math.max(8,Math.round(spec.h*.26));
-    const hitW=Math.max(10,Math.round(spec.w*.66));
-    obj.hitbox={x:Math.round((spec.w-hitW)/2),y:spec.h-hitH,w:hitW,h:hitH};
+    if(developerIsNpc(obj)) obj.hitbox={x:-6,y:-7,w:12,h:14};
+    else{
+      const spec=worldObjectSpec(obj)||{w:32,h:32};
+      const hitH=Math.max(8,Math.round(spec.h*.26));
+      const hitW=Math.max(10,Math.round(spec.w*.66));
+      obj.hitbox={x:Math.round((spec.w-hitW)/2),y:spec.h-hitH,w:hitW,h:hitH};
+    }
   }
   return obj.hitbox;
 }
 
-function ensureDeveloperDepth(obj){
+function ensureDeveloperDepth(obj=developerSelectedEntity()){
   if(!obj) return null;
-  if(!WORLD_OBJECT_DEPTH_MODES.has(String(obj.depthMode||"").toLowerCase())) obj.depthMode=worldObjectDepthMode(obj);
-  if(!Number.isFinite(Number(obj.depthY))) obj.depthY=defaultWorldObjectDepthY(obj);
-  return {mode:worldObjectDepthMode(obj),y:numberOr(obj.depthY,defaultWorldObjectDepthY(obj))};
+  if(!WORLD_OBJECT_DEPTH_MODES.has(String(obj.depthMode||"").toLowerCase())) obj.depthMode=developerEntityDepthMode(obj);
+  if(!Number.isFinite(Number(obj.depthY))) obj.depthY=developerEntityDefaultDepthY(obj);
+  return {mode:developerEntityDepthMode(obj),y:numberOr(obj.depthY,developerEntityDefaultDepthY(obj))};
 }
 
 function findDeveloperDepthInteraction(wx,wy){
-  if(!devDepthEditing || !devSelected || worldObjectDepthMode(devSelected)!=="ysort") return false;
-  const spec=worldObjectSpec(devSelected)||{w:32,h:32};
-  const depth=ensureDeveloperDepth(devSelected);
-  const lineY=devSelected.y+depth.y;
+  const entity=developerSelectedEntity();
+  if(!devDepthEditing || !entity || developerEntityDepthMode(entity)!=="ysort") return false;
+  const b=developerEntityBounds(entity);
+  const depth=ensureDeveloperDepth(entity);
+  const lineY=entity.y+depth.y;
   const grab=8/CAMERA_ZOOM;
-  return wx>=devSelected.x-grab*2 && wx<=devSelected.x+spec.w+grab*2 && Math.abs(wy-lineY)<=grab;
+  return wx>=b.x-grab*2 && wx<=b.x+b.w+grab*2 && Math.abs(wy-lineY)<=grab;
 }
 
 function setDeveloperDepthEditing(active){
-  devDepthEditing=!!active && !!devSelected && worldObjectDepthMode(devSelected)==="ysort";
+  const entity=developerSelectedEntity();
+  devDepthEditing=!!active && !!entity && developerEntityDepthMode(entity)==="ysort";
   devDepthDrag=null;
   if(devDepthEditing){
     devHitboxEditing=false;
     devHitboxDrag=null;
-    ensureDeveloperDepth(devSelected);
+    ensureDeveloperDepth(entity);
     devShowDepthLines=true;
     const toggle=devPanel?.querySelector("#devDepthLines");
     if(toggle) toggle.checked=true;
@@ -206,18 +238,20 @@ function setDeveloperDepthEditing(active){
 }
 
 function updateDeveloperDepthDrag(p){
-  if(!devDepthDrag || !devSelected) return;
-  const spec=worldObjectSpec(devSelected)||{w:32,h:32};
+  const entity=developerSelectedEntity();
+  if(!devDepthDrag || !entity) return;
+  const limits=developerEntityOffsetLimits(entity);
+  const span=Math.max(16,limits.maxY-limits.minY);
   const dy=Math.round(p.y-devDepthDrag.pointerY);
-  // Unlike collision hitboxes, depth anchors may extend outside the blue sprite box.
-  devSelected.depthY=Math.round(clampDev(devDepthDrag.depthY+dy,-spec.h,spec.h*2));
+  entity.depthY=Math.round(clampDev(devDepthDrag.depthY+dy,limits.minY-span,limits.maxY+span));
   refreshDeveloperInspectorValues();
 }
 
 function findDeveloperHitboxInteraction(wx,wy){
-  if(!devHitboxEditing || !devSelected) return null;
-  const hb=ensureDeveloperHitbox(devSelected);
-  const left=devSelected.x+hb.x, top=devSelected.y+hb.y;
+  const entity=developerSelectedEntity();
+  if(!devHitboxEditing || !entity) return null;
+  const hb=ensureDeveloperHitbox(entity);
+  const left=entity.x+hb.x, top=entity.y+hb.y;
   const right=left+hb.w, bottom=top+hb.h;
   const grab=7/CAMERA_ZOOM;
   if(wx<left-grab || wx>right+grab || wy<top-grab || wy>bottom+grab) return null;
@@ -246,12 +280,13 @@ function developerHitboxCursor(interaction){
 }
 
 function setDeveloperHitboxEditing(active){
-  devHitboxEditing=!!active && !!devSelected;
+  const entity=developerSelectedEntity();
+  devHitboxEditing=!!active && !!entity;
   devHitboxDrag=null;
   if(devHitboxEditing){
     devDepthEditing=false;
     devDepthDrag=null;
-    ensureDeveloperHitbox(devSelected);
+    ensureDeveloperHitbox(entity);
     devShowHitboxes=true;
     const toggle=devPanel?.querySelector("#devHitboxes");
     if(toggle) toggle.checked=true;
@@ -264,8 +299,9 @@ function setDeveloperHitboxEditing(active){
 }
 
 function updateDeveloperHitboxDrag(p){
-  if(!devHitboxDrag || !devSelected) return;
-  const spec=worldObjectSpec(devSelected)||{w:32,h:32};
+  const entity=developerSelectedEntity();
+  if(!devHitboxDrag || !entity) return;
+  const limits=developerEntityOffsetLimits(entity);
   const start=devHitboxDrag.hitbox;
   const dx=Math.round(p.x-devHitboxDrag.pointerX);
   const dy=Math.round(p.y-devHitboxDrag.pointerY);
@@ -274,24 +310,24 @@ function updateDeveloperHitboxDrag(p){
   const handle=devHitboxDrag.handle;
 
   if(handle==="move"){
-    left=clampDev(start.x+dx,0,Math.max(0,spec.w-start.w));
-    top=clampDev(start.y+dy,0,Math.max(0,spec.h-start.h));
+    left=clampDev(start.x+dx,limits.minX,Math.max(limits.minX,limits.maxX-start.w));
+    top=clampDev(start.y+dy,limits.minY,Math.max(limits.minY,limits.maxY-start.h));
     right=left+start.w;
     bottom=top+start.h;
   }else{
-    if(handle.includes("w")) left=clampDev(start.x+dx,0,right-minSize);
-    if(handle.includes("e")) right=clampDev(start.x+start.w+dx,left+minSize,spec.w);
-    if(handle.includes("n")) top=clampDev(start.y+dy,0,bottom-minSize);
-    if(handle.includes("s")) bottom=clampDev(start.y+start.h+dy,top+minSize,spec.h);
+    if(handle.includes("w")) left=clampDev(start.x+dx,limits.minX,right-minSize);
+    if(handle.includes("e")) right=clampDev(start.x+start.w+dx,left+minSize,limits.maxX);
+    if(handle.includes("n")) top=clampDev(start.y+dy,limits.minY,bottom-minSize);
+    if(handle.includes("s")) bottom=clampDev(start.y+start.h+dy,top+minSize,limits.maxY);
   }
 
-  devSelected.hitbox={
+  entity.hitbox={
     x:Math.round(left),
     y:Math.round(top),
     w:Math.max(minSize,Math.round(right-left)),
     h:Math.max(minSize,Math.round(bottom-top))
   };
-  rebuildWorldObjectCollision();
+  rebuildDeveloperEntityCollision(entity);
   refreshDeveloperInspectorValues();
 }
 
@@ -346,7 +382,7 @@ function developerWorldPack(){
   return {
     format:"little-realm-world-pack",
     schemaVersion:1,
-    build:"v54-quest-builder",
+    build:"v55-npc-selection",
     exportedAt:new Date().toISOString(),
     worldObjects:sceneryProps.map(cloneWorldObject),
     npcs:sceneryNPCs.map(cloneNpc),
@@ -486,7 +522,7 @@ function devSetStatus(text){
 function developerNpcTemplate(kind){
   if(kind==="lilly") return {name:"Lilly",role:"Villager",sprite:"./assets/npcs/lilly.png",displayHeight:58,greeting:"Hello!"};
   if(kind==="jorge") return {name:"Jorge",role:"Villager",sprite:"./assets/npcs/jorge.png",displayHeight:58,greeting:"Good to see you."};
-  return {name:"New NPC",role:"Villager",sprite:"",displayHeight:44,greeting:"Hello there."};
+  return {name:"New NPC",role:"Villager",sprite:NPC_PLACEHOLDER_SPRITE,displayHeight:58,greeting:"Hello there."};
 }
 
 function uniqueNpcId(base="npc"){
@@ -509,9 +545,9 @@ function placeDeveloperNpc(kind,wx,wy){
   sceneryNPCs.push(npc);
   rebuildNpcCollision();
   devSelectedNpc=npc;devSelected=null;devSelectedMob=null;devPlaceNpcTemplate=null;
-  setDeveloperTab("npcs");
+  setDeveloperTab("selection");
   saveDeveloperDraft();refreshDeveloperPanel();
-  devSetStatus(`Placed ${npc.name} — drag the NPC in the world or edit details here`);
+  devSetStatus(`Placed ${npc.name} — visual size, hitbox, and depth can be edited in Selection`);
 }
 
 function findDeveloperNpcAt(wx,wy){
@@ -545,8 +581,9 @@ function devPointerDown(event){
   }
 
   if(findDeveloperDepthInteraction(p.x,p.y)){
-    const depth=ensureDeveloperDepth(devSelected);
-    devDragging=false;
+    const entity=developerSelectedEntity();
+    const depth=ensureDeveloperDepth(entity);
+    devDragging=false;devNpcDragging=false;
     devDepthDrag={pointerY:p.y,depthY:depth.y};
     if(game?.style) game.style.cursor="ns-resize";
     try{ game.setPointerCapture?.(event.pointerId); }catch{}
@@ -556,8 +593,9 @@ function devPointerDown(event){
 
   const hitboxInteraction=findDeveloperHitboxInteraction(p.x,p.y);
   if(hitboxInteraction){
-    const hb=ensureDeveloperHitbox(devSelected);
-    devDragging=false;
+    const entity=developerSelectedEntity();
+    const hb=ensureDeveloperHitbox(entity);
+    devDragging=false;devNpcDragging=false;
     devHitboxDrag={
       handle:hitboxInteraction,
       pointerX:p.x,
@@ -574,13 +612,22 @@ function devPointerDown(event){
   if(npc){
     devSelectedNpc=npc;
     devSelected=null;devSelectedMob=null;
-    devDragging=false;devNpcDragging=true;
-    devNpcDragOffset={x:p.x-npc.x,y:p.y-npc.y};
-    devHitboxEditing=false;devHitboxDrag=null;devDepthEditing=false;devDepthDrag=null;
-    setDeveloperTab("npcs");
-    try{ game.setPointerCapture?.(event.pointerId); }catch{}
+    setDeveloperTab("selection");
+    if(devHitboxEditing){
+      ensureDeveloperHitbox(npc);
+      devNpcDragging=false;
+      devSetStatus(`Selected ${npc.name} — drag the yellow NPC hitbox or its handles`);
+    }else if(devDepthEditing && npcDepthMode(npc)==="ysort"){
+      ensureDeveloperDepth(npc);
+      devNpcDragging=false;
+      devSetStatus(`Selected ${npc.name} — drag the purple NPC depth line`);
+    }else{
+      devNpcDragging=true;
+      devNpcDragOffset={x:p.x-npc.x,y:p.y-npc.y};
+      try{ game.setPointerCapture?.(event.pointerId); }catch{}
+      devSetStatus(`Selected ${npc.name} — drag to move; Selection has size, hitbox, and depth tools`);
+    }
     refreshDeveloperPanel();
-    devSetStatus(`Selected ${npc.name} — drag to move`);
     return;
   }
 
@@ -588,7 +635,7 @@ function devPointerDown(event){
   if(mob){
     devSelectedMob=mob;
     devSelected=null;devSelectedNpc=null;
-    devDragging=false;
+    devDragging=false;devNpcDragging=false;
     devHitboxEditing=false;
     devHitboxDrag=null;
     devDepthEditing=false;
@@ -620,7 +667,8 @@ function devPointerDown(event){
       devSetStatus(`Selected ${devSelected.label||devSelected.type} — drag to move`);
     }
   }else{
-    devSetStatus("Nothing selected — use Objects to place props, or click a mob to tune its type scale");
+    devHitboxEditing=false;devHitboxDrag=null;devDepthEditing=false;devDepthDrag=null;
+    devSetStatus("Nothing selected — choose a prop/NPC from Selection or place one from its palette");
   }
   refreshDeveloperPanel();
 }
@@ -633,27 +681,28 @@ function devPointerMove(event){
     devSelectedNpc.x=snapDev(p.x-devNpcDragOffset.x);
     devSelectedNpc.y=snapDev(p.y-devNpcDragOffset.y);
     rebuildNpcCollision();
+    refreshDeveloperInspectorValues();
     refreshDeveloperNpcInspectorValues();
     return;
   }
 
-  if(devHitboxDrag && devSelected){
+  if(devHitboxDrag && developerSelectedEntity()){
     event.preventDefault(); event.stopImmediatePropagation();
     updateDeveloperHitboxDrag(p);
     return;
   }
 
-  if(devDepthDrag && devSelected){
+  if(devDepthDrag && developerSelectedEntity()){
     event.preventDefault(); event.stopImmediatePropagation();
     updateDeveloperDepthDrag(p);
     return;
   }
 
-  if(devDepthEditing && devSelected && game?.style){
+  if(devDepthEditing && developerSelectedEntity() && game?.style){
     game.style.cursor=findDeveloperDepthInteraction(p.x,p.y)?"ns-resize":"";
-  }else if(devHitboxEditing && devSelected && game?.style){
+  }else if(devHitboxEditing && developerSelectedEntity() && game?.style){
     game.style.cursor=developerHitboxCursor(findDeveloperHitboxInteraction(p.x,p.y));
-  }else if(game?.style && !devDragging){
+  }else if(game?.style && !devDragging && !devNpcDragging){
     game.style.cursor="";
   }
 
@@ -677,7 +726,64 @@ function devPointerUp(event){
   saveDeveloperDraft();
   if(finishedNpc) devSetStatus("NPC position updated");
   else if(finishedHitbox) devSetStatus("Hitbox updated — keep dragging handles or click Finish Hitbox Editing");
-  else if(finishedDepth) devSetStatus("Depth line updated — move around the object to test front/behind overlap");
+  else if(finishedDepth) devSetStatus("Depth line updated — move around the NPC/object to test overlap");
+}
+
+function drawDeveloperSelectedEntityOverlay(entity,camX,camY){
+  if(!entity) return;
+  const b=developerEntityBounds(entity);
+  const x=b.x-camX,y=b.y-camY;
+  ctx.strokeStyle="#63e6ff";
+  ctx.fillStyle="rgba(99,230,255,.05)";
+  ctx.lineWidth=2/CAMERA_ZOOM;
+  ctx.fillRect(x-2,y-2,b.w+4,b.h+4);
+  ctx.strokeRect(x-2,y-2,b.w+4,b.h+4);
+
+  if(devHitboxEditing){
+    const hb=ensureDeveloperHitbox(entity);
+    const hx=entity.x+hb.x-camX, hy=entity.y+hb.y-camY;
+    ctx.fillStyle="rgba(255,209,102,.13)";
+    ctx.strokeStyle="#ffd166";
+    ctx.lineWidth=2/CAMERA_ZOOM;
+    ctx.fillRect(hx,hy,hb.w,hb.h);
+    ctx.strokeRect(hx,hy,hb.w,hb.h);
+
+    const handleSize=7/CAMERA_ZOOM;
+    const half=handleSize/2;
+    const points=[
+      [hx,hy],[hx+hb.w/2,hy],[hx+hb.w,hy],
+      [hx,hy+hb.h/2],[hx+hb.w,hy+hb.h/2],
+      [hx,hy+hb.h],[hx+hb.w/2,hy+hb.h],[hx+hb.w,hy+hb.h]
+    ];
+    ctx.fillStyle="#fff3c4";
+    ctx.strokeStyle="#8a6817";
+    ctx.lineWidth=1/CAMERA_ZOOM;
+    for(const [px,py] of points){
+      ctx.fillRect(px-half,py-half,handleSize,handleSize);
+      ctx.strokeRect(px-half,py-half,handleSize,handleSize);
+    }
+  }
+
+  if(devDepthEditing && developerEntityDepthMode(entity)==="ysort"){
+    const depth=ensureDeveloperDepth(entity);
+    const lineY=entity.y+depth.y-camY;
+    ctx.strokeStyle="#d58cff";
+    ctx.fillStyle="#f2d7ff";
+    ctx.lineWidth=2/CAMERA_ZOOM;
+    ctx.beginPath();ctx.moveTo(x-8,lineY);ctx.lineTo(x+b.w+8,lineY);ctx.stroke();
+    const r=5/CAMERA_ZOOM;
+    const cx=x+b.w/2;
+    ctx.beginPath();
+    ctx.moveTo(cx,lineY-r);ctx.lineTo(cx+r,lineY);ctx.lineTo(cx,lineY+r);ctx.lineTo(cx-r,lineY);ctx.closePath();ctx.fill();
+    ctx.font=`${Math.max(7,9/CAMERA_ZOOM)}px system-ui`;
+    ctx.fillStyle="#f2d7ff";
+    ctx.fillText("DEPTH",x+b.w+10,lineY-2/CAMERA_ZOOM);
+  }
+
+  if(developerIsNpc(entity)){
+    ctx.font="800 9px system-ui";ctx.textAlign="center";ctx.fillStyle="#dffbff";
+    ctx.fillText(entity.name,entity.x-camX,y-7);ctx.textAlign="start";
+  }
 }
 
 function drawDeveloperOverlay(camX,camY,viewW,viewH){
@@ -702,6 +808,14 @@ function drawDeveloperOverlay(camX,camY,viewW,viewH){
       const x=obj.x+hb.x-camX,y=obj.y+hb.y-camY;
       ctx.fillRect(x,y,hb.w,hb.h);ctx.strokeRect(x,y,hb.w,hb.h);
     }
+    for(const npc of sceneryNPCs){
+      if(npc.solid===false || !npc.hitbox) continue;
+      const hb=npc.hitbox;
+      ctx.fillStyle="rgba(255,75,75,.12)";
+      ctx.strokeStyle="rgba(255,90,90,.8)";
+      const x=npc.x+hb.x-camX,y=npc.y+hb.y-camY;
+      ctx.fillRect(x,y,hb.w,hb.h);ctx.strokeRect(x,y,hb.w,hb.h);
+    }
   }
   if(devShowDepthLines){
     for(const obj of sceneryProps){
@@ -714,62 +828,17 @@ function drawDeveloperOverlay(camX,camY,viewW,viewH){
       ctx.lineWidth=(obj===devSelected?1.7:1)/CAMERA_ZOOM;
       ctx.beginPath();ctx.moveTo(x-3,y);ctx.lineTo(x+spec.w+3,y);ctx.stroke();
     }
-  }
-  if(devSelected){
-    const spec=worldObjectSpec(devSelected);
-    if(spec){
-      const x=devSelected.x-camX,y=devSelected.y-camY;
-      ctx.strokeStyle="#63e6ff";
-      ctx.lineWidth=2/CAMERA_ZOOM;
-      ctx.strokeRect(x-2,y-2,spec.w+4,spec.h+4);
-
-      if(devHitboxEditing){
-        const hb=ensureDeveloperHitbox(devSelected);
-        const hx=x+hb.x, hy=y+hb.y;
-        ctx.fillStyle="rgba(255,209,102,.13)";
-        ctx.strokeStyle="#ffd166";
-        ctx.lineWidth=2/CAMERA_ZOOM;
-        ctx.fillRect(hx,hy,hb.w,hb.h);
-        ctx.strokeRect(hx,hy,hb.w,hb.h);
-
-        const handleSize=7/CAMERA_ZOOM;
-        const half=handleSize/2;
-        const points=[
-          [hx,hy],[hx+hb.w/2,hy],[hx+hb.w,hy],
-          [hx,hy+hb.h/2],[hx+hb.w,hy+hb.h/2],
-          [hx,hy+hb.h],[hx+hb.w/2,hy+hb.h],[hx+hb.w,hy+hb.h]
-        ];
-        ctx.fillStyle="#fff3c4";
-        ctx.strokeStyle="#8a6817";
-        ctx.lineWidth=1/CAMERA_ZOOM;
-        for(const [px,py] of points){
-          ctx.fillRect(px-half,py-half,handleSize,handleSize);
-          ctx.strokeRect(px-half,py-half,handleSize,handleSize);
-        }
-      }
-
-      if(devDepthEditing && worldObjectDepthMode(devSelected)==="ysort"){
-        const depth=ensureDeveloperDepth(devSelected);
-        const lineY=y+depth.y;
-        ctx.strokeStyle="#d58cff";
-        ctx.fillStyle="#f2d7ff";
-        ctx.lineWidth=2/CAMERA_ZOOM;
-        ctx.beginPath();ctx.moveTo(x-8,lineY);ctx.lineTo(x+spec.w+8,lineY);ctx.stroke();
-        const r=5/CAMERA_ZOOM;
-        ctx.beginPath();
-        ctx.moveTo(x+spec.w/2,lineY-r);ctx.lineTo(x+spec.w/2+r,lineY);ctx.lineTo(x+spec.w/2,lineY+r);ctx.lineTo(x+spec.w/2-r,lineY);ctx.closePath();ctx.fill();
-        ctx.font=`${Math.max(7,9/CAMERA_ZOOM)}px system-ui`;
-        ctx.fillStyle="#f2d7ff";
-        ctx.fillText("DEPTH",x+spec.w+10,lineY-2/CAMERA_ZOOM);
-      }
+    for(const npc of sceneryNPCs){
+      if(npcDepthMode(npc)!=="ysort") continue;
+      const b=npcVisualBounds(npc);
+      const y=npc.y+npcDepthY(npc)-camY;
+      const x=b.x-camX;
+      ctx.strokeStyle=npc===devSelectedNpc?"rgba(213,140,255,.95)":"rgba(213,140,255,.32)";
+      ctx.lineWidth=(npc===devSelectedNpc?1.7:1)/CAMERA_ZOOM;
+      ctx.beginPath();ctx.moveTo(x-3,y);ctx.lineTo(x+b.w+3,y);ctx.stroke();
     }
   }
-  if(devSelectedNpc){
-    const x=devSelectedNpc.x-camX,y=devSelectedNpc.y-camY;
-    ctx.strokeStyle="#63e6ff";ctx.fillStyle="rgba(99,230,255,.08)";ctx.lineWidth=2/CAMERA_ZOOM;
-    ctx.beginPath();ctx.ellipse(x,y+8,18,8,0,0,Math.PI*2);ctx.fill();ctx.stroke();
-    ctx.font="800 9px system-ui";ctx.textAlign="center";ctx.fillStyle="#dffbff";ctx.fillText(devSelectedNpc.name,x,y-44);ctx.textAlign="start";
-  }
+  drawDeveloperSelectedEntityOverlay(developerSelectedEntity(),camX,camY);
   if(devSelectedMob && devSelectedMob.alive){
     const x=devSelectedMob.x-camX,y=devSelectedMob.y-camY;
     const scale=mobVisualScale(devSelectedMob);
@@ -829,19 +898,49 @@ function applyDeveloperInspector(){
   refreshDeveloperPanel(false);
 }
 
-function refreshDeveloperInspectorValues(){
-  if(!devPanel||!devSelected) return;
+function applyDeveloperNpcVisualInspector(){
+  if(!devPanel||!devSelectedNpc) return;
   const q=id=>devPanel.querySelector(`#${id}`);
-  if(q("devX")) q("devX").value=Math.round(devSelected.x);
-  if(q("devY")) q("devY").value=Math.round(devSelected.y);
-  const hb=ensureDeveloperHitbox(devSelected);
+  devSelectedNpc.x=numberOr(q("devX")?.value,devSelectedNpc.x);
+  devSelectedNpc.y=numberOr(q("devY")?.value,devSelectedNpc.y);
+  devSelectedNpc.sprite=q("devNpcSelectionSprite")?.value||NPC_PLACEHOLDER_SPRITE;
+  devSelectedNpc.facing=q("devNpcSelectionFacing")?.value||devSelectedNpc.facing||"down";
+  devSelectedNpc.displayHeight=Math.max(24,numberOr(q("devNpcSelectionHeight")?.value,devSelectedNpc.displayHeight));
+  devSelectedNpc.solid=!!q("devSolid")?.checked;
+  devSelectedNpc.hitbox=devSelectedNpc.hitbox||{};
+  devSelectedNpc.hitbox.x=numberOr(q("devHbX")?.value,-6);
+  devSelectedNpc.hitbox.y=numberOr(q("devHbY")?.value,-7);
+  devSelectedNpc.hitbox.w=Math.max(2,numberOr(q("devHbW")?.value,12));
+  devSelectedNpc.hitbox.h=Math.max(2,numberOr(q("devHbH")?.value,14));
+  devSelectedNpc.depthMode=WORLD_OBJECT_DEPTH_MODES.has(q("devDepthMode")?.value)?q("devDepthMode").value:"ysort";
+  devSelectedNpc.depthY=numberOr(q("devDepthY")?.value,defaultNpcDepthY(devSelectedNpc));
+  if(devSelectedNpc.depthMode!=="ysort"){devDepthEditing=false;devDepthDrag=null;}
+  rebuildNpcCollision();
+  saveDeveloperDraft();
+  refreshDeveloperPanel(false);
+  devSetStatus(`Applied visual settings for ${devSelectedNpc.name}`);
+}
+
+function refreshDeveloperInspectorValues(){
+  if(!devPanel) return;
+  const entity=developerSelectedEntity();
+  if(!entity) return;
+  const q=id=>devPanel.querySelector(`#${id}`);
+  if(q("devX")) q("devX").value=Math.round(entity.x);
+  if(q("devY")) q("devY").value=Math.round(entity.y);
+  const hb=ensureDeveloperHitbox(entity);
   if(q("devHbX")) q("devHbX").value=Math.round(hb.x);
   if(q("devHbY")) q("devHbY").value=Math.round(hb.y);
   if(q("devHbW")) q("devHbW").value=Math.round(hb.w);
   if(q("devHbH")) q("devHbH").value=Math.round(hb.h);
-  const depth=ensureDeveloperDepth(devSelected);
+  const depth=ensureDeveloperDepth(entity);
   if(q("devDepthMode")) q("devDepthMode").value=depth.mode;
   if(q("devDepthY")) q("devDepthY").value=Math.round(depth.y);
+  if(developerIsNpc(entity)){
+    if(q("devNpcSelectionHeight")) q("devNpcSelectionHeight").value=Math.round(entity.displayHeight);
+    if(q("devNpcSelectionSprite")) q("devNpcSelectionSprite").value=entity.sprite||NPC_PLACEHOLDER_SPRITE;
+    if(q("devNpcSelectionFacing")) q("devNpcSelectionFacing").value=entity.facing||"down";
+  }
 }
 
 function drawPaletteThumb(canvas,type){
@@ -892,29 +991,116 @@ function refreshDeveloperObjectList(){
   }
 }
 
+function refreshDeveloperSelectionList(){
+  if(!devPanel) return;
+  const list=devPanel.querySelector("#devSelectionList");
+  const count=devPanel.querySelector("#devSelectionCount");
+  if(count) count.textContent=`${sceneryProps.length} props • ${sceneryNPCs.length} NPCs`;
+  if(!list) return;
+  list.innerHTML="";
+  for(const npc of sceneryNPCs){
+    const b=document.createElement("button");
+    b.className="devObjectChip"+(npc===devSelectedNpc?" active":"");
+    b.textContent=`NPC • ${npc.name}`;
+    b.title=`${npc.role||"NPC"} @ ${Math.round(npc.x)}, ${Math.round(npc.y)}`;
+    b.onclick=()=>{
+      devPlaceType=null;devPlaceNpcTemplate=null;devSelectedMob=null;devSelected=null;devSelectedNpc=npc;
+      devHitboxEditing=false;devHitboxDrag=null;devDepthEditing=false;devDepthDrag=null;
+      setDeveloperTab("selection");updateDevPaletteActive();refreshDeveloperPanel();
+      devSetStatus(`Selected NPC ${npc.name} — visual size, hitbox, and depth are editable here`);
+    };
+    list.appendChild(b);
+  }
+  for(const obj of sceneryProps){
+    const b=document.createElement("button");
+    b.className="devObjectChip"+(obj===devSelected?" active":"");
+    b.textContent=`PROP • ${obj.label||obj.type}`;
+    b.title=`${obj.type} @ ${Math.round(obj.x)}, ${Math.round(obj.y)}`;
+    b.onclick=()=>{
+      devPlaceType=null;devPlaceNpcTemplate=null;devSelectedMob=null;devSelectedNpc=null;devSelected=obj;
+      devHitboxEditing=false;devHitboxDrag=null;devDepthEditing=false;devDepthDrag=null;
+      setDeveloperTab("selection");updateDevPaletteActive();refreshDeveloperPanel();
+      devSetStatus(`Selected ${obj.label||obj.type}`);
+    };
+    list.appendChild(b);
+  }
+}
+
 function refreshDeveloperPanel(rebuild=true){
   if(!devPanel) return;
   if(!rebuild){ refreshDeveloperInspectorValues(); return; }
   const inspector=devPanel.querySelector("#devInspector");
   if(!inspector) return;
   refreshDeveloperObjectList();
+  refreshDeveloperSelectionList();
   refreshDeveloperNpcPanel();
   refreshDeveloperQuestPanel();
   refreshDeveloperProjectPanel();
   refreshDeveloperMobPanel();
   refreshDeveloperCombatPanel();
-  if(!devSelected){
-    inspector.innerHTML='<div class="devEmpty">Select an object in the world or choose a prop from the palette and click to place it.</div>';
+
+  const entity=developerSelectedEntity();
+  if(!entity){
+    inspector.innerHTML='<div class="devEmpty">Choose a prop or NPC from the Selection Library, or click one directly in the world.</div>';
     return;
   }
-  const hb=devSelected.hitbox||{x:0,y:0,w:16,h:12};
-  const depth=ensureDeveloperDepth(devSelected);
+
+  const hb=ensureDeveloperHitbox(entity);
+  const depth=ensureDeveloperDepth(entity);
   const canEditDepth=depth.mode==="ysort";
+
+  if(developerIsNpc(entity)){
+    const npc=entity;
+    const spriteChoices=[
+      [NPC_PLACEHOLDER_SPRITE,"Placeholder model"],
+      ["./assets/npcs/lilly.png","Lilly model"],
+      ["./assets/npcs/jorge.png","Jorge model"]
+    ];
+    if(npc.sprite&&!spriteChoices.some(([v])=>v===npc.sprite)) spriteChoices.push([npc.sprite,"Current custom sprite"]);
+    inspector.innerHTML=`
+      <div class="devSelectedTitle">NPC • ${questEscape(npc.name)}</div>
+      <div class="devHint">Visual placement tools for NPCs. Use the NPCs tab for ID, role, greeting, and quest setup.</div>
+      <div class="devPair"><label>X<input id="devX" type="number" value="${Math.round(npc.x)}"></label><label>Y<input id="devY" type="number" value="${Math.round(npc.y)}"></label></div>
+      <div class="devPair"><label>Model<select id="devNpcSelectionSprite">${spriteChoices.map(([v,l])=>`<option value="${questEscape(v)}" ${v===npc.sprite?"selected":""}>${questEscape(l)}</option>`).join("")}</select></label><label>Facing<select id="devNpcSelectionFacing">${["down","left","right","up"].map(v=>`<option value="${v}" ${v===npc.facing?"selected":""}>${v}</option>`).join("")}</select></label></div>
+      <label>Sprite Height<input id="devNpcSelectionHeight" type="number" min="24" value="${Math.round(npc.displayHeight)}"></label>
+      <div class="devHint">Sprite Height updates live. The placeholder now uses the same sprite-sheet rendering path as Lilly and Jorge.</div>
+      <div class="devChecks"><label><input id="devSolid" type="checkbox" ${npc.solid!==false?"checked":""}> Hitbox / Solid</label></div>
+      <div class="devSubhead">NPC collision hitbox</div>
+      <div class="devQuad"><label>X<input id="devHbX" type="number" value="${hb.x}"></label><label>Y<input id="devHbY" type="number" value="${hb.y}"></label><label>W<input id="devHbW" type="number" value="${hb.w}"></label><label>H<input id="devHbH" type="number" value="${hb.h}"></label></div>
+      <button id="devEditHitbox" class="devHitboxEditButton${devHitboxEditing?" active":""}">${devHitboxEditing?"Finish Hitbox Editing":"Edit NPC Hitbox Visually"}</button>
+      <div class="devHitboxEditHelp">${devHitboxEditing?"Drag inside the yellow NPC hitbox to move it. Drag its corners/sides to resize it.":"NPC hitboxes are now editable with the same visual handles used by world props."}</div>
+      <div class="devSubhead">NPC overlap / depth</div>
+      <label>Depth Mode<select id="devDepthMode"><option value="ysort" ${depth.mode==="ysort"?"selected":""}>Y-Sort (recommended)</option><option value="behind" ${depth.mode==="behind"?"selected":""}>Always Behind Player</option><option value="front" ${depth.mode==="front"?"selected":""}>Always In Front of Player</option><option value="ground" ${depth.mode==="ground"?"selected":""}>Ground / Background</option></select></label>
+      <label>Depth line Y offset<input id="devDepthY" type="number" value="${Math.round(depth.y)}" ${canEditDepth?"":"disabled"}></label>
+      <button id="devEditDepth" class="devDepthEditButton${devDepthEditing?" active":""}" ${canEditDepth?"":"disabled"}>${devDepthEditing?"Finish Depth Editing":"Edit NPC Depth Line Visually"}</button>
+      <div class="devDepthEditHelp">${canEditDepth?(devDepthEditing?"Drag the purple line up/down to decide when the NPC sorts behind or in front of houses, props, and the player.":"Use this to fix overlaps like an NPC appearing on the wrong side of a house wall. Move the line until the NPC sorts naturally from its feet."):"This fixed mode ignores the depth line. Switch to Y-Sort for a draggable overlap anchor."}</div>
+      <div class="devRow"><button id="devApply">Apply</button><button id="devNpcDetails">NPC Details</button><button id="devDuplicate">Duplicate</button><button id="devDelete" class="danger">Delete</button></div>`;
+
+    inspector.querySelector("#devEditHitbox").onclick=()=>setDeveloperHitboxEditing(!devHitboxEditing);
+    inspector.querySelector("#devEditDepth").onclick=()=>setDeveloperDepthEditing(!devDepthEditing);
+    inspector.querySelector("#devDepthMode").onchange=e=>{
+      npc.depthMode=e.target.value;
+      if(npc.depthMode!=="ysort"){devDepthEditing=false;devDepthDrag=null;} else ensureDeveloperDepth(npc);
+      saveDeveloperDraft();refreshDeveloperPanel();devSetStatus(`NPC depth mode: ${e.target.options[e.target.selectedIndex].text}`);
+    };
+    const liveHeight=inspector.querySelector("#devNpcSelectionHeight");
+    liveHeight.oninput=e=>{npc.displayHeight=Math.max(24,numberOr(e.target.value,npc.displayHeight));rebuildNpcCollision();};
+    liveHeight.onchange=()=>saveDeveloperDraft();
+    inspector.querySelector("#devNpcSelectionSprite").onchange=e=>{npc.sprite=e.target.value||NPC_PLACEHOLDER_SPRITE;saveDeveloperDraft();};
+    inspector.querySelector("#devNpcSelectionFacing").onchange=e=>{npc.facing=e.target.value||"down";saveDeveloperDraft();};
+    inspector.querySelector("#devApply").onclick=applyDeveloperNpcVisualInspector;
+    inspector.querySelector("#devNpcDetails").onclick=()=>{setDeveloperTab("npcs");refreshDeveloperPanel();devSetStatus(`Editing ${npc.name} NPC details`);};
+    inspector.querySelector("#devDuplicate").onclick=duplicateDeveloperNpc;
+    inspector.querySelector("#devDelete").onclick=deleteDeveloperNpc;
+    return;
+  }
+
+  const obj=entity;
   inspector.innerHTML=`
-    <div class="devSelectedTitle">${devSelected.type}</div>
-    <label>Label<input id="devLabel" value="${String(devSelected.label||devSelected.type).replace(/"/g,"&quot;")}"></label>
-    <div class="devPair"><label>X<input id="devX" type="number" value="${Math.round(devSelected.x)}"></label><label>Y<input id="devY" type="number" value="${Math.round(devSelected.y)}"></label></div>
-    <div class="devChecks"><label><input id="devSolid" type="checkbox" ${devSelected.solid?"checked":""}> Hitbox / Solid</label><label><input id="devInteractable" type="checkbox" ${devSelected.interactable?"checked":""}> Interactable</label><label><input id="devContainer" type="checkbox" ${devSelected.container?"checked":""}> Container</label></div>
+    <div class="devSelectedTitle">${obj.type}</div>
+    <label>Label<input id="devLabel" value="${String(obj.label||obj.type).replace(/"/g,"&quot;")}"></label>
+    <div class="devPair"><label>X<input id="devX" type="number" value="${Math.round(obj.x)}"></label><label>Y<input id="devY" type="number" value="${Math.round(obj.y)}"></label></div>
+    <div class="devChecks"><label><input id="devSolid" type="checkbox" ${obj.solid?"checked":""}> Hitbox / Solid</label><label><input id="devInteractable" type="checkbox" ${obj.interactable?"checked":""}> Interactable</label><label><input id="devContainer" type="checkbox" ${obj.container?"checked":""}> Container</label></div>
     <div class="devSubhead">Hitbox offset / size</div>
     <div class="devQuad"><label>X<input id="devHbX" type="number" value="${hb.x}"></label><label>Y<input id="devHbY" type="number" value="${hb.y}"></label><label>W<input id="devHbW" type="number" value="${hb.w}"></label><label>H<input id="devHbH" type="number" value="${hb.h}"></label></div>
     <button id="devEditHitbox" class="devHitboxEditButton${devHitboxEditing?" active":""}">${devHitboxEditing?"Finish Hitbox Editing":"Edit Hitbox Visually"}</button>
@@ -924,17 +1110,14 @@ function refreshDeveloperPanel(rebuild=true){
     <label>Depth line Y offset<input id="devDepthY" type="number" value="${Math.round(depth.y)}" ${canEditDepth?"":"disabled"}></label>
     <button id="devEditDepth" class="devDepthEditButton${devDepthEditing?" active":""}" ${canEditDepth?"":"disabled"}>${devDepthEditing?"Finish Depth Editing":"Edit Depth Line Visually"}</button>
     <div class="devDepthEditHelp">${canEditDepth?(devDepthEditing?"Drag the purple line up or down. Unlike the hitbox, the depth line can move outside the blue sprite box. Player feet above the line draw behind the object; feet below the line draw in front.":"Y-Sort compares the player's feet with this purple line. Use the fixed Behind/Front modes only when an object should never switch sides."):"This fixed depth mode ignores the Y-Sort line. Switch to Y-Sort to use a draggable depth anchor."}</div>
-    <label>Container slots<input id="devCapacity" type="number" min="0" value="${devSelected.capacity||0}"></label>
+    <label>Container slots<input id="devCapacity" type="number" min="0" value="${obj.capacity||0}"></label>
     <div class="devRow"><button id="devApply">Apply</button><button id="devDuplicate">Duplicate</button><button id="devDelete" class="danger">Delete</button></div>`;
   inspector.querySelector("#devEditHitbox").onclick=()=>setDeveloperHitboxEditing(!devHitboxEditing);
   inspector.querySelector("#devEditDepth").onclick=()=>setDeveloperDepthEditing(!devDepthEditing);
   inspector.querySelector("#devDepthMode").onchange=e=>{
-    devSelected.depthMode=e.target.value;
-    if(devSelected.depthMode!=="ysort"){devDepthEditing=false;devDepthDrag=null;}
-    else ensureDeveloperDepth(devSelected);
-    saveDeveloperDraft();
-    refreshDeveloperPanel();
-    devSetStatus(`Depth mode: ${e.target.options[e.target.selectedIndex].text}`);
+    obj.depthMode=e.target.value;
+    if(obj.depthMode!=="ysort"){devDepthEditing=false;devDepthDrag=null;} else ensureDeveloperDepth(obj);
+    saveDeveloperDraft();refreshDeveloperPanel();devSetStatus(`Depth mode: ${e.target.options[e.target.selectedIndex].text}`);
   };
   inspector.querySelector("#devApply").onclick=applyDeveloperInspector;
   inspector.querySelector("#devDuplicate").onclick=duplicateDeveloperSelection;
@@ -1209,7 +1392,7 @@ function saveDeveloperNpc(){
   devSelectedNpc.id=newId;
   devSelectedNpc.name=root.querySelector("#devNpcName")?.value.trim()||newId;
   devSelectedNpc.role=root.querySelector("#devNpcRole")?.value.trim()||"Villager";
-  devSelectedNpc.sprite=root.querySelector("#devNpcSprite")?.value||"";
+  devSelectedNpc.sprite=root.querySelector("#devNpcSprite")?.value||NPC_PLACEHOLDER_SPRITE;
   devSelectedNpc.x=numberOr(root.querySelector("#devNpcX")?.value,devSelectedNpc.x);
   devSelectedNpc.y=numberOr(root.querySelector("#devNpcY")?.value,devSelectedNpc.y);
   devSelectedNpc.facing=root.querySelector("#devNpcFacing")?.value||"down";
@@ -1254,7 +1437,7 @@ function refreshDeveloperNpcPanel(){
   if(!inspector)return;
   if(!devSelectedNpc){inspector.innerHTML='<div class="devEmpty">Choose an NPC from the list, click one in the world, or place a new model.</div>';return;}
   const spriteChoices=[
-    ["","Simple placeholder"],["./assets/npcs/lilly.png","Lilly model"],["./assets/npcs/jorge.png","Jorge model"]
+    [NPC_PLACEHOLDER_SPRITE,"Placeholder model"],["./assets/npcs/lilly.png","Lilly model"],["./assets/npcs/jorge.png","Jorge model"]
   ];
   if(devSelectedNpc.sprite&&!spriteChoices.some(([v])=>v===devSelectedNpc.sprite))spriteChoices.push([devSelectedNpc.sprite,"Current custom sprite"]);
   inspector.innerHTML=`<div class="devNpcInspector">
@@ -1271,6 +1454,15 @@ function refreshDeveloperNpcPanel(){
   inspector.querySelector("#devNpcSave").onclick=saveDeveloperNpc;
   inspector.querySelector("#devNpcDuplicate").onclick=duplicateDeveloperNpc;
   inspector.querySelector("#devNpcDelete").onclick=deleteDeveloperNpc;
+  const heightInput=inspector.querySelector("#devNpcHeight");
+  heightInput.oninput=e=>{
+    devSelectedNpc.displayHeight=Math.max(24,numberOr(e.target.value,devSelectedNpc.displayHeight));
+    rebuildNpcCollision();
+    refreshDeveloperInspectorValues();
+  };
+  heightInput.onchange=()=>saveDeveloperDraft();
+  inspector.querySelector("#devNpcSprite").onchange=e=>{devSelectedNpc.sprite=e.target.value||NPC_PLACEHOLDER_SPRITE;saveDeveloperDraft();};
+  inspector.querySelector("#devNpcFacing").onchange=e=>{devSelectedNpc.facing=e.target.value||"down";saveDeveloperDraft();};
 }
 
 function devQuestOptions(values,selected){
@@ -1423,7 +1615,7 @@ function buildDeveloperPanel(){
         <div class="devSection"><div class="devSectionTitle">Existing Objects <span id="devObjectCount" style="float:right;font-weight:600;text-transform:none;letter-spacing:0;color:#a99bb3"></span></div><div id="devObjectList"></div></div>
       </section>
       <section class="devView" data-dev-view="npcs">
-        <div class="devSection"><div class="devSectionTitle">NPC Models</div><div class="devHint">Choose a model, then click the world to place an NPC. Click or drag existing NPCs directly in the world.</div><div class="devNpcPalette"><button data-npc-template="lilly">+ Lilly Model</button><button data-npc-template="jorge">+ Jorge Model</button><button data-npc-template="blank">+ Blank NPC</button></div></div>
+        <div class="devSection"><div class="devSectionTitle">NPC Models</div><div class="devHint">Choose a model, then click the world to place an NPC. Click or drag existing NPCs directly in the world.</div><div class="devNpcPalette"><button data-npc-template="lilly">+ Lilly Model</button><button data-npc-template="jorge">+ Jorge Model</button><button data-npc-template="blank">+ Placeholder Model</button></div></div>
         <div class="devSection"><div class="devSectionTitle">Existing NPCs <span id="devNpcCount" style="float:right;font-weight:600;text-transform:none;letter-spacing:0;color:#a99bb3"></span></div><div id="devNpcList"></div></div>
         <div class="devSection"><div class="devSectionTitle">NPC Inspector</div><div id="devNpcInspector"></div></div>
       </section>
@@ -1432,7 +1624,8 @@ function buildDeveloperPanel(){
         <div class="devSection"><div class="devSectionTitle">Quest Maker</div><div id="devQuestEditor"></div></div>
       </section>
       <section class="devView" data-dev-view="selection">
-        <div class="devSection"><div class="devSectionTitle">Selected Object</div><div class="devHint">Click an object in the world or choose it from Existing Objects. Drag it directly in the world to reposition it.</div><div id="devInspector"></div></div>
+        <div class="devSection"><div class="devSectionTitle">Selection Library <span id="devSelectionCount" style="float:right;font-weight:600;text-transform:none;letter-spacing:0;color:#a99bb3"></span></div><div class="devHint">Props and NPCs live together here for visual placement work. Select an NPC to adjust its model size, collision hitbox, and depth line.</div><div id="devSelectionList"></div></div>
+        <div class="devSection"><div class="devSectionTitle">Selected Item</div><div class="devHint">Click a prop or NPC in the world, or choose one above. Drag it directly in the world to reposition it.</div><div id="devInspector"></div></div>
         <div class="devSection"><div class="devSectionTitle">Layout File</div><div class="devProjectActions"><button id="devExport">Export world-objects.js</button><button id="devLoadDraft">Load Local Draft</button><button id="devReset">Use Project Layout</button></div></div>
       </section>
       <section class="devView" data-dev-view="scale">
@@ -1475,7 +1668,7 @@ function buildDeveloperPanel(){
   root.querySelector("#devDuplicateQuest").onclick=duplicateDeveloperQuest;
   root.querySelector("#devDeleteQuest").onclick=deleteDeveloperQuest;
   root.querySelectorAll("[data-npc-template]").forEach(button=>button.onclick=()=>{
-    devPlaceNpcTemplate=button.dataset.npcTemplate;devPlaceType=null;devSelected=null;devSelectedMob=null;setDeveloperTab("npcs");updateDevPaletteActive();refreshDeveloperPanel();devSetStatus(`Placing ${button.textContent.replace(/^\+\s*/,"")} — click the world`);
+    devPlaceNpcTemplate=button.dataset.npcTemplate;devPlaceType=null;devSelected=null;devSelectedNpc=null;devSelectedMob=null;setDeveloperTab("npcs");updateDevPaletteActive();refreshDeveloperPanel();devSetStatus(`Placing ${button.textContent.replace(/^\+\s*/,"")} — click the world`);
   });
   root.querySelector("#devExportWorldPack").onclick=exportDeveloperWorldPack;
   root.querySelector("#devImportWorldPack").onclick=()=>root.querySelector("#devImportWorldPackFile").click();

@@ -1,4 +1,4 @@
-/* Exported from Little Realm Developer Mode */
+/* Integrated from Little Realm World Pack v55 */
 window.LR_WORLD_OBJECTS = [
   {
     "id": "town-well",
@@ -134,7 +134,9 @@ window.LR_WORLD_OBJECTS = [
     "interactable": false,
     "label": "Lamp",
     "container": false,
-    "capacity": 0
+    "capacity": 0,
+    "depthMode": "ysort",
+    "depthY": 58
   },
   {
     "id": "town-flowers-a",
@@ -321,7 +323,9 @@ window.LR_WORLD_OBJECTS = [
     "interactable": false,
     "label": "Mushrooms",
     "container": false,
-    "capacity": 0
+    "capacity": 0,
+    "depthMode": "behind",
+    "depthY": 33
   },
   {
     "id": "wild-boulder",
@@ -372,7 +376,9 @@ window.LR_WORLD_OBJECTS = [
     "interactable": false,
     "label": "Wildflowers",
     "container": false,
-    "capacity": 0
+    "capacity": 0,
+    "depthMode": "behind",
+    "depthY": 30
   },
   {
     "id": "goblin-tent-a",

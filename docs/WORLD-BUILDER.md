@@ -35,3 +35,8 @@ The **Quests** tab is a visual Quest Maker. It supports Kill, Collect, Talk, Del
 The preferred long-term workflow is now **Project → Export World Pack (.json)**. The World Pack contains the current placed props, NPCs, quests, visual settings, and combat tuning in one uploadable file. This lets many small world/content edits be batched before the project source needs to be updated.
 
 Local drafts now save the same combined content. Old v1 prop-only drafts are migrated automatically when loaded. The Project tab can also import a previously exported World Pack to continue editing it in the browser.
+
+
+## NPC visual selection (v55)
+
+NPCs now participate in the Selection tab alongside props. Selecting an NPC exposes live Sprite Height, model/facing, a visual collision hitbox editor, and a draggable Y-sort depth line. The placeholder NPC is a real 4x4 sprite sheet at `assets/npcs/npc-placeholder.png`, so it uses the same rendering and sizing path as named NPC models.
