@@ -1,0 +1,10 @@
+Little Realm v52 — Visual Hitbox Editor
+
+World Builder collision editing now works like an image crop box:
+- Select any world object and click "Edit Hitbox Visually".
+- Drag inside the yellow hitbox to reposition it.
+- Drag corners or side handles to resize it.
+- Changes update collision live and autosave to the World Builder draft on release.
+- Editing is pixel-precise; object-placement Snap does not affect hitbox adjustments.
+- Numeric X/Y/W/H hitbox fields remain available for exact/manual edits.
+- Hitbox resizing is kept inside the selected sprite's bounds.

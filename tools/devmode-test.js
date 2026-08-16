@@ -10,7 +10,8 @@ const required=[
   'initDeveloperMode','toggleDeveloperMode','drawDeveloperOverlay',
   'rebuildWorldObjectCollision','exportDeveloperLayout','DEV_DRAFT_KEY',
   'ensureDeveloperStyles','refreshDeveloperObjectList','devObjectList',
-  'devPalette','Existing Objects','findDeveloperMobAt','refreshDeveloperMobPanel','mobTypeScaleKey','MOB_TYPE_SCALE','Selected Mob Type','Visual Scale'
+  'devPalette','Existing Objects','findDeveloperMobAt','refreshDeveloperMobPanel','mobTypeScaleKey','MOB_TYPE_SCALE','Selected Mob Type','Visual Scale',
+  'devHitboxEditing','devHitboxDrag','findDeveloperHitboxInteraction','updateDeveloperHitboxDrag','Edit Hitbox Visually','Finish Hitbox Editing'
 ];
 for(const s of required) if(!bundle.includes(s)) throw new Error('missing developer feature: '+s);
 if(!bundle.includes('#devPanel .devView{display:none}#devPanel .devView.active{display:block}')) throw new Error('developer tab active-view CSS specificity regression');

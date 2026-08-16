@@ -5,6 +5,8 @@ Press **F2** on desktop to toggle Developer Mode.
 - Choose a prop from the palette, then click the world to place copies.
 - Choose **Select / Move** and drag a prop to reposition it.
 - The inspector edits position, hitbox/solid collision, interactable metadata, and container metadata/capacity.
+- **Edit Hitbox Visually** turns the selected object's collision box into a crop-style editor directly in the world. Drag inside the yellow box to move it, or drag any of the 8 side/corner handles to resize it. The numeric X/Y/W/H fields remain available for exact values.
+- Visual hitbox editing is pixel-precise and intentionally ignores the normal object-placement Snap setting.
 - Delete/Backspace removes the selected object when no text field is focused.
 - Grid and hitbox overlays are only visible in Developer Mode.
 - Changes autosave to a browser-local draft while you work.

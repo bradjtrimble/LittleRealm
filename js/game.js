@@ -1883,6 +1883,8 @@ let devSelected=null;
 let devPlaceType=null;
 let devDragging=false;
 let devDragOffset={x:0,y:0};
+let devHitboxEditing=false;
+let devHitboxDrag=null;
 let devShowGrid=true;
 let devShowHitboxes=true;
 let devSnap=8;
@@ -1937,6 +1939,9 @@ function ensureDeveloperStyles(){
     #devPanel .devChecks{display:grid;grid-template-columns:repeat(3,1fr);gap:6px;margin-top:8px} #devPanel .devChecks label{flex-direction:row!important;align-items:center!important;background:#2b2432;padding:8px;border-radius:7px}
     #devPanel .devPair{display:grid;grid-template-columns:1fr 1fr;gap:9px} #devPanel .devQuad{display:grid;grid-template-columns:repeat(4,1fr);gap:7px}
     #devPanel .devSubhead{font-weight:800;margin-top:10px;color:#c9b9d2} #devPanel .devRow{display:flex;gap:7px;margin-top:10px} #devPanel .devRow button{flex:1} #devPanel .devRow .danger{background:#713b47}
+    #devPanel .devHitboxEditButton{width:100%;margin-top:8px;border:1px solid rgba(255,255,255,.14);background:#5a4869;color:#fff;border-radius:8px;padding:9px 10px;font-weight:900;cursor:pointer}
+    #devPanel .devHitboxEditButton.active{outline:2px solid #ffd166;background:#66532b;color:#fff8dd}
+    #devPanel .devHitboxEditHelp{margin-top:7px;padding:8px 9px;border:1px solid rgba(255,209,102,.18);border-radius:8px;background:rgba(255,209,102,.06);color:#d8cdbc;font-size:10px;line-height:1.35}
     #devPanel .devProjectActions{display:grid;grid-template-columns:1fr 1fr;gap:7px;margin-top:12px} #devPanel .devProjectActions button:first-child{grid-column:1/-1;background:#38606a}
     #devPanel #devStatus{padding:9px 12px;background:#1d1822;color:#bdb0c5;font-size:11px;border-top:1px solid rgba(255,255,255,.08)}
 
@@ -2010,6 +2015,97 @@ function devWorldFromPointer(event){
   };
 }
 function snapDev(v){ return Math.round(v/devSnap)*devSnap; }
+function clampDev(v,min,max){ return Math.max(min,Math.min(max,v)); }
+
+function ensureDeveloperHitbox(obj){
+  if(!obj) return null;
+  const spec=worldObjectSpec(obj)||{w:32,h:32};
+  if(!obj.hitbox){
+    const hitH=Math.max(8,Math.round(spec.h*.26));
+    const hitW=Math.max(10,Math.round(spec.w*.66));
+    obj.hitbox={x:Math.round((spec.w-hitW)/2),y:spec.h-hitH,w:hitW,h:hitH};
+  }
+  return obj.hitbox;
+}
+
+function findDeveloperHitboxInteraction(wx,wy){
+  if(!devHitboxEditing || !devSelected) return null;
+  const hb=ensureDeveloperHitbox(devSelected);
+  const left=devSelected.x+hb.x, top=devSelected.y+hb.y;
+  const right=left+hb.w, bottom=top+hb.h;
+  const grab=7/CAMERA_ZOOM;
+  if(wx<left-grab || wx>right+grab || wy<top-grab || wy>bottom+grab) return null;
+
+  const nearL=Math.abs(wx-left)<=grab, nearR=Math.abs(wx-right)<=grab;
+  const nearT=Math.abs(wy-top)<=grab, nearB=Math.abs(wy-bottom)<=grab;
+  if(nearL&&nearT) return "nw";
+  if(nearR&&nearT) return "ne";
+  if(nearL&&nearB) return "sw";
+  if(nearR&&nearB) return "se";
+  if(nearT && wx>=left-grab && wx<=right+grab) return "n";
+  if(nearB && wx>=left-grab && wx<=right+grab) return "s";
+  if(nearL && wy>=top-grab && wy<=bottom+grab) return "w";
+  if(nearR && wy>=top-grab && wy<=bottom+grab) return "e";
+  if(wx>=left && wx<=right && wy>=top && wy<=bottom) return "move";
+  return null;
+}
+
+function developerHitboxCursor(interaction){
+  if(interaction==="move") return "move";
+  if(interaction==="n"||interaction==="s") return "ns-resize";
+  if(interaction==="e"||interaction==="w") return "ew-resize";
+  if(interaction==="nw"||interaction==="se") return "nwse-resize";
+  if(interaction==="ne"||interaction==="sw") return "nesw-resize";
+  return "default";
+}
+
+function setDeveloperHitboxEditing(active){
+  devHitboxEditing=!!active && !!devSelected;
+  devHitboxDrag=null;
+  if(devHitboxEditing){
+    ensureDeveloperHitbox(devSelected);
+    devShowHitboxes=true;
+    const toggle=devPanel?.querySelector("#devHitboxes");
+    if(toggle) toggle.checked=true;
+    devSetStatus("Hitbox edit mode — drag inside to move, drag handles/edges to resize");
+  }else{
+    if(game?.style) game.style.cursor="";
+    devSetStatus("Hitbox edit mode finished");
+  }
+  refreshDeveloperPanel();
+}
+
+function updateDeveloperHitboxDrag(p){
+  if(!devHitboxDrag || !devSelected) return;
+  const spec=worldObjectSpec(devSelected)||{w:32,h:32};
+  const start=devHitboxDrag.hitbox;
+  const dx=Math.round(p.x-devHitboxDrag.pointerX);
+  const dy=Math.round(p.y-devHitboxDrag.pointerY);
+  const minSize=2;
+  let left=start.x, top=start.y, right=start.x+start.w, bottom=start.y+start.h;
+  const handle=devHitboxDrag.handle;
+
+  if(handle==="move"){
+    left=clampDev(start.x+dx,0,Math.max(0,spec.w-start.w));
+    top=clampDev(start.y+dy,0,Math.max(0,spec.h-start.h));
+    right=left+start.w;
+    bottom=top+start.h;
+  }else{
+    if(handle.includes("w")) left=clampDev(start.x+dx,0,right-minSize);
+    if(handle.includes("e")) right=clampDev(start.x+start.w+dx,left+minSize,spec.w);
+    if(handle.includes("n")) top=clampDev(start.y+dy,0,bottom-minSize);
+    if(handle.includes("s")) bottom=clampDev(start.y+start.h+dy,top+minSize,spec.h);
+  }
+
+  devSelected.hitbox={
+    x:Math.round(left),
+    y:Math.round(top),
+    w:Math.max(minSize,Math.round(right-left)),
+    h:Math.max(minSize,Math.round(bottom-top))
+  };
+  rebuildWorldObjectCollision();
+  refreshDeveloperInspectorValues();
+}
 
 function findWorldObjectAt(wx,wy){
   const pad=10;
@@ -2135,11 +2231,29 @@ function devPointerDown(event){
     return;
   }
 
+  const hitboxInteraction=findDeveloperHitboxInteraction(p.x,p.y);
+  if(hitboxInteraction){
+    const hb=ensureDeveloperHitbox(devSelected);
+    devDragging=false;
+    devHitboxDrag={
+      handle:hitboxInteraction,
+      pointerX:p.x,
+      pointerY:p.y,
+      hitbox:{x:hb.x,y:hb.y,w:hb.w,h:hb.h}
+    };
+    if(game?.style) game.style.cursor=developerHitboxCursor(hitboxInteraction);
+    try{ game.setPointerCapture?.(event.pointerId); }catch{}
+    devSetStatus(hitboxInteraction==="move"?"Moving hitbox — release to save":"Resizing hitbox — release to save");
+    return;
+  }
+
   const mob=findDeveloperMobAt(p.x,p.y);
   if(mob){
     devSelectedMob=mob;
     devSelected=null;
     devDragging=false;
+    devHitboxEditing=false;
+    devHitboxDrag=null;
     devCombatMobType=mobTypeScaleKey(mob);
     if(devActiveTab!=="combat") setDeveloperTab("scale");
     refreshDeveloperPanel();
@@ -2152,30 +2266,53 @@ function devPointerDown(event){
   devSelected=findWorldObjectAt(p.x,p.y);
   if(devSelected){
     setDeveloperTab("selection");
-    devDragging=true;
-    devDragOffset={x:p.x-devSelected.x,y:p.y-devSelected.y};
-    try{ game.setPointerCapture?.(event.pointerId); }catch{}
-    devSetStatus(`Selected ${devSelected.label||devSelected.type} — drag to move`);
+    if(devHitboxEditing){
+      ensureDeveloperHitbox(devSelected);
+      devDragging=false;
+      devSetStatus(`Selected ${devSelected.label||devSelected.type} — drag the yellow hitbox or its handles`);
+    }else{
+      devDragging=true;
+      devDragOffset={x:p.x-devSelected.x,y:p.y-devSelected.y};
+      try{ game.setPointerCapture?.(event.pointerId); }catch{}
+      devSetStatus(`Selected ${devSelected.label||devSelected.type} — drag to move`);
+    }
   }else{
     devSetStatus("Nothing selected — use Objects to place props, or click a mob to tune its type scale");
   }
   refreshDeveloperPanel();
 }
 function devPointerMove(event){
-  if(!devModeActive || !devDragging || !devSelected) return;
-  event.preventDefault(); event.stopImmediatePropagation();
+  if(!devModeActive) return;
   const p=devWorldFromPointer(event);
+
+  if(devHitboxDrag && devSelected){
+    event.preventDefault(); event.stopImmediatePropagation();
+    updateDeveloperHitboxDrag(p);
+    return;
+  }
+
+  if(devHitboxEditing && devSelected && game?.style){
+    game.style.cursor=developerHitboxCursor(findDeveloperHitboxInteraction(p.x,p.y));
+  }else if(game?.style && !devDragging){
+    game.style.cursor="";
+  }
+
+  if(!devDragging || !devSelected) return;
+  event.preventDefault(); event.stopImmediatePropagation();
   devSelected.x=snapDev(p.x-devDragOffset.x);
   devSelected.y=snapDev(p.y-devDragOffset.y);
   rebuildWorldObjectCollision();
   refreshDeveloperInspectorValues();
 }
 function devPointerUp(event){
-  if(!devModeActive || !devDragging) return;
+  if(!devModeActive || (!devDragging && !devHitboxDrag)) return;
   event.preventDefault(); event.stopImmediatePropagation();
   devDragging=false;
+  const finishedHitbox=!!devHitboxDrag;
+  devHitboxDrag=null;
   try{ game.releasePointerCapture?.(event.pointerId); }catch{}
   saveDeveloperDraft();
+  if(finishedHitbox) devSetStatus("Hitbox updated — keep dragging handles or click Finish Hitbox Editing");
 }
 
 function drawDeveloperOverlay(camX,camY,viewW,viewH){
@@ -2208,6 +2345,31 @@ function drawDeveloperOverlay(camX,camY,viewW,viewH){
       ctx.strokeStyle="#63e6ff";
       ctx.lineWidth=2/CAMERA_ZOOM;
       ctx.strokeRect(x-2,y-2,spec.w+4,spec.h+4);
+
+      if(devHitboxEditing){
+        const hb=ensureDeveloperHitbox(devSelected);
+        const hx=x+hb.x, hy=y+hb.y;
+        ctx.fillStyle="rgba(255,209,102,.13)";
+        ctx.strokeStyle="#ffd166";
+        ctx.lineWidth=2/CAMERA_ZOOM;
+        ctx.fillRect(hx,hy,hb.w,hb.h);
+        ctx.strokeRect(hx,hy,hb.w,hb.h);
+
+        const handleSize=7/CAMERA_ZOOM;
+        const half=handleSize/2;
+        const points=[
+          [hx,hy],[hx+hb.w/2,hy],[hx+hb.w,hy],
+          [hx,hy+hb.h/2],[hx+hb.w,hy+hb.h/2],
+          [hx,hy+hb.h],[hx+hb.w/2,hy+hb.h],[hx+hb.w,hy+hb.h]
+        ];
+        ctx.fillStyle="#fff3c4";
+        ctx.strokeStyle="#8a6817";
+        ctx.lineWidth=1/CAMERA_ZOOM;
+        for(const [px,py] of points){
+          ctx.fillRect(px-half,py-half,handleSize,handleSize);
+          ctx.strokeRect(px-half,py-half,handleSize,handleSize);
+        }
+      }
     }
   }
   if(devSelectedMob && devSelectedMob.alive){
@@ -2229,6 +2391,8 @@ function deleteDeveloperSelection(){
   const i=sceneryProps.indexOf(devSelected);
   if(i>=0) sceneryProps.splice(i,1);
   devSelected=null;
+  devHitboxEditing=false;
+  devHitboxDrag=null;
   rebuildWorldObjectCollision();
   saveDeveloperDraft();
   refreshDeveloperPanel();
@@ -2267,6 +2431,11 @@ function refreshDeveloperInspectorValues(){
   const q=id=>devPanel.querySelector(`#${id}`);
   if(q("devX")) q("devX").value=Math.round(devSelected.x);
   if(q("devY")) q("devY").value=Math.round(devSelected.y);
+  const hb=ensureDeveloperHitbox(devSelected);
+  if(q("devHbX")) q("devHbX").value=Math.round(hb.x);
+  if(q("devHbY")) q("devHbY").value=Math.round(hb.y);
+  if(q("devHbW")) q("devHbW").value=Math.round(hb.w);
+  if(q("devHbH")) q("devHbH").value=Math.round(hb.h);
 }
 
 function drawPaletteThumb(canvas,type){
@@ -2337,8 +2506,11 @@ function refreshDeveloperPanel(rebuild=true){
     <div class="devChecks"><label><input id="devSolid" type="checkbox" ${devSelected.solid?"checked":""}> Hitbox / Solid</label><label><input id="devInteractable" type="checkbox" ${devSelected.interactable?"checked":""}> Interactable</label><label><input id="devContainer" type="checkbox" ${devSelected.container?"checked":""}> Container</label></div>
     <div class="devSubhead">Hitbox offset / size</div>
     <div class="devQuad"><label>X<input id="devHbX" type="number" value="${hb.x}"></label><label>Y<input id="devHbY" type="number" value="${hb.y}"></label><label>W<input id="devHbW" type="number" value="${hb.w}"></label><label>H<input id="devHbH" type="number" value="${hb.h}"></label></div>
+    <button id="devEditHitbox" class="devHitboxEditButton${devHitboxEditing?" active":""}">${devHitboxEditing?"Finish Hitbox Editing":"Edit Hitbox Visually"}</button>
+    <div class="devHitboxEditHelp">${devHitboxEditing?"Drag inside the yellow hitbox to move it. Drag any corner or side handle to resize it. Hitbox editing is pixel-precise and does not use the world-placement Snap setting.":"Use the visual editor instead of typing coordinates. The numeric fields stay available for exact values."}</div>
     <label>Container slots<input id="devCapacity" type="number" min="0" value="${devSelected.capacity||0}"></label>
     <div class="devRow"><button id="devApply">Apply</button><button id="devDuplicate">Duplicate</button><button id="devDelete" class="danger">Delete</button></div>`;
+  inspector.querySelector("#devEditHitbox").onclick=()=>setDeveloperHitboxEditing(!devHitboxEditing);
   inspector.querySelector("#devApply").onclick=applyDeveloperInspector;
   inspector.querySelector("#devDuplicate").onclick=duplicateDeveloperSelection;
   inspector.querySelector("#devDelete").onclick=deleteDeveloperSelection;
@@ -2622,7 +2794,11 @@ function buildDeveloperPanel(){
   document.body.appendChild(root);
   devPanel=root;
   root.querySelector("#devClose").onclick=()=>setDeveloperMode(false);
-  root.querySelector("#devSelect").onclick=()=>{devPlaceType=null;updateDevPaletteActive();devSetStatus("Select / Move mode");};
+  root.querySelector("#devSelect").onclick=()=>{
+    devPlaceType=null;
+    if(devHitboxEditing) setDeveloperHitboxEditing(false);
+    else{ updateDevPaletteActive();devSetStatus("Select / Move mode"); }
+  };
   root.querySelector("#devSnap").onchange=e=>{devSnap=Number(e.target.value)||8;};
   root.querySelector("#devGrid").onchange=e=>{devShowGrid=e.target.checked;};
   root.querySelector("#devHitboxes").onchange=e=>{devShowHitboxes=e.target.checked;};
@@ -2643,7 +2819,7 @@ function buildDeveloperPanel(){
     const cv=document.createElement("canvas");cv.width=48;cv.height=48;
     const name=document.createElement("span");name.textContent=type.replace(/([A-Z])/g," $1");
     b.append(cv,name);
-    b.onclick=()=>{devPlaceType=type;devSelectedMob=null;setDeveloperTab("objects");updateDevPaletteActive();devSetStatus(`Placing ${type} — click the world`);};
+    b.onclick=()=>{devPlaceType=type;devSelectedMob=null;devHitboxEditing=false;devHitboxDrag=null;setDeveloperTab("objects");updateDevPaletteActive();devSetStatus(`Placing ${type} — click the world`);};
     palette.appendChild(b);
     drawPaletteThumb(cv,type);
   }
@@ -2666,7 +2842,13 @@ function setDeveloperMode(active){
   document.body.classList.toggle("devMode",devModeActive);
   input={up:false,down:false,left:false,right:false};
   isHeroMoving=false;
-  if(!devModeActive){devDragging=false;devPlaceType=null;}
+  if(!devModeActive){
+    devDragging=false;
+    devPlaceType=null;
+    devHitboxEditing=false;
+    devHitboxDrag=null;
+    if(game?.style) game.style.cursor="";
+  }
   updateDevPaletteActive();
   if(devModeActive){
     // Rebuild the live panels now that normal game state is guaranteed to exist.
@@ -2692,7 +2874,8 @@ function initDeveloperMode(){
     }
     if(!devModeActive)return;
     if(event.code==="Escape"){
-      if(devPlaceType){devPlaceType=null;updateDevPaletteActive();devSetStatus("Select / Move mode");}
+      if(devHitboxEditing){setDeveloperHitboxEditing(false);}
+      else if(devPlaceType){devPlaceType=null;updateDevPaletteActive();devSetStatus("Select / Move mode");}
       else if(devSelected){devSelected=null;refreshDeveloperPanel();}
       return;
     }
@@ -4568,7 +4751,7 @@ const INPUT_BINDINGS = {
 
 // Exposed only as read-only diagnostics so a desktop tester can confirm the
 // deployed build from DevTools without digging through bundled source.
-window.LR_BUILD_VERSION="v51-floating-loot-ui";
+window.LR_BUILD_VERSION="v52-visual-hitbox-editor";
 window.LR_INPUT_BINDINGS=Object.freeze({...INPUT_BINDINGS});
 window.LR_INPUT_STATE=()=>({...input});
 

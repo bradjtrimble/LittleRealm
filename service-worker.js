@@ -1,4 +1,4 @@
-const CACHE_NAME = "little-realm-v51-floating-loot-ui";
+const CACHE_NAME = "little-realm-v52-visual-hitbox-editor";
 const FILES = [
   "./",
   "./index.html",
