@@ -4,7 +4,7 @@ const VISUAL_CONFIG = window.LR_VISUAL || {};
 
 function visualScaleOr(value,fallback=1){
   const n=Number(value);
-  return Number.isFinite(n)?Math.max(0.5,Math.min(2.0,n)):fallback;
+  return Number.isFinite(n)?Math.max(0.5,Math.min(3.0,n)):fallback;
 }
 
 const VISUAL_SCALE = {
@@ -16,7 +16,17 @@ const VISUAL_SCALE = {
   npcs: visualScaleOr(VISUAL_CONFIG.npcs,1.10),
   props: visualScaleOr(VISUAL_CONFIG.props,1.00)
 };
+const MOB_TYPE_SCALE = {
+  slime: visualScaleOr(VISUAL_CONFIG.mobTypes?.slime,VISUAL_SCALE.hostileMobs),
+  goblin: visualScaleOr(VISUAL_CONFIG.mobTypes?.goblin,VISUAL_SCALE.hostileMobs),
+  wolf: visualScaleOr(VISUAL_CONFIG.mobTypes?.wolf,VISUAL_SCALE.hostileMobs),
+  cow: visualScaleOr(VISUAL_CONFIG.mobTypes?.cow,VISUAL_SCALE.passiveMobs),
+  pig: visualScaleOr(VISUAL_CONFIG.mobTypes?.pig,VISUAL_SCALE.passiveMobs),
+  chicken: visualScaleOr(VISUAL_CONFIG.mobTypes?.chicken,VISUAL_SCALE.passiveMobs),
+  snickers: visualScaleOr(VISUAL_CONFIG.mobTypes?.snickers,VISUAL_SCALE.boss)
+};
 const PROJECT_VISUAL_SCALE = {...VISUAL_SCALE};
+const PROJECT_MOB_TYPE_SCALE = {...MOB_TYPE_SCALE};
 
 function numberOr(value,fallback){
   const n=Number(value);

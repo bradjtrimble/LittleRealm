@@ -10,7 +10,7 @@ const required=[
   'initDeveloperMode','toggleDeveloperMode','drawDeveloperOverlay',
   'rebuildWorldObjectCollision','exportDeveloperLayout','DEV_DRAFT_KEY',
   'ensureDeveloperStyles','refreshDeveloperObjectList','devObjectList',
-  'devPalette','Existing Objects'
+  'devPalette','Existing Objects','findDeveloperMobAt','refreshDeveloperMobPanel','mobTypeScaleKey','MOB_TYPE_SCALE','Selected Mob Type','Visual Scale'
 ];
 for(const s of required) if(!bundle.includes(s)) throw new Error('missing developer feature: '+s);
 if(!loader.includes('config/world-objects.js')) throw new Error('world object config is not live-loaded');

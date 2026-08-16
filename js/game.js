@@ -9,7 +9,7 @@ const VISUAL_CONFIG = window.LR_VISUAL || {};
 
 function visualScaleOr(value,fallback=1){
   const n=Number(value);
-  return Number.isFinite(n)?Math.max(0.5,Math.min(2.0,n)):fallback;
+  return Number.isFinite(n)?Math.max(0.5,Math.min(3.0,n)):fallback;
 }
 
 const VISUAL_SCALE = {
@@ -21,7 +21,17 @@ const VISUAL_SCALE = {
   npcs: visualScaleOr(VISUAL_CONFIG.npcs,1.10),
   props: visualScaleOr(VISUAL_CONFIG.props,1.00)
 };
+const MOB_TYPE_SCALE = {
+  slime: visualScaleOr(VISUAL_CONFIG.mobTypes?.slime,VISUAL_SCALE.hostileMobs),
+  goblin: visualScaleOr(VISUAL_CONFIG.mobTypes?.goblin,VISUAL_SCALE.hostileMobs),
+  wolf: visualScaleOr(VISUAL_CONFIG.mobTypes?.wolf,VISUAL_SCALE.hostileMobs),
+  cow: visualScaleOr(VISUAL_CONFIG.mobTypes?.cow,VISUAL_SCALE.passiveMobs),
+  pig: visualScaleOr(VISUAL_CONFIG.mobTypes?.pig,VISUAL_SCALE.passiveMobs),
+  chicken: visualScaleOr(VISUAL_CONFIG.mobTypes?.chicken,VISUAL_SCALE.passiveMobs),
+  snickers: visualScaleOr(VISUAL_CONFIG.mobTypes?.snickers,VISUAL_SCALE.boss)
+};
 const PROJECT_VISUAL_SCALE = {...VISUAL_SCALE};
+const PROJECT_MOB_TYPE_SCALE = {...MOB_TYPE_SCALE};
 
 function numberOr(value,fallback){
   const n=Number(value);
@@ -1149,10 +1159,11 @@ function drawWorld(){
       const mob=item.obj;
       let sx=mob.x-camX, sy=mob.y-camY;
 
+      const mScale=mobVisualScale(mob);
       if(mob===selectedTarget || mob===combatTarget){
         ctx.strokeStyle=mob===combatTarget?"rgba(255,154,92,.96)":"rgba(255,220,96,.96)";
         ctx.lineWidth=2;
-        ctx.beginPath();ctx.ellipse(sx,sy+12,mob.boss?25:18,mob.boss?10:7,0,0,Math.PI*2);ctx.stroke();
+        ctx.beginPath();ctx.ellipse(sx,sy+12,(mob.boss?25:18)*mScale,(mob.boss?10:7)*mScale,0,0,Math.PI*2);ctx.stroke();
       }
 
       if((mob.attackAnim||0)>0 && mob===combatTarget){
@@ -1166,10 +1177,10 @@ function drawWorld(){
       drawMob(ctx,mob,sx,sy);
 
       if(mob===combatTarget || mob===selectedTarget || mob.hp<mob.maxHp){
-        drawWorldHpBar(sx,sy-(mob.boss?38*VISUAL_SCALE.boss:29*mobVisualScale(mob)),mob.hp,mob.maxHp,mob.boss?52:38);
+        drawWorldHpBar(sx,sy-(mob.boss?38:29)*mScale,mob.hp,mob.maxHp,(mob.boss?52:38)*Math.min(1.5,mScale));
       }else if(mob.aggro){
         ctx.fillStyle="#f2d15f";
-        ctx.beginPath();ctx.arc(sx,sy-26,4,0,Math.PI*2);ctx.fill();
+        ctx.beginPath();ctx.arc(sx,sy-26*mScale,4,0,Math.PI*2);ctx.fill();
       }
     }else{
       let hx=viewW/2,hy=viewH/2;
@@ -1234,46 +1245,58 @@ let devShowGrid=true;
 let devShowHitboxes=true;
 let devSnap=8;
 let devStatusTimer=null;
+let devSelectedMob=null;
+let devActiveTab="objects";
 
 function ensureDeveloperStyles(){
   if(document.getElementById("littleRealmDevStyles")) return;
   const style=document.createElement("style");
   style.id="littleRealmDevStyles";
   style.textContent=`
-    #devPanel{position:fixed!important;z-index:10000!important;top:10px!important;right:10px!important;width:min(430px,44vw)!important;height:calc(100vh - 20px)!important;background:rgba(24,20,30,.98)!important;border:1px solid rgba(255,255,255,.22)!important;border-radius:14px!important;box-shadow:0 18px 50px rgba(0,0,0,.55)!important;color:#f8f2ff!important;display:none!important;overflow:hidden!important;font:12px system-ui,sans-serif!important;backdrop-filter:blur(8px)!important}
+    #devPanel{position:fixed!important;z-index:10000!important;top:12px!important;right:12px!important;width:min(720px,58vw)!important;height:min(860px,calc(100vh - 24px))!important;background:rgba(24,20,30,.98)!important;border:1px solid rgba(255,255,255,.22)!important;border-radius:16px!important;box-shadow:0 18px 50px rgba(0,0,0,.55)!important;color:#f8f2ff!important;display:none!important;overflow:hidden!important;font:13px system-ui,sans-serif!important;backdrop-filter:blur(8px)!important}
     #devPanel.show{display:flex!important;flex-direction:column!important}
     #devPanel *{box-sizing:border-box}
-    #devPanel .devHeader{display:flex;align-items:center;justify-content:space-between;padding:10px 12px;background:#453552;border-bottom:1px solid rgba(255,255,255,.12)}
-    #devPanel .devHeader b{display:block;font-size:14px;letter-spacing:.08em} #devPanel .devHeader span{display:block;font-size:10px;color:#cdbed9;margin-top:2px}
+    #devPanel .devHeader{display:flex;align-items:center;justify-content:space-between;padding:12px 14px;background:#453552;border-bottom:1px solid rgba(255,255,255,.12)}
+    #devPanel .devHeader b{display:block;font-size:15px;letter-spacing:.08em} #devPanel .devHeader span{display:block;font-size:11px;color:#cdbed9;margin-top:2px}
     #devPanel button,#devPanel select,#devPanel input{font:inherit}
-    #devPanel .devHeader button{width:32px;height:32px;border:0;border-radius:8px;background:#2a2132;color:white;font-size:20px}
-    #devPanel .devToolbar{display:flex;gap:7px;align-items:center;flex-wrap:wrap;padding:8px;border-bottom:1px solid rgba(255,255,255,.1)}
-    #devPanel .devToolbar button,#devPanel .devToolbar select,#devPanel .devProjectActions button,#devPanel .devRow button{border:1px solid rgba(255,255,255,.14);background:#5a4869;color:#fff;border-radius:7px;padding:7px 8px;font-weight:700}
-    #devPanel .devToolbar button.active,#devPanel .devPropButton.active{outline:2px solid #63e6ff;background:#385a64}
-    #devPanel .devToolbar label{display:flex;gap:4px;align-items:center;color:#e5d9ec}
-    #devPanel .devSectionTitle{padding:7px 10px 5px;font-weight:900;color:#d8c1e7;letter-spacing:.06em;text-transform:uppercase}
-    #devPanel #devPalette{display:grid!important;grid-template-columns:repeat(5,minmax(0,1fr))!important;gap:5px!important;padding:0 8px 8px!important;min-height:118px!important;max-height:220px!important;overflow:auto!important}
-    #devPanel .devPropButton{min-width:0;border:1px solid rgba(255,255,255,.12);background:#30283a;color:#eee;border-radius:7px;padding:3px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px;cursor:pointer}
-    #devPanel .devPropButton canvas{width:48px;height:48px;image-rendering:pixelated;background:rgba(255,255,255,.025);border-radius:4px}
-    #devPanel .devPropButton span{font-size:9px;line-height:1.05;max-width:100%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;text-transform:capitalize}
-    #devPanel #devObjectList{display:flex;gap:4px;overflow:auto;padding:0 8px 8px;min-height:44px;max-height:92px;flex-wrap:wrap;align-content:flex-start}
-    #devPanel #devScalePanel{display:grid;grid-template-columns:1fr 1fr;gap:6px;padding:0 10px 10px}
-    #devPanel .devScaleControl{background:#2b2432;border-radius:8px;padding:6px 7px;color:#ddd}
-    #devPanel .devScaleControl .devScaleTop{display:flex;justify-content:space-between;gap:8px;font-size:10px;font-weight:800;margin-bottom:4px}
-    #devPanel .devScaleControl input{width:100%;accent-color:#63e6ff}
-    #devPanel .devObjectChip{border:1px solid rgba(255,255,255,.12);background:#2e2736;color:#e9dff0;border-radius:999px;padding:5px 8px;font-size:10px;cursor:pointer}
+    #devPanel .devHeader button{width:36px;height:36px;border:0;border-radius:9px;background:#2a2132;color:white;font-size:22px}
+    #devPanel .devToolbar{display:flex;gap:9px;align-items:center;flex-wrap:wrap;padding:10px 12px;border-bottom:1px solid rgba(255,255,255,.1)}
+    #devPanel .devToolbar button,#devPanel .devToolbar select,#devPanel .devProjectActions button,#devPanel .devRow button,#devPanel .devMobTypeChip{border:1px solid rgba(255,255,255,.14);background:#5a4869;color:#fff;border-radius:8px;padding:8px 10px;font-weight:700}
+    #devPanel .devToolbar button.active,#devPanel .devPropButton.active,#devPanel .devTab.active,#devPanel .devMobTypeChip.active{outline:2px solid #63e6ff;background:#385a64}
+    #devPanel .devToolbar label{display:flex;gap:5px;align-items:center;color:#e5d9ec}
+    #devPanel .devTabs{display:grid;grid-template-columns:repeat(3,1fr);gap:6px;padding:8px 12px;border-bottom:1px solid rgba(255,255,255,.1);background:#211a28}
+    #devPanel .devTab{border:1px solid rgba(255,255,255,.12);background:#30283a;color:#d9cfdf;border-radius:9px;padding:9px 10px;font-weight:800;cursor:pointer}
+    #devPanel .devBody{flex:1;min-height:0;overflow:auto;padding:12px}
+    #devPanel .devView{display:none}.devView.active{display:block}
+    #devPanel .devSection{background:#241e2b;border:1px solid rgba(255,255,255,.08);border-radius:12px;padding:10px;margin-bottom:12px}
+    #devPanel .devSectionTitle{padding:0 2px 8px;font-weight:900;color:#d8c1e7;letter-spacing:.06em;text-transform:uppercase;font-size:12px}
+    #devPanel .devHint{color:#b9aebe;font-size:11px;margin:-2px 2px 9px;line-height:1.35}
+    #devPanel #devPalette{display:grid!important;grid-template-columns:repeat(6,minmax(0,1fr))!important;gap:7px!important;max-height:360px!important;overflow:auto!important;padding:2px!important}
+    #devPanel .devPropButton{min-width:0;border:1px solid rgba(255,255,255,.12);background:#30283a;color:#eee;border-radius:9px;padding:5px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:4px;cursor:pointer;min-height:76px}
+    #devPanel .devPropButton canvas{width:52px;height:52px;image-rendering:pixelated;background:rgba(255,255,255,.025);border-radius:5px}
+    #devPanel .devPropButton span{font-size:10px;line-height:1.05;max-width:100%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;text-transform:capitalize}
+    #devPanel #devObjectList{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:6px;max-height:260px;overflow:auto}
+    #devPanel .devObjectChip{border:1px solid rgba(255,255,255,.12);background:#2e2736;color:#e9dff0;border-radius:8px;padding:7px 9px;font-size:11px;cursor:pointer;text-align:left;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
     #devPanel .devObjectChip.active{outline:2px solid #63e6ff;background:#385a64}
-    #devPanel #devInspector{padding:0 10px 10px;overflow:auto;min-height:90px}
-    #devPanel .devEmpty{color:#baaec2;padding:8px;background:#2b2432;border-radius:8px}.devSelectedTitle{font-size:14px;font-weight:900;margin-bottom:7px;color:#7ceaff;text-transform:capitalize}
-    #devPanel #devInspector label{display:flex;flex-direction:column;gap:3px;margin:5px 0;color:#d7cbdc}
-    #devPanel #devInspector input[type=text],#devPanel #devInspector input[type=number],#devPanel #devInspector input:not([type]){width:100%;background:#1c1821;color:#fff;border:1px solid #594b62;border-radius:6px;padding:6px}
-    #devPanel .devChecks{display:grid;grid-template-columns:1fr 1fr;gap:3px} #devPanel .devChecks label{flex-direction:row!important;align-items:center!important}
-    #devPanel .devPair{display:grid;grid-template-columns:1fr 1fr;gap:7px} #devPanel .devQuad{display:grid;grid-template-columns:repeat(4,1fr);gap:5px}
-    #devPanel .devSubhead{font-weight:800;margin-top:7px;color:#c9b9d2} #devPanel .devRow{display:flex;gap:5px;margin-top:8px} #devPanel .devRow button{flex:1} #devPanel .devRow .danger{background:#713b47}
-    #devPanel .devProjectActions{display:grid;grid-template-columns:1fr 1fr;gap:5px;padding:8px 10px;border-top:1px solid rgba(255,255,255,.1)} #devPanel .devProjectActions button:first-child{grid-column:1/-1;background:#38606a}
-    #devPanel #devStatus{padding:7px 10px;background:#1d1822;color:#bdb0c5;font-size:10px;margin-top:auto}
+    #devPanel #devScalePanel{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:9px}
+    #devPanel .devScaleControl{background:#2b2432;border:1px solid rgba(255,255,255,.07);border-radius:10px;padding:10px;color:#ddd}
+    #devPanel .devScaleControl .devScaleTop{display:flex;justify-content:space-between;gap:8px;font-size:11px;font-weight:800;margin-bottom:7px}
+    #devPanel .devScaleControl input[type=range]{width:100%;accent-color:#63e6ff}
+    #devPanel #devMobScalePanel{background:#2b2432;border:1px solid rgba(99,230,255,.18);border-radius:12px;padding:12px;min-height:130px}
+    #devPanel .devMobSelectedTitle{font-size:18px;font-weight:900;color:#7ceaff;margin-bottom:3px}.devMobMeta{color:#bdb0c5;font-size:11px;margin-bottom:11px}
+    #devPanel #devMobTypeChips{display:flex;flex-wrap:wrap;gap:6px;margin-top:10px}.devMobTypeChip{font-size:10px!important;padding:6px 8px!important;cursor:pointer}
+    #devPanel #devInspector{padding:2px;min-height:180px}
+    #devPanel .devEmpty{color:#baaec2;padding:12px;background:#2b2432;border-radius:9px}.devSelectedTitle{font-size:16px;font-weight:900;margin-bottom:9px;color:#7ceaff;text-transform:capitalize}
+    #devPanel #devInspector label{display:flex;flex-direction:column;gap:4px;margin:7px 0;color:#d7cbdc}
+    #devPanel #devInspector input[type=text],#devPanel #devInspector input[type=number],#devPanel #devInspector input:not([type]){width:100%;background:#1c1821;color:#fff;border:1px solid #594b62;border-radius:7px;padding:8px}
+    #devPanel .devChecks{display:grid;grid-template-columns:repeat(3,1fr);gap:6px;margin-top:8px} #devPanel .devChecks label{flex-direction:row!important;align-items:center!important;background:#2b2432;padding:8px;border-radius:7px}
+    #devPanel .devPair{display:grid;grid-template-columns:1fr 1fr;gap:9px} #devPanel .devQuad{display:grid;grid-template-columns:repeat(4,1fr);gap:7px}
+    #devPanel .devSubhead{font-weight:800;margin-top:10px;color:#c9b9d2} #devPanel .devRow{display:flex;gap:7px;margin-top:10px} #devPanel .devRow button{flex:1} #devPanel .devRow .danger{background:#713b47}
+    #devPanel .devProjectActions{display:grid;grid-template-columns:1fr 1fr;gap:7px;margin-top:12px} #devPanel .devProjectActions button:first-child{grid-column:1/-1;background:#38606a}
+    #devPanel #devStatus{padding:9px 12px;background:#1d1822;color:#bdb0c5;font-size:11px;border-top:1px solid rgba(255,255,255,.08)}
     body.devMode #pcControls{opacity:.25}
-    @media(max-width:900px){#devPanel{width:calc(100vw - 16px)!important;right:8px!important;top:8px!important;height:calc(100vh - 16px)!important}#devPanel #devPalette{grid-template-columns:repeat(6,minmax(0,1fr))!important}}
+    @media(max-width:1100px){#devPanel{width:min(650px,68vw)!important}#devPanel #devPalette{grid-template-columns:repeat(5,minmax(0,1fr))!important}}
+    @media(max-width:760px){#devPanel{width:calc(100vw - 12px)!important;right:6px!important;top:6px!important;height:calc(100vh - 12px)!important}#devPanel #devPalette{grid-template-columns:repeat(4,minmax(0,1fr))!important}#devPanel #devObjectList{grid-template-columns:repeat(2,minmax(0,1fr))}#devPanel #devScalePanel{grid-template-columns:1fr}.devQuad{grid-template-columns:repeat(2,1fr)!important}}
   `;
   document.head.appendChild(style);
 }
@@ -1345,6 +1368,42 @@ function findWorldObjectAt(wx,wy){
   return null;
 }
 
+function mobTypeScaleKey(mob){
+  if(!mob) return null;
+  return (mob.boss || mob.kind==="boss") ? "snickers" : mob.kind;
+}
+function mobTypeScaleLabel(key){
+  const labels={slime:"Slime",goblin:"Goblin",wolf:"Wolf",cow:"Cow",pig:"Pig",chicken:"Chicken",snickers:"Snickers"};
+  return labels[key]||key||"Mob";
+}
+function mobTypeFallbackScale(key){
+  if(key==="snickers") return VISUAL_SCALE.boss;
+  if(["cow","pig","chicken"].includes(key)) return VISUAL_SCALE.passiveMobs;
+  return VISUAL_SCALE.hostileMobs;
+}
+function findDeveloperMobAt(wx,wy){
+  let best=null,bestScore=Infinity;
+  for(const mob of mobs){
+    if(!mob.alive) continue;
+    const scale=Math.max(.75,mobVisualScale(mob));
+    const rx=(mob.boss?42:30)*scale;
+    const ry=(mob.boss?52:38)*scale;
+    const dx=Math.abs(wx-mob.x),dy=wy-mob.y;
+    if(dx<=rx && dy>=-ry && dy<=ry*.55){
+      const score=dx*dx+(dy*.65)*(dy*.65);
+      if(score<bestScore){best=mob;bestScore=score;}
+    }
+  }
+  return best;
+}
+function setDeveloperTab(tab){
+  devActiveTab=tab||"objects";
+  if(!devPanel) return;
+  devPanel.querySelectorAll(".devTab").forEach(b=>b.classList.toggle("active",b.dataset.devTab===devActiveTab));
+  devPanel.querySelectorAll(".devView").forEach(v=>v.classList.toggle("active",v.dataset.devView===devActiveTab));
+}
+
+
 function saveDeveloperDraft(){
   try{
     localStorage.setItem(DEV_DRAFT_KEY,JSON.stringify(sceneryProps));
@@ -1406,6 +1465,8 @@ function placeDeveloperObject(type,wx,wy){
   const obj=defaultWorldObject(type,snapDev(wx-spec.w/2),snapDev(wy-spec.h/2));
   sceneryProps.push(obj);
   devSelected=obj;
+  devSelectedMob=null;
+  setDeveloperTab("selection");
   rebuildWorldObjectCollision();
   saveDeveloperDraft();
   refreshDeveloperPanel();
@@ -1419,14 +1480,28 @@ function devPointerDown(event){
     placeDeveloperObject(devPlaceType,p.x,p.y);
     return;
   }
+
+  const mob=findDeveloperMobAt(p.x,p.y);
+  if(mob){
+    devSelectedMob=mob;
+    devSelected=null;
+    devDragging=false;
+    setDeveloperTab("scale");
+    refreshDeveloperPanel();
+    devSetStatus(`${mobTypeScaleLabel(mobTypeScaleKey(mob))} selected — scale changes affect every ${mobTypeScaleLabel(mobTypeScaleKey(mob)).toLowerCase()}`);
+    return;
+  }
+
+  devSelectedMob=null;
   devSelected=findWorldObjectAt(p.x,p.y);
   if(devSelected){
+    setDeveloperTab("selection");
     devDragging=true;
     devDragOffset={x:p.x-devSelected.x,y:p.y-devSelected.y};
     try{ game.setPointerCapture?.(event.pointerId); }catch{}
     devSetStatus(`Selected ${devSelected.label||devSelected.type} — drag to move`);
   }else{
-    devSetStatus("No prop under cursor — choose one from the palette or Existing Objects");
+    devSetStatus("Nothing selected — use Objects to place props, or click a mob to tune its type scale");
   }
   refreshDeveloperPanel();
 }
@@ -1478,6 +1553,17 @@ function drawDeveloperOverlay(camX,camY,viewW,viewH){
       ctx.lineWidth=2/CAMERA_ZOOM;
       ctx.strokeRect(x-2,y-2,spec.w+4,spec.h+4);
     }
+  }
+  if(devSelectedMob && devSelectedMob.alive){
+    const x=devSelectedMob.x-camX,y=devSelectedMob.y-camY;
+    const scale=mobVisualScale(devSelectedMob);
+    ctx.strokeStyle="#63e6ff";
+    ctx.fillStyle="rgba(99,230,255,.10)";
+    ctx.lineWidth=2/CAMERA_ZOOM;
+    ctx.beginPath();ctx.ellipse(x,y+8,(devSelectedMob.boss?28:20)*scale,(devSelectedMob.boss?13:9)*scale,0,0,Math.PI*2);ctx.fill();ctx.stroke();
+    ctx.font="800 10px system-ui";ctx.textAlign="center";ctx.fillStyle="#dffbff";
+    ctx.fillText(`${mobTypeScaleLabel(mobTypeScaleKey(devSelectedMob))} ${scale.toFixed(2)}×`,x,y-(devSelectedMob.boss?44:34)*scale);
+    ctx.textAlign="start";
   }
   ctx.restore();
 }
@@ -1564,7 +1650,9 @@ function refreshDeveloperObjectList(){
     b.title=`${obj.type} @ ${Math.round(obj.x)}, ${Math.round(obj.y)}`;
     b.onclick=()=>{
       devPlaceType=null;
+      devSelectedMob=null;
       devSelected=obj;
+      setDeveloperTab("selection");
       updateDevPaletteActive();
       refreshDeveloperPanel();
       devSetStatus(`Selected ${obj.label||obj.type}`);
@@ -1579,6 +1667,7 @@ function refreshDeveloperPanel(rebuild=true){
   const inspector=devPanel.querySelector("#devInspector");
   if(!inspector) return;
   refreshDeveloperObjectList();
+  refreshDeveloperMobPanel();
   if(!devSelected){
     inspector.innerHTML='<div class="devEmpty">Select an object in the world or choose a prop from the palette and click to place it.</div>';
     return;
@@ -1599,7 +1688,7 @@ function refreshDeveloperPanel(rebuild=true){
 }
 
 function updateVisualScaleControl(key,value){
-  const n=Math.max(0.5,Math.min(2.0,Number(value)||1));
+  const n=Math.max(0.5,Math.min(3.0,Number(value)||1));
   VISUAL_SCALE[key]=Math.round(n*100)/100;
   if(devPanel){
     const out=devPanel.querySelector(`[data-scale-value="${key}"]`);
@@ -1607,9 +1696,64 @@ function updateVisualScaleControl(key,value){
   }
 }
 
+function setMobTypeScale(key,value){
+  if(!key || !Object.prototype.hasOwnProperty.call(MOB_TYPE_SCALE,key)) return;
+  const n=Math.max(0.5,Math.min(3.0,Number(value)||1));
+  MOB_TYPE_SCALE[key]=Math.round(n*100)/100;
+  refreshDeveloperMobPanel();
+}
+
+function selectDeveloperMobType(key){
+  const match=mobs.find(m=>mobTypeScaleKey(m)===key) || {kind:key,boss:key==="snickers",alive:false};
+  devSelectedMob=match;
+  devSelected=null;
+  setDeveloperTab("scale");
+  refreshDeveloperPanel();
+}
+
+function refreshDeveloperMobPanel(){
+  if(!devPanel) return;
+  const panel=devPanel.querySelector("#devMobScalePanel");
+  if(!panel) return;
+  const key=mobTypeScaleKey(devSelectedMob);
+  const available=["slime","goblin","wolf","cow","pig","chicken","snickers"];
+  if(!key){
+    panel.innerHTML=`<div class="devEmpty">Click a mob in the world to select its type. You can then resize only that species.</div><div id="devMobTypeChips"></div>`;
+  }else{
+    const count=mobs.filter(m=>mobTypeScaleKey(m)===key).length;
+    const value=MOB_TYPE_SCALE[key] ?? mobTypeFallbackScale(key);
+    panel.innerHTML=`
+      <div class="devMobSelectedTitle">${mobTypeScaleLabel(key)}</div>
+      <div class="devMobMeta">Affects all ${count} ${mobTypeScaleLabel(key)} spawn${count===1?"":"s"}. Visual size only — combat stats and hitboxes are unchanged.</div>
+      <div class="devScaleControl">
+        <div class="devScaleTop"><span>${mobTypeScaleLabel(key)} scale</span><span id="devSelectedMobScaleValue">${value.toFixed(2)}×</span></div>
+        <input id="devSelectedMobScale" type="range" min="0.50" max="3.00" step="0.05" value="${value}">
+      </div>
+      <div class="devRow"><button id="devResetMobScale">Reset ${mobTypeScaleLabel(key)}</button></div>
+      <div id="devMobTypeChips"></div>`;
+    panel.querySelector("#devSelectedMobScale").oninput=e=>setMobTypeScale(key,e.target.value);
+    panel.querySelector("#devResetMobScale").onclick=()=>{
+      MOB_TYPE_SCALE[key]=mobTypeFallbackScale(key);
+      refreshDeveloperMobPanel();
+      devSetStatus(`${mobTypeScaleLabel(key)} reset to ${MOB_TYPE_SCALE[key].toFixed(2)}×`);
+    };
+  }
+  const chips=panel.querySelector("#devMobTypeChips");
+  if(chips){
+    for(const type of available){
+      const b=document.createElement("button");
+      b.className="devMobTypeChip"+(type===key?" active":"");
+      b.textContent=mobTypeScaleLabel(type);
+      b.onclick=()=>selectDeveloperMobType(type);
+      chips.appendChild(b);
+    }
+  }
+}
+
 function exportVisualSettings(){
+  const settings={...VISUAL_SCALE,mobTypes:{...MOB_TYPE_SCALE}};
   const text=`/* Exported from Little Realm Developer Mode */
-window.LR_VISUAL = ${JSON.stringify(VISUAL_SCALE,null,2)};
+window.LR_VISUAL = ${JSON.stringify(settings,null,2)};
 `;
   const blob=new Blob([text],{type:"text/javascript"});
   const url=URL.createObjectURL(blob);
@@ -1619,16 +1763,18 @@ window.LR_VISUAL = ${JSON.stringify(VISUAL_SCALE,null,2)};
   document.body.appendChild(a);
   a.click(); a.remove();
   setTimeout(()=>URL.revokeObjectURL(url),1000);
-  devSetStatus("Exported visual-settings.js");
+  devSetStatus("Exported visual-settings.js with per-mob scales");
 }
 
 function resetVisualScale(){
   Object.assign(VISUAL_SCALE,PROJECT_VISUAL_SCALE);
+  Object.assign(MOB_TYPE_SCALE,PROJECT_MOB_TYPE_SCALE);
   if(!devPanel) return;
   devPanel.querySelectorAll("[data-scale-key]").forEach(input=>{
     input.value=VISUAL_SCALE[input.dataset.scaleKey];
     updateVisualScaleControl(input.dataset.scaleKey,input.value);
   });
+  refreshDeveloperMobPanel();
   devSetStatus("Visual scale reset to project settings");
 }
 
@@ -1637,42 +1783,49 @@ function buildDeveloperPanel(){
   const root=document.createElement("aside");
   root.id="devPanel";
   root.innerHTML=`
-    <div class="devHeader"><div><b>WORLD BUILDER</b><span>F2 to close</span></div><button id="devClose">×</button></div>
+    <div class="devHeader"><div><b>WORLD BUILDER</b><span>F2 to close • click a mob to tune only that type</span></div><button id="devClose">×</button></div>
     <div class="devToolbar">
       <button id="devSelect" class="active">Select / Move</button>
       <label>Snap <select id="devSnap"><option>4</option><option selected>8</option><option>16</option><option>32</option><option>64</option></select></label>
       <label><input id="devGrid" type="checkbox" checked> Grid</label>
       <label><input id="devHitboxes" type="checkbox" checked> Hitboxes</label>
     </div>
-    <div class="devSectionTitle">Prop Palette</div>
-    <div id="devPalette"></div>
-    <div class="devSectionTitle">Visual Scale</div>
-    <div id="devScalePanel">
-      <div class="devScaleControl"><div class="devScaleTop"><span>Player</span><span data-scale-value="player"></span></div><input data-scale-key="player" type="range" min="0.50" max="2.00" step="0.05" value="${VISUAL_SCALE.player}"></div>
-      <div class="devScaleControl"><div class="devScaleTop"><span>Hostile Mobs</span><span data-scale-value="hostileMobs"></span></div><input data-scale-key="hostileMobs" type="range" min="0.50" max="2.00" step="0.05" value="${VISUAL_SCALE.hostileMobs}"></div>
-      <div class="devScaleControl"><div class="devScaleTop"><span>Farm Animals</span><span data-scale-value="passiveMobs"></span></div><input data-scale-key="passiveMobs" type="range" min="0.50" max="2.00" step="0.05" value="${VISUAL_SCALE.passiveMobs}"></div>
-      <div class="devScaleControl"><div class="devScaleTop"><span>Bosses</span><span data-scale-value="boss"></span></div><input data-scale-key="boss" type="range" min="0.50" max="2.00" step="0.05" value="${VISUAL_SCALE.boss}"></div>
-      <div class="devScaleControl"><div class="devScaleTop"><span>Houses</span><span data-scale-value="houses"></span></div><input data-scale-key="houses" type="range" min="0.50" max="2.00" step="0.05" value="${VISUAL_SCALE.houses}"></div>
-      <div class="devScaleControl"><div class="devScaleTop"><span>NPCs</span><span data-scale-value="npcs"></span></div><input data-scale-key="npcs" type="range" min="0.50" max="2.00" step="0.05" value="${VISUAL_SCALE.npcs}"></div>
-      <div class="devScaleControl"><div class="devScaleTop"><span>Props</span><span data-scale-value="props"></span></div><input data-scale-key="props" type="range" min="0.50" max="2.00" step="0.05" value="${VISUAL_SCALE.props}"></div>
-      <div class="devScaleControl"><div class="devScaleTop"><span>Scale File</span><span>live</span></div><div class="devRow" style="margin-top:0"><button id="devExportScale">Export</button><button id="devResetScale">Reset</button></div></div>
+    <div class="devTabs">
+      <button class="devTab active" data-dev-tab="objects">Objects</button>
+      <button class="devTab" data-dev-tab="selection">Selection</button>
+      <button class="devTab" data-dev-tab="scale">Visual Scale</button>
     </div>
-    <div class="devSectionTitle">Existing Objects <span id="devObjectCount" style="float:right;font-weight:600;text-transform:none;letter-spacing:0;color:#a99bb3"></span></div>
-    <div id="devObjectList"></div>
-    <div class="devSectionTitle">Selected Object</div>
-    <div id="devInspector"></div>
-    <div class="devProjectActions"><button id="devExport">Export world-objects.js</button><button id="devLoadDraft">Load Local Draft</button><button id="devReset">Use Project Layout</button></div>
+    <div class="devBody">
+      <section class="devView active" data-dev-view="objects">
+        <div class="devSection"><div class="devSectionTitle">Prop Palette</div><div class="devHint">Choose a prop, then click the world to place it. Switch back to Select / Move when finished.</div><div id="devPalette"></div></div>
+        <div class="devSection"><div class="devSectionTitle">Existing Objects <span id="devObjectCount" style="float:right;font-weight:600;text-transform:none;letter-spacing:0;color:#a99bb3"></span></div><div id="devObjectList"></div></div>
+      </section>
+      <section class="devView" data-dev-view="selection">
+        <div class="devSection"><div class="devSectionTitle">Selected Object</div><div class="devHint">Click an object in the world or choose it from Existing Objects. Drag it directly in the world to reposition it.</div><div id="devInspector"></div></div>
+        <div class="devSection"><div class="devSectionTitle">Layout File</div><div class="devProjectActions"><button id="devExport">Export world-objects.js</button><button id="devLoadDraft">Load Local Draft</button><button id="devReset">Use Project Layout</button></div></div>
+      </section>
+      <section class="devView" data-dev-view="scale">
+        <div class="devSection"><div class="devSectionTitle">Selected Mob Type</div><div class="devHint">Click a mob in the world. This slider changes only that mob type — for example, selecting a Wolf changes Wolves without changing Goblins or Slimes.</div><div id="devMobScalePanel"></div></div>
+        <div class="devSection"><div class="devSectionTitle">World Visual Scale</div><div class="devHint">These controls change broad world elements. Mob species are controlled separately above.</div><div id="devScalePanel">
+          <div class="devScaleControl"><div class="devScaleTop"><span>Player</span><span data-scale-value="player"></span></div><input data-scale-key="player" type="range" min="0.50" max="3.00" step="0.05" value="${VISUAL_SCALE.player}"></div>
+          <div class="devScaleControl"><div class="devScaleTop"><span>Houses</span><span data-scale-value="houses"></span></div><input data-scale-key="houses" type="range" min="0.50" max="3.00" step="0.05" value="${VISUAL_SCALE.houses}"></div>
+          <div class="devScaleControl"><div class="devScaleTop"><span>NPCs</span><span data-scale-value="npcs"></span></div><input data-scale-key="npcs" type="range" min="0.50" max="3.00" step="0.05" value="${VISUAL_SCALE.npcs}"></div>
+          <div class="devScaleControl"><div class="devScaleTop"><span>Props</span><span data-scale-value="props"></span></div><input data-scale-key="props" type="range" min="0.50" max="3.00" step="0.05" value="${VISUAL_SCALE.props}"></div>
+        </div><div class="devRow"><button id="devExportScale">Export visual-settings.js</button><button id="devResetScale">Reset Scale Settings</button></div></div>
+      </section>
+    </div>
     <div id="devStatus">F2 toggles World Builder</div>`;
   document.body.appendChild(root);
   devPanel=root;
   root.querySelector("#devClose").onclick=()=>setDeveloperMode(false);
-  root.querySelector("#devSelect").onclick=()=>{devPlaceType=null;updateDevPaletteActive();};
+  root.querySelector("#devSelect").onclick=()=>{devPlaceType=null;updateDevPaletteActive();devSetStatus("Select / Move mode");};
   root.querySelector("#devSnap").onchange=e=>{devSnap=Number(e.target.value)||8;};
   root.querySelector("#devGrid").onchange=e=>{devShowGrid=e.target.checked;};
   root.querySelector("#devHitboxes").onchange=e=>{devShowHitboxes=e.target.checked;};
   root.querySelector("#devExport").onclick=exportDeveloperLayout;
   root.querySelector("#devLoadDraft").onclick=loadDeveloperDraft;
   root.querySelector("#devReset").onclick=resetDeveloperLayout;
+  root.querySelectorAll(".devTab").forEach(b=>b.onclick=()=>setDeveloperTab(b.dataset.devTab));
   root.querySelectorAll("[data-scale-key]").forEach(input=>{
     updateVisualScaleControl(input.dataset.scaleKey,input.value);
     input.oninput=()=>updateVisualScaleControl(input.dataset.scaleKey,input.value);
@@ -1686,13 +1839,14 @@ function buildDeveloperPanel(){
     const cv=document.createElement("canvas");cv.width=48;cv.height=48;
     const name=document.createElement("span");name.textContent=type.replace(/([A-Z])/g," $1");
     b.append(cv,name);
-    b.onclick=()=>{devPlaceType=type;updateDevPaletteActive();devSetStatus(`Placing ${type} — click the world`);};
+    b.onclick=()=>{devPlaceType=type;devSelectedMob=null;setDeveloperTab("objects");updateDevPaletteActive();devSetStatus(`Placing ${type} — click the world`);};
     palette.appendChild(b);
     drawPaletteThumb(cv,type);
   }
   if(!propAtlasReady) propAtlas.addEventListener("load",()=>root.querySelectorAll(".devPropButton").forEach(b=>drawPaletteThumb(b.querySelector("canvas"),b.dataset.type)),{once:true});
+  setDeveloperTab(devActiveTab);
   refreshDeveloperPanel();
-  devSetStatus(`${propTypes.length} props available • ${sceneryProps.length} existing objects`);
+  devSetStatus(`${propTypes.length} props • ${sceneryProps.length} objects • click mobs for per-type scale`);
   return root;
 }
 function updateDevPaletteActive(){
@@ -1710,7 +1864,7 @@ function setDeveloperMode(active){
   isHeroMoving=false;
   if(!devModeActive){devDragging=false;devPlaceType=null;}
   updateDevPaletteActive();
-  if(devModeActive) devSetStatus("Developer Mode active — select, drag, or place props");
+  if(devModeActive) devSetStatus("Developer Mode active — use tabs for objects, selection, and mob-specific scale");
 }
 function toggleDeveloperMode(){setDeveloperMode(!devModeActive);}
 
@@ -2267,26 +2421,28 @@ function drawChicken(c,x,y,s=1){
 
 function mobVisualScale(mob){
   if(!mob) return 1;
-  if(mob.boss || mob.kind==="boss") return VISUAL_SCALE.boss;
+  if(mob.boss || mob.kind==="boss") return MOB_TYPE_SCALE.snickers;
+  if(Object.prototype.hasOwnProperty.call(MOB_TYPE_SCALE,mob.kind)) return MOB_TYPE_SCALE[mob.kind];
   if(["cow","pig","chicken"].includes(mob.kind)) return VISUAL_SCALE.passiveMobs;
   return VISUAL_SCALE.hostileMobs;
 }
 
 function drawMob(c,mob,sx,sy){
+  const scale=mobVisualScale(mob);
   if(mob.kind==="slime") {
-    drawSlimeSprite(c,sx,sy,0.23*VISUAL_SCALE.hostileMobs,mob.facing||"down",mob.animTime||0,true);
+    drawSlimeSprite(c,sx,sy,0.23*scale,mob.facing||"down",mob.animTime||0,true);
   } else if(mob.kind==="goblin") {
-    drawGoblinSprite(c,sx,sy,0.23*VISUAL_SCALE.hostileMobs,mob.facing||"down",mob.animTime||0,true);
+    drawGoblinSprite(c,sx,sy,0.23*scale,mob.facing||"down",mob.animTime||0,true);
   } else if(mob.kind==="wolf") {
-    drawWolfSprite(c,sx,sy,0.23*VISUAL_SCALE.hostileMobs,mob.facing||"down",mob.animTime||0,true);
+    drawWolfSprite(c,sx,sy,0.23*scale,mob.facing||"down",mob.animTime||0,true);
   } else if(mob.kind==="cow") {
-    drawCow(c,sx,sy,1.0*VISUAL_SCALE.passiveMobs);
+    drawCow(c,sx,sy,1.0*scale);
   } else if(mob.kind==="pig") {
-    drawPig(c,sx,sy,1.0*VISUAL_SCALE.passiveMobs);
+    drawPig(c,sx,sy,1.0*scale);
   } else if(mob.kind==="chicken") {
-    drawChicken(c,sx,sy,1.0*VISUAL_SCALE.passiveMobs);
+    drawChicken(c,sx,sy,1.0*scale);
   } else if(mob.kind==="boss") {
-    drawBearSprite(c,sx,sy,0.145*VISUAL_SCALE.boss,mob.facing||"down",mob.animTime||0,Math.hypot(mob.drawVx||0,mob.drawVy||0)>1 || mob===combatTarget);
+    drawBearSprite(c,sx,sy,0.145*scale,mob.facing||"down",mob.animTime||0,Math.hypot(mob.drawVx||0,mob.drawVy||0)>1 || mob===combatTarget);
   }
 }
 

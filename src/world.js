@@ -782,10 +782,11 @@ function drawWorld(){
       const mob=item.obj;
       let sx=mob.x-camX, sy=mob.y-camY;
 
+      const mScale=mobVisualScale(mob);
       if(mob===selectedTarget || mob===combatTarget){
         ctx.strokeStyle=mob===combatTarget?"rgba(255,154,92,.96)":"rgba(255,220,96,.96)";
         ctx.lineWidth=2;
-        ctx.beginPath();ctx.ellipse(sx,sy+12,mob.boss?25:18,mob.boss?10:7,0,0,Math.PI*2);ctx.stroke();
+        ctx.beginPath();ctx.ellipse(sx,sy+12,(mob.boss?25:18)*mScale,(mob.boss?10:7)*mScale,0,0,Math.PI*2);ctx.stroke();
       }
 
       if((mob.attackAnim||0)>0 && mob===combatTarget){
@@ -799,10 +800,10 @@ function drawWorld(){
       drawMob(ctx,mob,sx,sy);
 
       if(mob===combatTarget || mob===selectedTarget || mob.hp<mob.maxHp){
-        drawWorldHpBar(sx,sy-(mob.boss?38*VISUAL_SCALE.boss:29*mobVisualScale(mob)),mob.hp,mob.maxHp,mob.boss?52:38);
+        drawWorldHpBar(sx,sy-(mob.boss?38:29)*mScale,mob.hp,mob.maxHp,(mob.boss?52:38)*Math.min(1.5,mScale));
       }else if(mob.aggro){
         ctx.fillStyle="#f2d15f";
-        ctx.beginPath();ctx.arc(sx,sy-26,4,0,Math.PI*2);ctx.fill();
+        ctx.beginPath();ctx.arc(sx,sy-26*mScale,4,0,Math.PI*2);ctx.fill();
       }
     }else{
       let hx=viewW/2,hy=viewH/2;

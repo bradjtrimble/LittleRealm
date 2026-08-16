@@ -1,7 +1,9 @@
-# Visual Scale Tuning
+# Little Realm Visual Scale
 
-Press **F2** in the game and use the **Visual Scale** sliders to resize the player, hostile mobs, farm animals, bosses, houses, NPCs, and props live.
+Developer Mode (F2) now includes a dedicated **Visual Scale** tab.
 
-When the proportions look right, click **Export** in the Scale File box. Replace `config/visual-settings.js` with the downloaded file and commit it. The game loads this config fresh on launch, so scale-only changes do not require rebuilding the project.
+World-level controls: player, houses, NPCs, and props.
 
-`1.00` is the base size. `1.20` is 20% larger. `0.90` is 10% smaller. Visual scale does not resize gameplay collision hitboxes.
+Mob scale is per type. Click a mob in the world (or use the type chips) and adjust only that species. Supported keys are `slime`, `goblin`, `wolf`, `cow`, `pig`, `chicken`, and `snickers`.
+
+`config/visual-settings.js` stores both the broad visual scale values and a nested `mobTypes` object. Exporting from Developer Mode preserves all of them.

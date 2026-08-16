@@ -6,5 +6,14 @@ window.LR_VISUAL = {
   "boss": 1.55,
   "houses": 1.7,
   "npcs": 1,
-  "props": 0.75
+  "props": 0.75,
+  "mobTypes": {
+    "slime": 1.3,
+    "goblin": 1.3,
+    "wolf": 1.3,
+    "cow": 1.1,
+    "pig": 1.1,
+    "chicken": 1.1,
+    "snickers": 1.55
+  }
 };
