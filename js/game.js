@@ -5,6 +5,23 @@ window.addEventListener("error", (event) => {
 (() => {
 const BALANCE = window.LR_BALANCE || {};
 const PROJECT_WORLD_OBJECTS = window.LR_WORLD_OBJECTS || [];
+const VISUAL_CONFIG = window.LR_VISUAL || {};
+
+function visualScaleOr(value,fallback=1){
+  const n=Number(value);
+  return Number.isFinite(n)?Math.max(0.5,Math.min(2.0,n)):fallback;
+}
+
+const VISUAL_SCALE = {
+  player: visualScaleOr(VISUAL_CONFIG.player,1.20),
+  hostileMobs: visualScaleOr(VISUAL_CONFIG.hostileMobs,1.15),
+  passiveMobs: visualScaleOr(VISUAL_CONFIG.passiveMobs,1.10),
+  boss: visualScaleOr(VISUAL_CONFIG.boss,1.05),
+  houses: visualScaleOr(VISUAL_CONFIG.houses,1.15),
+  npcs: visualScaleOr(VISUAL_CONFIG.npcs,1.10),
+  props: visualScaleOr(VISUAL_CONFIG.props,1.00)
+};
+const PROJECT_VISUAL_SCALE = {...VISUAL_SCALE};
 
 function numberOr(value,fallback){
   const n=Number(value);
@@ -750,13 +767,21 @@ function drawHouseObject(obj,camX,camY){
   const sx=obj.x-camX;
   const sy=obj.y-camY;
   const spec=obj.spec;
+  const scale=VISUAL_SCALE.houses;
+  const dw=spec.w*scale, dh=spec.h*scale;
+  const dx=sx+spec.w/2-dw/2;
+  const dy=sy+spec.h-dh; // keep the physical footprint anchored at the bottom
 
   if(spec.ready()){
     ctx.imageSmoothingEnabled=false;
-    ctx.drawImage(spec.image,Math.round(sx),Math.round(sy),spec.w,spec.h);
+    ctx.drawImage(spec.image,Math.round(dx),Math.round(dy),Math.round(dw),Math.round(dh));
     return;
   }
 
+  ctx.save();
+  ctx.translate(sx+spec.w/2,sy+spec.h);
+  ctx.scale(scale,scale);
+  ctx.translate(-(sx+spec.w/2),-(sy+spec.h));
   // Simple loading fallback.
   ctx.fillStyle="#d8c7a0";
   ctx.fillRect(sx+14,sy+38,spec.w-28,spec.h-45);
@@ -764,6 +789,7 @@ function drawHouseObject(obj,camX,camY){
   ctx.fillRect(sx+5,sy+22,spec.w-10,22);
   ctx.fillStyle="#70472c";
   ctx.fillRect(sx+spec.w*.47,sy+spec.h-32,14,32);
+  ctx.restore();
 }
 
 function drawTreeObject(obj,camX,camY){
@@ -930,6 +956,9 @@ function drawCastle(x,y){
 function drawNpcObject(obj,camX,camY){
   const x=Math.round(obj.x-camX), y=Math.round(obj.y-camY);
   ctx.save(); ctx.imageSmoothingEnabled=false;
+  ctx.translate(x,y+15);
+  ctx.scale(VISUAL_SCALE.npcs,VISUAL_SCALE.npcs);
+  ctx.translate(-x,-(y+15));
   ctx.fillStyle="rgba(0,0,0,.18)"; ctx.fillRect(x-6,y+8,12,3);
   ctx.fillStyle="#d9ad84"; ctx.fillRect(x-5,y-11,10,9);
   ctx.fillStyle="#5a3d2d"; ctx.fillRect(x-6,y-13,12,4); ctx.fillRect(x-6,y-9,2,5);
@@ -945,9 +974,17 @@ function drawNpcObject(obj,camX,camY){
 function drawPropObject(obj,camX,camY){
   const x=Math.round(obj.x-camX), y=Math.round(obj.y-camY);
   const spec=PROP_SPECS[obj.type];
-  if(spec && drawPropAtlasCell(spec,x,y)) return;
+  const baseW=spec?.w || (obj.type==="caveEntrance"?(obj.w||244):obj.type==="crops"?(obj.w||90):24);
+  const baseH=spec?.h || (obj.type==="caveEntrance"?(obj.h||176):obj.type==="crops"?(obj.h||70):24);
+  const pScale=VISUAL_SCALE.props;
 
   ctx.save(); ctx.imageSmoothingEnabled=false;
+  if(pScale!==1){
+    ctx.translate(x+baseW/2,y+baseH);
+    ctx.scale(pScale,pScale);
+    ctx.translate(-(x+baseW/2),-(y+baseH));
+  }
+  if(spec && drawPropAtlasCell(spec,x,y)){ ctx.restore(); return; }
   if(obj.type==="caveEntrance"){
     const w=obj.w||220, h=obj.h||160;
     ctx.fillStyle="rgba(0,0,0,.22)";
@@ -1129,7 +1166,7 @@ function drawWorld(){
       drawMob(ctx,mob,sx,sy);
 
       if(mob===combatTarget || mob===selectedTarget || mob.hp<mob.maxHp){
-        drawWorldHpBar(sx,sy-(mob.boss?38:29),mob.hp,mob.maxHp,mob.boss?52:38);
+        drawWorldHpBar(sx,sy-(mob.boss?38*VISUAL_SCALE.boss:29*mobVisualScale(mob)),mob.hp,mob.maxHp,mob.boss?52:38);
       }else if(mob.aggro){
         ctx.fillStyle="#f2d15f";
         ctx.beginPath();ctx.arc(sx,sy-26,4,0,Math.PI*2);ctx.fill();
@@ -1141,8 +1178,8 @@ function drawWorld(){
         const dx=combatTarget.x-state.x,dy=combatTarget.y-state.y,len=Math.max(1,Math.hypot(dx,dy));
         hx+=dx/len*5*phase; hy+=dy/len*5*phase;
       }
-      drawHero(ctx,hx,hy,0.055,isHeroMoving,moveAnimTime,heroFacing);
-      if(combatTarget || state.hp<state.maxHp) drawWorldHpBar(hx,hy-31,state.hp,state.maxHp,42);
+      drawHero(ctx,hx,hy,0.055*VISUAL_SCALE.player,isHeroMoving,moveAnimTime,heroFacing);
+      if(combatTarget || state.hp<state.maxHp) drawWorldHpBar(hx,hy-31*VISUAL_SCALE.player,state.hp,state.maxHp,42);
     }
   }
 
@@ -1220,6 +1257,10 @@ function ensureDeveloperStyles(){
     #devPanel .devPropButton canvas{width:48px;height:48px;image-rendering:pixelated;background:rgba(255,255,255,.025);border-radius:4px}
     #devPanel .devPropButton span{font-size:9px;line-height:1.05;max-width:100%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;text-transform:capitalize}
     #devPanel #devObjectList{display:flex;gap:4px;overflow:auto;padding:0 8px 8px;min-height:44px;max-height:92px;flex-wrap:wrap;align-content:flex-start}
+    #devPanel #devScalePanel{display:grid;grid-template-columns:1fr 1fr;gap:6px;padding:0 10px 10px}
+    #devPanel .devScaleControl{background:#2b2432;border-radius:8px;padding:6px 7px;color:#ddd}
+    #devPanel .devScaleControl .devScaleTop{display:flex;justify-content:space-between;gap:8px;font-size:10px;font-weight:800;margin-bottom:4px}
+    #devPanel .devScaleControl input{width:100%;accent-color:#63e6ff}
     #devPanel .devObjectChip{border:1px solid rgba(255,255,255,.12);background:#2e2736;color:#e9dff0;border-radius:999px;padding:5px 8px;font-size:10px;cursor:pointer}
     #devPanel .devObjectChip.active{outline:2px solid #63e6ff;background:#385a64}
     #devPanel #devInspector{padding:0 10px 10px;overflow:auto;min-height:90px}
@@ -1557,6 +1598,40 @@ function refreshDeveloperPanel(rebuild=true){
   inspector.querySelector("#devDelete").onclick=deleteDeveloperSelection;
 }
 
+function updateVisualScaleControl(key,value){
+  const n=Math.max(0.5,Math.min(2.0,Number(value)||1));
+  VISUAL_SCALE[key]=Math.round(n*100)/100;
+  if(devPanel){
+    const out=devPanel.querySelector(`[data-scale-value="${key}"]`);
+    if(out) out.textContent=VISUAL_SCALE[key].toFixed(2)+"×";
+  }
+}
+
+function exportVisualSettings(){
+  const text=`/* Exported from Little Realm Developer Mode */
+window.LR_VISUAL = ${JSON.stringify(VISUAL_SCALE,null,2)};
+`;
+  const blob=new Blob([text],{type:"text/javascript"});
+  const url=URL.createObjectURL(blob);
+  const a=document.createElement("a");
+  a.href=url;
+  a.download="visual-settings.js";
+  document.body.appendChild(a);
+  a.click(); a.remove();
+  setTimeout(()=>URL.revokeObjectURL(url),1000);
+  devSetStatus("Exported visual-settings.js");
+}
+
+function resetVisualScale(){
+  Object.assign(VISUAL_SCALE,PROJECT_VISUAL_SCALE);
+  if(!devPanel) return;
+  devPanel.querySelectorAll("[data-scale-key]").forEach(input=>{
+    input.value=VISUAL_SCALE[input.dataset.scaleKey];
+    updateVisualScaleControl(input.dataset.scaleKey,input.value);
+  });
+  devSetStatus("Visual scale reset to project settings");
+}
+
 function buildDeveloperPanel(){
   ensureDeveloperStyles();
   const root=document.createElement("aside");
@@ -1571,6 +1646,17 @@ function buildDeveloperPanel(){
     </div>
     <div class="devSectionTitle">Prop Palette</div>
     <div id="devPalette"></div>
+    <div class="devSectionTitle">Visual Scale</div>
+    <div id="devScalePanel">
+      <div class="devScaleControl"><div class="devScaleTop"><span>Player</span><span data-scale-value="player"></span></div><input data-scale-key="player" type="range" min="0.50" max="2.00" step="0.05" value="${VISUAL_SCALE.player}"></div>
+      <div class="devScaleControl"><div class="devScaleTop"><span>Hostile Mobs</span><span data-scale-value="hostileMobs"></span></div><input data-scale-key="hostileMobs" type="range" min="0.50" max="2.00" step="0.05" value="${VISUAL_SCALE.hostileMobs}"></div>
+      <div class="devScaleControl"><div class="devScaleTop"><span>Farm Animals</span><span data-scale-value="passiveMobs"></span></div><input data-scale-key="passiveMobs" type="range" min="0.50" max="2.00" step="0.05" value="${VISUAL_SCALE.passiveMobs}"></div>
+      <div class="devScaleControl"><div class="devScaleTop"><span>Bosses</span><span data-scale-value="boss"></span></div><input data-scale-key="boss" type="range" min="0.50" max="2.00" step="0.05" value="${VISUAL_SCALE.boss}"></div>
+      <div class="devScaleControl"><div class="devScaleTop"><span>Houses</span><span data-scale-value="houses"></span></div><input data-scale-key="houses" type="range" min="0.50" max="2.00" step="0.05" value="${VISUAL_SCALE.houses}"></div>
+      <div class="devScaleControl"><div class="devScaleTop"><span>NPCs</span><span data-scale-value="npcs"></span></div><input data-scale-key="npcs" type="range" min="0.50" max="2.00" step="0.05" value="${VISUAL_SCALE.npcs}"></div>
+      <div class="devScaleControl"><div class="devScaleTop"><span>Props</span><span data-scale-value="props"></span></div><input data-scale-key="props" type="range" min="0.50" max="2.00" step="0.05" value="${VISUAL_SCALE.props}"></div>
+      <div class="devScaleControl"><div class="devScaleTop"><span>Scale File</span><span>live</span></div><div class="devRow" style="margin-top:0"><button id="devExportScale">Export</button><button id="devResetScale">Reset</button></div></div>
+    </div>
     <div class="devSectionTitle">Existing Objects <span id="devObjectCount" style="float:right;font-weight:600;text-transform:none;letter-spacing:0;color:#a99bb3"></span></div>
     <div id="devObjectList"></div>
     <div class="devSectionTitle">Selected Object</div>
@@ -1587,6 +1673,12 @@ function buildDeveloperPanel(){
   root.querySelector("#devExport").onclick=exportDeveloperLayout;
   root.querySelector("#devLoadDraft").onclick=loadDeveloperDraft;
   root.querySelector("#devReset").onclick=resetDeveloperLayout;
+  root.querySelectorAll("[data-scale-key]").forEach(input=>{
+    updateVisualScaleControl(input.dataset.scaleKey,input.value);
+    input.oninput=()=>updateVisualScaleControl(input.dataset.scaleKey,input.value);
+  });
+  root.querySelector("#devExportScale").onclick=exportVisualSettings;
+  root.querySelector("#devResetScale").onclick=resetVisualScale;
   const palette=root.querySelector("#devPalette");
   const propTypes=[...Object.keys(PROP_SPECS),"caveEntrance"];
   for(const type of propTypes){
@@ -2173,21 +2265,28 @@ function drawChicken(c,x,y,s=1){
   c.restore();
 }
 
+function mobVisualScale(mob){
+  if(!mob) return 1;
+  if(mob.boss || mob.kind==="boss") return VISUAL_SCALE.boss;
+  if(["cow","pig","chicken"].includes(mob.kind)) return VISUAL_SCALE.passiveMobs;
+  return VISUAL_SCALE.hostileMobs;
+}
+
 function drawMob(c,mob,sx,sy){
   if(mob.kind==="slime") {
-    drawSlimeSprite(c,sx,sy,0.23,mob.facing||"down",mob.animTime||0,true);
+    drawSlimeSprite(c,sx,sy,0.23*VISUAL_SCALE.hostileMobs,mob.facing||"down",mob.animTime||0,true);
   } else if(mob.kind==="goblin") {
-    drawGoblinSprite(c,sx,sy,0.23,mob.facing||"down",mob.animTime||0,true);
+    drawGoblinSprite(c,sx,sy,0.23*VISUAL_SCALE.hostileMobs,mob.facing||"down",mob.animTime||0,true);
   } else if(mob.kind==="wolf") {
-    drawWolfSprite(c,sx,sy,0.23,mob.facing||"down",mob.animTime||0,true);
+    drawWolfSprite(c,sx,sy,0.23*VISUAL_SCALE.hostileMobs,mob.facing||"down",mob.animTime||0,true);
   } else if(mob.kind==="cow") {
-    drawCow(c,sx,sy,1.0);
+    drawCow(c,sx,sy,1.0*VISUAL_SCALE.passiveMobs);
   } else if(mob.kind==="pig") {
-    drawPig(c,sx,sy,1.0);
+    drawPig(c,sx,sy,1.0*VISUAL_SCALE.passiveMobs);
   } else if(mob.kind==="chicken") {
-    drawChicken(c,sx,sy,1.0);
+    drawChicken(c,sx,sy,1.0*VISUAL_SCALE.passiveMobs);
   } else if(mob.kind==="boss") {
-    drawBearSprite(c,sx,sy,0.145,mob.facing||"down",mob.animTime||0,Math.hypot(mob.drawVx||0,mob.drawVy||0)>1 || mob===combatTarget);
+    drawBearSprite(c,sx,sy,0.145*VISUAL_SCALE.boss,mob.facing||"down",mob.animTime||0,Math.hypot(mob.drawVx||0,mob.drawVy||0)>1 || mob===combatTarget);
   }
 }
 
@@ -2609,7 +2708,7 @@ function handleWorldTap(ev){
     // selection box rather than requiring a click directly on their feet.
     const dx=Math.abs(wx-mob.x);
     const dy=wy-mob.y;
-    const radius=mob.boss?TARGET_CLICK_RADIUS*1.45:TARGET_CLICK_RADIUS;
+    const radius=(mob.boss?TARGET_CLICK_RADIUS*1.45:TARGET_CLICK_RADIUS)*Math.max(1,mobVisualScale(mob));
     if(dx<=radius && dy>=-radius*1.35 && dy<=radius*.75){
       const score=dx*dx+(dy*.65)*(dy*.65);
       if(score<bestScore){best=mob;bestScore=score}

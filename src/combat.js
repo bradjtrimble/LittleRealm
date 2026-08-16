@@ -317,7 +317,7 @@ function handleWorldTap(ev){
     // selection box rather than requiring a click directly on their feet.
     const dx=Math.abs(wx-mob.x);
     const dy=wy-mob.y;
-    const radius=mob.boss?TARGET_CLICK_RADIUS*1.45:TARGET_CLICK_RADIUS;
+    const radius=(mob.boss?TARGET_CLICK_RADIUS*1.45:TARGET_CLICK_RADIUS)*Math.max(1,mobVisualScale(mob));
     if(dx<=radius && dy>=-radius*1.35 && dy<=radius*.75){
       const score=dx*dx+(dy*.65)*(dy*.65);
       if(score<bestScore){best=mob;bestScore=score}

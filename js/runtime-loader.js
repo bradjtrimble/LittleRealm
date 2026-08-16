@@ -23,6 +23,13 @@
     }
 
     try {
+      await loadScript("./config/visual-settings.js", true);
+    } catch (err) {
+      console.warn("Fresh visual config unavailable; trying offline cache.", err);
+      await loadScript("./config/visual-settings.js");
+    }
+
+    try {
       await loadScript("./config/items.js", true);
     } catch (err) {
       console.warn("Fresh item config unavailable; trying offline cache.", err);

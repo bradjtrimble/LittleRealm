@@ -355,21 +355,28 @@ function drawChicken(c,x,y,s=1){
   c.restore();
 }
 
+function mobVisualScale(mob){
+  if(!mob) return 1;
+  if(mob.boss || mob.kind==="boss") return VISUAL_SCALE.boss;
+  if(["cow","pig","chicken"].includes(mob.kind)) return VISUAL_SCALE.passiveMobs;
+  return VISUAL_SCALE.hostileMobs;
+}
+
 function drawMob(c,mob,sx,sy){
   if(mob.kind==="slime") {
-    drawSlimeSprite(c,sx,sy,0.23,mob.facing||"down",mob.animTime||0,true);
+    drawSlimeSprite(c,sx,sy,0.23*VISUAL_SCALE.hostileMobs,mob.facing||"down",mob.animTime||0,true);
   } else if(mob.kind==="goblin") {
-    drawGoblinSprite(c,sx,sy,0.23,mob.facing||"down",mob.animTime||0,true);
+    drawGoblinSprite(c,sx,sy,0.23*VISUAL_SCALE.hostileMobs,mob.facing||"down",mob.animTime||0,true);
   } else if(mob.kind==="wolf") {
-    drawWolfSprite(c,sx,sy,0.23,mob.facing||"down",mob.animTime||0,true);
+    drawWolfSprite(c,sx,sy,0.23*VISUAL_SCALE.hostileMobs,mob.facing||"down",mob.animTime||0,true);
   } else if(mob.kind==="cow") {
-    drawCow(c,sx,sy,1.0);
+    drawCow(c,sx,sy,1.0*VISUAL_SCALE.passiveMobs);
   } else if(mob.kind==="pig") {
-    drawPig(c,sx,sy,1.0);
+    drawPig(c,sx,sy,1.0*VISUAL_SCALE.passiveMobs);
   } else if(mob.kind==="chicken") {
-    drawChicken(c,sx,sy,1.0);
+    drawChicken(c,sx,sy,1.0*VISUAL_SCALE.passiveMobs);
   } else if(mob.kind==="boss") {
-    drawBearSprite(c,sx,sy,0.145,mob.facing||"down",mob.animTime||0,Math.hypot(mob.drawVx||0,mob.drawVy||0)>1 || mob===combatTarget);
+    drawBearSprite(c,sx,sy,0.145*VISUAL_SCALE.boss,mob.facing||"down",mob.animTime||0,Math.hypot(mob.drawVx||0,mob.drawVy||0)>1 || mob===combatTarget);
   }
 }
 

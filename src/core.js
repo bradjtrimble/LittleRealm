@@ -1,5 +1,22 @@
 const BALANCE = window.LR_BALANCE || {};
 const PROJECT_WORLD_OBJECTS = window.LR_WORLD_OBJECTS || [];
+const VISUAL_CONFIG = window.LR_VISUAL || {};
+
+function visualScaleOr(value,fallback=1){
+  const n=Number(value);
+  return Number.isFinite(n)?Math.max(0.5,Math.min(2.0,n)):fallback;
+}
+
+const VISUAL_SCALE = {
+  player: visualScaleOr(VISUAL_CONFIG.player,1.20),
+  hostileMobs: visualScaleOr(VISUAL_CONFIG.hostileMobs,1.15),
+  passiveMobs: visualScaleOr(VISUAL_CONFIG.passiveMobs,1.10),
+  boss: visualScaleOr(VISUAL_CONFIG.boss,1.05),
+  houses: visualScaleOr(VISUAL_CONFIG.houses,1.15),
+  npcs: visualScaleOr(VISUAL_CONFIG.npcs,1.10),
+  props: visualScaleOr(VISUAL_CONFIG.props,1.00)
+};
+const PROJECT_VISUAL_SCALE = {...VISUAL_SCALE};
 
 function numberOr(value,fallback){
   const n=Number(value);

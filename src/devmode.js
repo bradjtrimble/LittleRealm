@@ -32,6 +32,10 @@ function ensureDeveloperStyles(){
     #devPanel .devPropButton canvas{width:48px;height:48px;image-rendering:pixelated;background:rgba(255,255,255,.025);border-radius:4px}
     #devPanel .devPropButton span{font-size:9px;line-height:1.05;max-width:100%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;text-transform:capitalize}
     #devPanel #devObjectList{display:flex;gap:4px;overflow:auto;padding:0 8px 8px;min-height:44px;max-height:92px;flex-wrap:wrap;align-content:flex-start}
+    #devPanel #devScalePanel{display:grid;grid-template-columns:1fr 1fr;gap:6px;padding:0 10px 10px}
+    #devPanel .devScaleControl{background:#2b2432;border-radius:8px;padding:6px 7px;color:#ddd}
+    #devPanel .devScaleControl .devScaleTop{display:flex;justify-content:space-between;gap:8px;font-size:10px;font-weight:800;margin-bottom:4px}
+    #devPanel .devScaleControl input{width:100%;accent-color:#63e6ff}
     #devPanel .devObjectChip{border:1px solid rgba(255,255,255,.12);background:#2e2736;color:#e9dff0;border-radius:999px;padding:5px 8px;font-size:10px;cursor:pointer}
     #devPanel .devObjectChip.active{outline:2px solid #63e6ff;background:#385a64}
     #devPanel #devInspector{padding:0 10px 10px;overflow:auto;min-height:90px}
@@ -369,6 +373,40 @@ function refreshDeveloperPanel(rebuild=true){
   inspector.querySelector("#devDelete").onclick=deleteDeveloperSelection;
 }
 
+function updateVisualScaleControl(key,value){
+  const n=Math.max(0.5,Math.min(2.0,Number(value)||1));
+  VISUAL_SCALE[key]=Math.round(n*100)/100;
+  if(devPanel){
+    const out=devPanel.querySelector(`[data-scale-value="${key}"]`);
+    if(out) out.textContent=VISUAL_SCALE[key].toFixed(2)+"×";
+  }
+}
+
+function exportVisualSettings(){
+  const text=`/* Exported from Little Realm Developer Mode */
+window.LR_VISUAL = ${JSON.stringify(VISUAL_SCALE,null,2)};
+`;
+  const blob=new Blob([text],{type:"text/javascript"});
+  const url=URL.createObjectURL(blob);
+  const a=document.createElement("a");
+  a.href=url;
+  a.download="visual-settings.js";
+  document.body.appendChild(a);
+  a.click(); a.remove();
+  setTimeout(()=>URL.revokeObjectURL(url),1000);
+  devSetStatus("Exported visual-settings.js");
+}
+
+function resetVisualScale(){
+  Object.assign(VISUAL_SCALE,PROJECT_VISUAL_SCALE);
+  if(!devPanel) return;
+  devPanel.querySelectorAll("[data-scale-key]").forEach(input=>{
+    input.value=VISUAL_SCALE[input.dataset.scaleKey];
+    updateVisualScaleControl(input.dataset.scaleKey,input.value);
+  });
+  devSetStatus("Visual scale reset to project settings");
+}
+
 function buildDeveloperPanel(){
   ensureDeveloperStyles();
   const root=document.createElement("aside");
@@ -383,6 +421,17 @@ function buildDeveloperPanel(){
     </div>
     <div class="devSectionTitle">Prop Palette</div>
     <div id="devPalette"></div>
+    <div class="devSectionTitle">Visual Scale</div>
+    <div id="devScalePanel">
+      <div class="devScaleControl"><div class="devScaleTop"><span>Player</span><span data-scale-value="player"></span></div><input data-scale-key="player" type="range" min="0.50" max="2.00" step="0.05" value="${VISUAL_SCALE.player}"></div>
+      <div class="devScaleControl"><div class="devScaleTop"><span>Hostile Mobs</span><span data-scale-value="hostileMobs"></span></div><input data-scale-key="hostileMobs" type="range" min="0.50" max="2.00" step="0.05" value="${VISUAL_SCALE.hostileMobs}"></div>
+      <div class="devScaleControl"><div class="devScaleTop"><span>Farm Animals</span><span data-scale-value="passiveMobs"></span></div><input data-scale-key="passiveMobs" type="range" min="0.50" max="2.00" step="0.05" value="${VISUAL_SCALE.passiveMobs}"></div>
+      <div class="devScaleControl"><div class="devScaleTop"><span>Bosses</span><span data-scale-value="boss"></span></div><input data-scale-key="boss" type="range" min="0.50" max="2.00" step="0.05" value="${VISUAL_SCALE.boss}"></div>
+      <div class="devScaleControl"><div class="devScaleTop"><span>Houses</span><span data-scale-value="houses"></span></div><input data-scale-key="houses" type="range" min="0.50" max="2.00" step="0.05" value="${VISUAL_SCALE.houses}"></div>
+      <div class="devScaleControl"><div class="devScaleTop"><span>NPCs</span><span data-scale-value="npcs"></span></div><input data-scale-key="npcs" type="range" min="0.50" max="2.00" step="0.05" value="${VISUAL_SCALE.npcs}"></div>
+      <div class="devScaleControl"><div class="devScaleTop"><span>Props</span><span data-scale-value="props"></span></div><input data-scale-key="props" type="range" min="0.50" max="2.00" step="0.05" value="${VISUAL_SCALE.props}"></div>
+      <div class="devScaleControl"><div class="devScaleTop"><span>Scale File</span><span>live</span></div><div class="devRow" style="margin-top:0"><button id="devExportScale">Export</button><button id="devResetScale">Reset</button></div></div>
+    </div>
     <div class="devSectionTitle">Existing Objects <span id="devObjectCount" style="float:right;font-weight:600;text-transform:none;letter-spacing:0;color:#a99bb3"></span></div>
     <div id="devObjectList"></div>
     <div class="devSectionTitle">Selected Object</div>
@@ -399,6 +448,12 @@ function buildDeveloperPanel(){
   root.querySelector("#devExport").onclick=exportDeveloperLayout;
   root.querySelector("#devLoadDraft").onclick=loadDeveloperDraft;
   root.querySelector("#devReset").onclick=resetDeveloperLayout;
+  root.querySelectorAll("[data-scale-key]").forEach(input=>{
+    updateVisualScaleControl(input.dataset.scaleKey,input.value);
+    input.oninput=()=>updateVisualScaleControl(input.dataset.scaleKey,input.value);
+  });
+  root.querySelector("#devExportScale").onclick=exportVisualSettings;
+  root.querySelector("#devResetScale").onclick=resetVisualScale;
   const palette=root.querySelector("#devPalette");
   const propTypes=[...Object.keys(PROP_SPECS),"caveEntrance"];
   for(const type of propTypes){

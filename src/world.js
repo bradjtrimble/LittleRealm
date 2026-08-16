@@ -400,13 +400,21 @@ function drawHouseObject(obj,camX,camY){
   const sx=obj.x-camX;
   const sy=obj.y-camY;
   const spec=obj.spec;
+  const scale=VISUAL_SCALE.houses;
+  const dw=spec.w*scale, dh=spec.h*scale;
+  const dx=sx+spec.w/2-dw/2;
+  const dy=sy+spec.h-dh; // keep the physical footprint anchored at the bottom
 
   if(spec.ready()){
     ctx.imageSmoothingEnabled=false;
-    ctx.drawImage(spec.image,Math.round(sx),Math.round(sy),spec.w,spec.h);
+    ctx.drawImage(spec.image,Math.round(dx),Math.round(dy),Math.round(dw),Math.round(dh));
     return;
   }
 
+  ctx.save();
+  ctx.translate(sx+spec.w/2,sy+spec.h);
+  ctx.scale(scale,scale);
+  ctx.translate(-(sx+spec.w/2),-(sy+spec.h));
   // Simple loading fallback.
   ctx.fillStyle="#d8c7a0";
   ctx.fillRect(sx+14,sy+38,spec.w-28,spec.h-45);
@@ -414,6 +422,7 @@ function drawHouseObject(obj,camX,camY){
   ctx.fillRect(sx+5,sy+22,spec.w-10,22);
   ctx.fillStyle="#70472c";
   ctx.fillRect(sx+spec.w*.47,sy+spec.h-32,14,32);
+  ctx.restore();
 }
 
 function drawTreeObject(obj,camX,camY){
@@ -580,6 +589,9 @@ function drawCastle(x,y){
 function drawNpcObject(obj,camX,camY){
   const x=Math.round(obj.x-camX), y=Math.round(obj.y-camY);
   ctx.save(); ctx.imageSmoothingEnabled=false;
+  ctx.translate(x,y+15);
+  ctx.scale(VISUAL_SCALE.npcs,VISUAL_SCALE.npcs);
+  ctx.translate(-x,-(y+15));
   ctx.fillStyle="rgba(0,0,0,.18)"; ctx.fillRect(x-6,y+8,12,3);
   ctx.fillStyle="#d9ad84"; ctx.fillRect(x-5,y-11,10,9);
   ctx.fillStyle="#5a3d2d"; ctx.fillRect(x-6,y-13,12,4); ctx.fillRect(x-6,y-9,2,5);
@@ -595,9 +607,17 @@ function drawNpcObject(obj,camX,camY){
 function drawPropObject(obj,camX,camY){
   const x=Math.round(obj.x-camX), y=Math.round(obj.y-camY);
   const spec=PROP_SPECS[obj.type];
-  if(spec && drawPropAtlasCell(spec,x,y)) return;
+  const baseW=spec?.w || (obj.type==="caveEntrance"?(obj.w||244):obj.type==="crops"?(obj.w||90):24);
+  const baseH=spec?.h || (obj.type==="caveEntrance"?(obj.h||176):obj.type==="crops"?(obj.h||70):24);
+  const pScale=VISUAL_SCALE.props;
 
   ctx.save(); ctx.imageSmoothingEnabled=false;
+  if(pScale!==1){
+    ctx.translate(x+baseW/2,y+baseH);
+    ctx.scale(pScale,pScale);
+    ctx.translate(-(x+baseW/2),-(y+baseH));
+  }
+  if(spec && drawPropAtlasCell(spec,x,y)){ ctx.restore(); return; }
   if(obj.type==="caveEntrance"){
     const w=obj.w||220, h=obj.h||160;
     ctx.fillStyle="rgba(0,0,0,.22)";
@@ -779,7 +799,7 @@ function drawWorld(){
       drawMob(ctx,mob,sx,sy);
 
       if(mob===combatTarget || mob===selectedTarget || mob.hp<mob.maxHp){
-        drawWorldHpBar(sx,sy-(mob.boss?38:29),mob.hp,mob.maxHp,mob.boss?52:38);
+        drawWorldHpBar(sx,sy-(mob.boss?38*VISUAL_SCALE.boss:29*mobVisualScale(mob)),mob.hp,mob.maxHp,mob.boss?52:38);
       }else if(mob.aggro){
         ctx.fillStyle="#f2d15f";
         ctx.beginPath();ctx.arc(sx,sy-26,4,0,Math.PI*2);ctx.fill();
@@ -791,8 +811,8 @@ function drawWorld(){
         const dx=combatTarget.x-state.x,dy=combatTarget.y-state.y,len=Math.max(1,Math.hypot(dx,dy));
         hx+=dx/len*5*phase; hy+=dy/len*5*phase;
       }
-      drawHero(ctx,hx,hy,0.055,isHeroMoving,moveAnimTime,heroFacing);
-      if(combatTarget || state.hp<state.maxHp) drawWorldHpBar(hx,hy-31,state.hp,state.maxHp,42);
+      drawHero(ctx,hx,hy,0.055*VISUAL_SCALE.player,isHeroMoving,moveAnimTime,heroFacing);
+      if(combatTarget || state.hp<state.maxHp) drawWorldHpBar(hx,hy-31*VISUAL_SCALE.player,state.hp,state.maxHp,42);
     }
   }
 

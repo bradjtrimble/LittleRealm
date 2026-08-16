@@ -1,4 +1,4 @@
-const CACHE_NAME = "little-realm-v30-custom-world";
+const CACHE_NAME = "little-realm-v31-visual-scale-tuner";
 const FILES = [
   "./",
   "./index.html",
@@ -7,6 +7,7 @@ const FILES = [
   "./js/pwa.js",
   "./js/runtime-loader.js",
   "./config/game-balance.js",
+  "./config/visual-settings.js",
   "./config/items.js",
   "./config/keybinds.js",
   "./config/world-objects.js",
