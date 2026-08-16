@@ -15,3 +15,10 @@ Press **F2** on desktop to toggle Developer Mode.
 - **Use Project Layout** returns the live editor to the currently deployed `config/world-objects.js` layout.
 
 `container` and `capacity` are stored now so future chest/storage interaction can use the same placed-object data without another map-format migration.
+
+
+## Depth / player overlap (v53)
+
+Selected world objects have a **Depth Mode**. `Y-Sort` is the recommended default: the player's feet are compared with the object's purple depth line. Feet above the line render behind the prop; feet below the line render in front. The line can be dragged outside the sprite bounds and is independent from collision.
+
+Fixed modes are available for special cases: **Always Behind Player**, **Always In Front of Player**, and **Ground / Floor**. The exported `world-objects.js` stores these as `depthMode` and (for Y-Sort) `depthY`. Older object files without these fields remain compatible; their default depth line is derived from the bottom of the object's hitbox.

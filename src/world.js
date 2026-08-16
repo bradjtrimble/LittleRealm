@@ -144,6 +144,44 @@ const PROP_SPECS = {
   bridge:{sx:247,sy:1902,sw:115,sh:104,w:52,h:40},
   steppingStones:{sx:369,sy:1901,sw:100,sh:98,w:52,h:34},
 };
+
+const WORLD_OBJECT_DEPTH_MODES = new Set(["ysort","behind","front","ground"]);
+
+function worldObjectDepthMode(obj){
+  const raw=String(obj?.depthMode||"ysort").toLowerCase();
+  if(raw==="background" || raw==="back") return "behind";
+  if(raw==="foreground" || raw==="overlay") return "front";
+  return WORLD_OBJECT_DEPTH_MODES.has(raw)?raw:"ysort";
+}
+
+function worldObjectBaseSize(obj){
+  if(!obj) return {w:32,h:32};
+  if(obj.type==="crops") return {w:obj.w||90,h:obj.h||70};
+  if(obj.type==="blockedGate") return {w:150,h:62};
+  if(obj.type==="caveEntrance") return {w:obj.w||220,h:obj.h||160};
+  return PROP_SPECS[obj.type]||{w:32,h:32};
+}
+
+function defaultWorldObjectDepthY(obj){
+  const spec=worldObjectBaseSize(obj);
+  const hb=obj?.hitbox;
+  const hitBottom=Number(hb?.y)+Number(hb?.h);
+  if(Number.isFinite(hitBottom)) return clamp(hitBottom,0,spec.h);
+  return Math.max(0,spec.h-2);
+}
+
+function worldObjectDepthY(obj){
+  return numberOr(obj?.depthY,defaultWorldObjectDepthY(obj));
+}
+
+function worldObjectRenderDepth(obj,heroY){
+  const mode=worldObjectDepthMode(obj);
+  if(mode==="ground") return -1000000000;
+  if(mode==="behind") return heroY-0.25;
+  if(mode==="front") return heroY+0.25;
+  return obj.y+worldObjectDepthY(obj);
+}
+
 const MOB_SPAWN_TILES = new Set([
   "18,5","21,4","24,6","19,8","22,9","26,5",
   "34,6","37,5","39,8","35,9","40,6",
@@ -746,8 +784,8 @@ function drawWorld(){
   }
   for(const prop of sceneryProps){
     const sx=prop.x-camX, sy=prop.y-camY;
-    if(sx<-180||sy<-100||sx>viewW+180||sy>viewH+120) continue;
-    renderables.push({kind:"prop",depth:prop.y+(prop.type==="blockedGate"?62:prop.type==="caveEntrance"?((prop.h||160)-10):36),obj:prop});
+    if(sx<-180||sy<-180||sx>viewW+180||sy>viewH+180) continue;
+    renderables.push({kind:"prop",depth:worldObjectRenderDepth(prop,state.y),obj:prop});
   }
   for(const npc of sceneryNPCs){
     const sx=npc.x-camX, sy=npc.y-camY;

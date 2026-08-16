@@ -11,7 +11,8 @@ const required=[
   'rebuildWorldObjectCollision','exportDeveloperLayout','DEV_DRAFT_KEY',
   'ensureDeveloperStyles','refreshDeveloperObjectList','devObjectList',
   'devPalette','Existing Objects','findDeveloperMobAt','refreshDeveloperMobPanel','mobTypeScaleKey','MOB_TYPE_SCALE','Selected Mob Type','Visual Scale',
-  'devHitboxEditing','devHitboxDrag','findDeveloperHitboxInteraction','updateDeveloperHitboxDrag','Edit Hitbox Visually','Finish Hitbox Editing'
+  'devHitboxEditing','devHitboxDrag','findDeveloperHitboxInteraction','updateDeveloperHitboxDrag','Edit Hitbox Visually','Finish Hitbox Editing',
+  'devDepthEditing','devDepthDrag','findDeveloperDepthInteraction','updateDeveloperDepthDrag','Edit Depth Line Visually','Depth Lines','worldObjectRenderDepth','worldObjectDepthMode'
 ];
 for(const s of required) if(!bundle.includes(s)) throw new Error('missing developer feature: '+s);
 if(!bundle.includes('#devPanel .devView{display:none}#devPanel .devView.active{display:block}')) throw new Error('developer tab active-view CSS specificity regression');
@@ -53,6 +54,8 @@ for(let i=0;i<objects.length;i++){
   if(o.solid!==undefined && typeof o.solid!=='boolean') throw new Error(`object ${o.id} solid must be true/false`);
   if(o.capacity!==undefined && (!Number.isFinite(Number(o.capacity)) || Number(o.capacity)<0)) throw new Error(`object ${o.id} capacity must be zero or greater`);
   if(o.contents!==undefined && !Array.isArray(o.contents)) throw new Error(`object ${o.id} contents must be an array`);
+  if(o.depthMode!==undefined && !['ysort','behind','front','ground'].includes(String(o.depthMode))) throw new Error(`object ${o.id} has invalid depthMode`);
+  if(o.depthY!==undefined && !Number.isFinite(Number(o.depthY))) throw new Error(`object ${o.id} depthY must be numeric`);
 }
 
 const propSpecCount=(bundle.match(/\{sx:\d+,sy:\d+,sw:\d+,sh:\d+,w:\d+,h:\d+\}/g)||[]).length;

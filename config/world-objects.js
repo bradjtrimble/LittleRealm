@@ -7,10 +7,10 @@ window.LR_WORLD_OBJECTS = [
     "y": 316,
     "solid": true,
     "hitbox": {
-      "x": 8,
-      "y": 39,
-      "w": 46,
-      "h": 20
+      "x": 13,
+      "y": 33,
+      "w": 37,
+      "h": 25
     },
     "interactable": true,
     "label": "Town Well",
@@ -24,9 +24,9 @@ window.LR_WORLD_OBJECTS = [
     "y": 568,
     "solid": true,
     "hitbox": {
-      "x": 13,
-      "y": 42,
-      "w": 24,
+      "x": 10,
+      "y": 35,
+      "w": 32,
       "h": 14
     },
     "interactable": true,
@@ -41,10 +41,10 @@ window.LR_WORLD_OBJECTS = [
     "y": 216,
     "solid": true,
     "hitbox": {
-      "x": 5,
-      "y": 40,
-      "w": 42,
-      "h": 14
+      "x": 8,
+      "y": 29,
+      "w": 34,
+      "h": 18
     },
     "interactable": true,
     "label": "Market Stall",
@@ -58,10 +58,10 @@ window.LR_WORLD_OBJECTS = [
     "y": 288,
     "solid": true,
     "hitbox": {
-      "x": 5,
-      "y": 39,
-      "w": 42,
-      "h": 13
+      "x": 13,
+      "y": 29,
+      "w": 31,
+      "h": 17
     },
     "interactable": true,
     "label": "Market Stall",
@@ -75,10 +75,10 @@ window.LR_WORLD_OBJECTS = [
     "y": 528,
     "solid": true,
     "hitbox": {
-      "x": 4,
-      "y": 19,
-      "w": 44,
-      "h": 10
+      "x": 9,
+      "y": 10,
+      "w": 36,
+      "h": 20
     },
     "interactable": false,
     "label": "Bench",
@@ -109,10 +109,10 @@ window.LR_WORLD_OBJECTS = [
     "y": 256,
     "solid": true,
     "hitbox": {
-      "x": 14,
-      "y": 48,
+      "x": 10,
+      "y": 37,
       "w": 10,
-      "h": 11
+      "h": 20
     },
     "interactable": false,
     "label": "Lamp",
@@ -126,10 +126,10 @@ window.LR_WORLD_OBJECTS = [
     "y": 280,
     "solid": true,
     "hitbox": {
-      "x": 14,
-      "y": 48,
-      "w": 10,
-      "h": 11
+      "x": 7,
+      "y": 34,
+      "w": 15,
+      "h": 24
     },
     "interactable": false,
     "label": "Lamp",

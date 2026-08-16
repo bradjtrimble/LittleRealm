@@ -122,6 +122,16 @@ except Exception as e:
     failed.append('developer world builder test'); print('FAIL developer world builder test',e)
 
 try:
+    depth_sort=subprocess.run(['node',str(ROOT/'tools'/'depth-sort-test.js')],check=True,capture_output=True,text=True)
+    print(depth_sort.stdout.strip())
+except subprocess.CalledProcessError as e:
+    failed.append('world object depth sort test')
+    detail=(e.stderr or e.stdout or str(e)).strip()
+    print('FAIL world object depth sort test',detail)
+except Exception as e:
+    failed.append('world object depth sort test'); print('FAIL world object depth sort test',e)
+
+try:
     config_test=subprocess.run(['node',str(ROOT/'tools'/'config-test.js')],check=True,capture_output=True,text=True)
     print(config_test.stdout.strip())
 except Exception as e:

@@ -7,8 +7,11 @@ let devDragging=false;
 let devDragOffset={x:0,y:0};
 let devHitboxEditing=false;
 let devHitboxDrag=null;
+let devDepthEditing=false;
+let devDepthDrag=null;
 let devShowGrid=true;
 let devShowHitboxes=true;
+let devShowDepthLines=true;
 let devSnap=8;
 let devStatusTimer=null;
 let devSelectedMob=null;
@@ -57,13 +60,17 @@ function ensureDeveloperStyles(){
     #devPanel #devInspector{padding:2px;min-height:180px}
     #devPanel .devEmpty{color:#baaec2;padding:12px;background:#2b2432;border-radius:9px}.devSelectedTitle{font-size:16px;font-weight:900;margin-bottom:9px;color:#7ceaff;text-transform:capitalize}
     #devPanel #devInspector label{display:flex;flex-direction:column;gap:4px;margin:7px 0;color:#d7cbdc}
-    #devPanel #devInspector input[type=text],#devPanel #devInspector input[type=number],#devPanel #devInspector input:not([type]){width:100%;background:#1c1821;color:#fff;border:1px solid #594b62;border-radius:7px;padding:8px}
+    #devPanel #devInspector input[type=text],#devPanel #devInspector input[type=number],#devPanel #devInspector input:not([type]),#devPanel #devInspector select{width:100%;background:#1c1821;color:#fff;border:1px solid #594b62;border-radius:7px;padding:8px}
     #devPanel .devChecks{display:grid;grid-template-columns:repeat(3,1fr);gap:6px;margin-top:8px} #devPanel .devChecks label{flex-direction:row!important;align-items:center!important;background:#2b2432;padding:8px;border-radius:7px}
     #devPanel .devPair{display:grid;grid-template-columns:1fr 1fr;gap:9px} #devPanel .devQuad{display:grid;grid-template-columns:repeat(4,1fr);gap:7px}
     #devPanel .devSubhead{font-weight:800;margin-top:10px;color:#c9b9d2} #devPanel .devRow{display:flex;gap:7px;margin-top:10px} #devPanel .devRow button{flex:1} #devPanel .devRow .danger{background:#713b47}
     #devPanel .devHitboxEditButton{width:100%;margin-top:8px;border:1px solid rgba(255,255,255,.14);background:#5a4869;color:#fff;border-radius:8px;padding:9px 10px;font-weight:900;cursor:pointer}
     #devPanel .devHitboxEditButton.active{outline:2px solid #ffd166;background:#66532b;color:#fff8dd}
     #devPanel .devHitboxEditHelp{margin-top:7px;padding:8px 9px;border:1px solid rgba(255,209,102,.18);border-radius:8px;background:rgba(255,209,102,.06);color:#d8cdbc;font-size:10px;line-height:1.35}
+    #devPanel .devDepthEditButton{width:100%;margin-top:8px;border:1px solid rgba(255,255,255,.14);background:#5a4869;color:#fff;border-radius:8px;padding:9px 10px;font-weight:900;cursor:pointer}
+    #devPanel .devDepthEditButton.active{outline:2px solid #d58cff;background:#59406a;color:#fff4ff}
+    #devPanel .devDepthEditButton:disabled{opacity:.42;cursor:not-allowed}
+    #devPanel .devDepthEditHelp{margin-top:7px;padding:8px 9px;border:1px solid rgba(213,140,255,.20);border-radius:8px;background:rgba(213,140,255,.07);color:#d8cdbc;font-size:10px;line-height:1.35}
     #devPanel .devProjectActions{display:grid;grid-template-columns:1fr 1fr;gap:7px;margin-top:12px} #devPanel .devProjectActions button:first-child{grid-column:1/-1;background:#38606a}
     #devPanel #devStatus{padding:9px 12px;background:#1d1822;color:#bdb0c5;font-size:11px;border-top:1px solid rgba(255,255,255,.08)}
 
@@ -109,6 +116,8 @@ function defaultWorldObject(type,x,y){
     y:Math.round(y),
     solid:false,
     hitbox:{x:Math.round((spec.w-hitW)/2),y:spec.h-hitH,w:hitW,h:hitH},
+    depthMode:"ysort",
+    depthY:spec.h,
     interactable:false,
     label:type.replace(/([A-Z])/g," $1").replace(/^./,c=>c.toUpperCase()),
     container:false,
@@ -150,6 +159,49 @@ function ensureDeveloperHitbox(obj){
   return obj.hitbox;
 }
 
+function ensureDeveloperDepth(obj){
+  if(!obj) return null;
+  if(!WORLD_OBJECT_DEPTH_MODES.has(String(obj.depthMode||"").toLowerCase())) obj.depthMode=worldObjectDepthMode(obj);
+  if(!Number.isFinite(Number(obj.depthY))) obj.depthY=defaultWorldObjectDepthY(obj);
+  return {mode:worldObjectDepthMode(obj),y:numberOr(obj.depthY,defaultWorldObjectDepthY(obj))};
+}
+
+function findDeveloperDepthInteraction(wx,wy){
+  if(!devDepthEditing || !devSelected || worldObjectDepthMode(devSelected)!=="ysort") return false;
+  const spec=worldObjectSpec(devSelected)||{w:32,h:32};
+  const depth=ensureDeveloperDepth(devSelected);
+  const lineY=devSelected.y+depth.y;
+  const grab=8/CAMERA_ZOOM;
+  return wx>=devSelected.x-grab*2 && wx<=devSelected.x+spec.w+grab*2 && Math.abs(wy-lineY)<=grab;
+}
+
+function setDeveloperDepthEditing(active){
+  devDepthEditing=!!active && !!devSelected && worldObjectDepthMode(devSelected)==="ysort";
+  devDepthDrag=null;
+  if(devDepthEditing){
+    devHitboxEditing=false;
+    devHitboxDrag=null;
+    ensureDeveloperDepth(devSelected);
+    devShowDepthLines=true;
+    const toggle=devPanel?.querySelector("#devDepthLines");
+    if(toggle) toggle.checked=true;
+    devSetStatus("Depth edit mode — drag the purple line up/down to control sprite overlap");
+  }else{
+    if(game?.style) game.style.cursor="";
+    devSetStatus("Depth edit mode finished");
+  }
+  refreshDeveloperPanel();
+}
+
+function updateDeveloperDepthDrag(p){
+  if(!devDepthDrag || !devSelected) return;
+  const spec=worldObjectSpec(devSelected)||{w:32,h:32};
+  const dy=Math.round(p.y-devDepthDrag.pointerY);
+  // Unlike collision hitboxes, depth anchors may extend outside the blue sprite box.
+  devSelected.depthY=Math.round(clampDev(devDepthDrag.depthY+dy,-spec.h,spec.h*2));
+  refreshDeveloperInspectorValues();
+}
+
 function findDeveloperHitboxInteraction(wx,wy){
   if(!devHitboxEditing || !devSelected) return null;
   const hb=ensureDeveloperHitbox(devSelected);
@@ -185,6 +237,8 @@ function setDeveloperHitboxEditing(active){
   devHitboxEditing=!!active && !!devSelected;
   devHitboxDrag=null;
   if(devHitboxEditing){
+    devDepthEditing=false;
+    devDepthDrag=null;
     ensureDeveloperHitbox(devSelected);
     devShowHitboxes=true;
     const toggle=devPanel?.querySelector("#devHitboxes");
@@ -353,6 +407,16 @@ function devPointerDown(event){
     return;
   }
 
+  if(findDeveloperDepthInteraction(p.x,p.y)){
+    const depth=ensureDeveloperDepth(devSelected);
+    devDragging=false;
+    devDepthDrag={pointerY:p.y,depthY:depth.y};
+    if(game?.style) game.style.cursor="ns-resize";
+    try{ game.setPointerCapture?.(event.pointerId); }catch{}
+    devSetStatus("Moving depth line — release to save");
+    return;
+  }
+
   const hitboxInteraction=findDeveloperHitboxInteraction(p.x,p.y);
   if(hitboxInteraction){
     const hb=ensureDeveloperHitbox(devSelected);
@@ -376,6 +440,8 @@ function devPointerDown(event){
     devDragging=false;
     devHitboxEditing=false;
     devHitboxDrag=null;
+    devDepthEditing=false;
+    devDepthDrag=null;
     devCombatMobType=mobTypeScaleKey(mob);
     if(devActiveTab!=="combat") setDeveloperTab("scale");
     refreshDeveloperPanel();
@@ -392,6 +458,10 @@ function devPointerDown(event){
       ensureDeveloperHitbox(devSelected);
       devDragging=false;
       devSetStatus(`Selected ${devSelected.label||devSelected.type} — drag the yellow hitbox or its handles`);
+    }else if(devDepthEditing && worldObjectDepthMode(devSelected)==="ysort"){
+      ensureDeveloperDepth(devSelected);
+      devDragging=false;
+      devSetStatus(`Selected ${devSelected.label||devSelected.type} — drag the purple depth line`);
     }else{
       devDragging=true;
       devDragOffset={x:p.x-devSelected.x,y:p.y-devSelected.y};
@@ -413,7 +483,15 @@ function devPointerMove(event){
     return;
   }
 
-  if(devHitboxEditing && devSelected && game?.style){
+  if(devDepthDrag && devSelected){
+    event.preventDefault(); event.stopImmediatePropagation();
+    updateDeveloperDepthDrag(p);
+    return;
+  }
+
+  if(devDepthEditing && devSelected && game?.style){
+    game.style.cursor=findDeveloperDepthInteraction(p.x,p.y)?"ns-resize":"";
+  }else if(devHitboxEditing && devSelected && game?.style){
     game.style.cursor=developerHitboxCursor(findDeveloperHitboxInteraction(p.x,p.y));
   }else if(game?.style && !devDragging){
     game.style.cursor="";
@@ -427,14 +505,17 @@ function devPointerMove(event){
   refreshDeveloperInspectorValues();
 }
 function devPointerUp(event){
-  if(!devModeActive || (!devDragging && !devHitboxDrag)) return;
+  if(!devModeActive || (!devDragging && !devHitboxDrag && !devDepthDrag)) return;
   event.preventDefault(); event.stopImmediatePropagation();
   devDragging=false;
   const finishedHitbox=!!devHitboxDrag;
+  const finishedDepth=!!devDepthDrag;
   devHitboxDrag=null;
+  devDepthDrag=null;
   try{ game.releasePointerCapture?.(event.pointerId); }catch{}
   saveDeveloperDraft();
   if(finishedHitbox) devSetStatus("Hitbox updated — keep dragging handles or click Finish Hitbox Editing");
+  else if(finishedDepth) devSetStatus("Depth line updated — move around the object to test front/behind overlap");
 }
 
 function drawDeveloperOverlay(camX,camY,viewW,viewH){
@@ -458,6 +539,18 @@ function drawDeveloperOverlay(camX,camY,viewW,viewH){
       ctx.strokeStyle="rgba(255,90,90,.8)";
       const x=obj.x+hb.x-camX,y=obj.y+hb.y-camY;
       ctx.fillRect(x,y,hb.w,hb.h);ctx.strokeRect(x,y,hb.w,hb.h);
+    }
+  }
+  if(devShowDepthLines){
+    for(const obj of sceneryProps){
+      if(worldObjectDepthMode(obj)!=="ysort") continue;
+      const spec=worldObjectSpec(obj);
+      if(!spec) continue;
+      const y=obj.y+worldObjectDepthY(obj)-camY;
+      const x=obj.x-camX;
+      ctx.strokeStyle=obj===devSelected?"rgba(213,140,255,.95)":"rgba(213,140,255,.32)";
+      ctx.lineWidth=(obj===devSelected?1.7:1)/CAMERA_ZOOM;
+      ctx.beginPath();ctx.moveTo(x-3,y);ctx.lineTo(x+spec.w+3,y);ctx.stroke();
     }
   }
   if(devSelected){
@@ -492,6 +585,21 @@ function drawDeveloperOverlay(camX,camY,viewW,viewH){
           ctx.strokeRect(px-half,py-half,handleSize,handleSize);
         }
       }
+
+      if(devDepthEditing && worldObjectDepthMode(devSelected)==="ysort"){
+        const depth=ensureDeveloperDepth(devSelected);
+        const lineY=y+depth.y;
+        ctx.strokeStyle="#d58cff";
+        ctx.fillStyle="#f2d7ff";
+        ctx.lineWidth=2/CAMERA_ZOOM;
+        ctx.beginPath();ctx.moveTo(x-8,lineY);ctx.lineTo(x+spec.w+8,lineY);ctx.stroke();
+        const r=5/CAMERA_ZOOM;
+        ctx.beginPath();
+        ctx.moveTo(x+spec.w/2,lineY-r);ctx.lineTo(x+spec.w/2+r,lineY);ctx.lineTo(x+spec.w/2,lineY+r);ctx.lineTo(x+spec.w/2-r,lineY);ctx.closePath();ctx.fill();
+        ctx.font=`${Math.max(7,9/CAMERA_ZOOM)}px system-ui`;
+        ctx.fillStyle="#f2d7ff";
+        ctx.fillText("DEPTH",x+spec.w+10,lineY-2/CAMERA_ZOOM);
+      }
     }
   }
   if(devSelectedMob && devSelectedMob.alive){
@@ -515,6 +623,8 @@ function deleteDeveloperSelection(){
   devSelected=null;
   devHitboxEditing=false;
   devHitboxDrag=null;
+  devDepthEditing=false;
+  devDepthDrag=null;
   rebuildWorldObjectCollision();
   saveDeveloperDraft();
   refreshDeveloperPanel();
@@ -543,6 +653,9 @@ function applyDeveloperInspector(){
   devSelected.hitbox.y=numberOr(q("devHbY").value,0);
   devSelected.hitbox.w=Math.max(1,numberOr(q("devHbW").value,16));
   devSelected.hitbox.h=Math.max(1,numberOr(q("devHbH").value,12));
+  devSelected.depthMode=WORLD_OBJECT_DEPTH_MODES.has(q("devDepthMode")?.value)?q("devDepthMode").value:"ysort";
+  devSelected.depthY=numberOr(q("devDepthY")?.value,defaultWorldObjectDepthY(devSelected));
+  if(devSelected.depthMode!=="ysort"){ devDepthEditing=false; devDepthDrag=null; }
   rebuildWorldObjectCollision();
   saveDeveloperDraft();
   refreshDeveloperPanel(false);
@@ -558,6 +671,9 @@ function refreshDeveloperInspectorValues(){
   if(q("devHbY")) q("devHbY").value=Math.round(hb.y);
   if(q("devHbW")) q("devHbW").value=Math.round(hb.w);
   if(q("devHbH")) q("devHbH").value=Math.round(hb.h);
+  const depth=ensureDeveloperDepth(devSelected);
+  if(q("devDepthMode")) q("devDepthMode").value=depth.mode;
+  if(q("devDepthY")) q("devDepthY").value=Math.round(depth.y);
 }
 
 function drawPaletteThumb(canvas,type){
@@ -621,6 +737,8 @@ function refreshDeveloperPanel(rebuild=true){
     return;
   }
   const hb=devSelected.hitbox||{x:0,y:0,w:16,h:12};
+  const depth=ensureDeveloperDepth(devSelected);
+  const canEditDepth=depth.mode==="ysort";
   inspector.innerHTML=`
     <div class="devSelectedTitle">${devSelected.type}</div>
     <label>Label<input id="devLabel" value="${String(devSelected.label||devSelected.type).replace(/"/g,"&quot;")}"></label>
@@ -630,9 +748,23 @@ function refreshDeveloperPanel(rebuild=true){
     <div class="devQuad"><label>X<input id="devHbX" type="number" value="${hb.x}"></label><label>Y<input id="devHbY" type="number" value="${hb.y}"></label><label>W<input id="devHbW" type="number" value="${hb.w}"></label><label>H<input id="devHbH" type="number" value="${hb.h}"></label></div>
     <button id="devEditHitbox" class="devHitboxEditButton${devHitboxEditing?" active":""}">${devHitboxEditing?"Finish Hitbox Editing":"Edit Hitbox Visually"}</button>
     <div class="devHitboxEditHelp">${devHitboxEditing?"Drag inside the yellow hitbox to move it. Drag any corner or side handle to resize it. Hitbox editing is pixel-precise and does not use the world-placement Snap setting.":"Use the visual editor instead of typing coordinates. The numeric fields stay available for exact values."}</div>
+    <div class="devSubhead">Player overlap / depth</div>
+    <label>Depth Mode<select id="devDepthMode"><option value="ysort" ${depth.mode==="ysort"?"selected":""}>Y-Sort (recommended)</option><option value="behind" ${depth.mode==="behind"?"selected":""}>Always Behind Player</option><option value="front" ${depth.mode==="front"?"selected":""}>Always In Front of Player</option><option value="ground" ${depth.mode==="ground"?"selected":""}>Ground / Floor</option></select></label>
+    <label>Depth line Y offset<input id="devDepthY" type="number" value="${Math.round(depth.y)}" ${canEditDepth?"":"disabled"}></label>
+    <button id="devEditDepth" class="devDepthEditButton${devDepthEditing?" active":""}" ${canEditDepth?"":"disabled"}>${devDepthEditing?"Finish Depth Editing":"Edit Depth Line Visually"}</button>
+    <div class="devDepthEditHelp">${canEditDepth?(devDepthEditing?"Drag the purple line up or down. Unlike the hitbox, the depth line can move outside the blue sprite box. Player feet above the line draw behind the object; feet below the line draw in front.":"Y-Sort compares the player's feet with this purple line. Use the fixed Behind/Front modes only when an object should never switch sides."):"This fixed depth mode ignores the Y-Sort line. Switch to Y-Sort to use a draggable depth anchor."}</div>
     <label>Container slots<input id="devCapacity" type="number" min="0" value="${devSelected.capacity||0}"></label>
     <div class="devRow"><button id="devApply">Apply</button><button id="devDuplicate">Duplicate</button><button id="devDelete" class="danger">Delete</button></div>`;
   inspector.querySelector("#devEditHitbox").onclick=()=>setDeveloperHitboxEditing(!devHitboxEditing);
+  inspector.querySelector("#devEditDepth").onclick=()=>setDeveloperDepthEditing(!devDepthEditing);
+  inspector.querySelector("#devDepthMode").onchange=e=>{
+    devSelected.depthMode=e.target.value;
+    if(devSelected.depthMode!=="ysort"){devDepthEditing=false;devDepthDrag=null;}
+    else ensureDeveloperDepth(devSelected);
+    saveDeveloperDraft();
+    refreshDeveloperPanel();
+    devSetStatus(`Depth mode: ${e.target.options[e.target.selectedIndex].text}`);
+  };
   inspector.querySelector("#devApply").onclick=applyDeveloperInspector;
   inspector.querySelector("#devDuplicate").onclick=duplicateDeveloperSelection;
   inspector.querySelector("#devDelete").onclick=deleteDeveloperSelection;
@@ -881,6 +1013,7 @@ function buildDeveloperPanel(){
       <label>Snap <select id="devSnap"><option>4</option><option selected>8</option><option>16</option><option>32</option><option>64</option></select></label>
       <label><input id="devGrid" type="checkbox" checked> Grid</label>
       <label><input id="devHitboxes" type="checkbox" checked> Hitboxes</label>
+      <label><input id="devDepthLines" type="checkbox" checked> Depth Lines</label>
     </div>
     <div class="devTabs">
       <button class="devTab active" data-dev-tab="objects">Objects</button>
@@ -919,11 +1052,13 @@ function buildDeveloperPanel(){
   root.querySelector("#devSelect").onclick=()=>{
     devPlaceType=null;
     if(devHitboxEditing) setDeveloperHitboxEditing(false);
+    else if(devDepthEditing) setDeveloperDepthEditing(false);
     else{ updateDevPaletteActive();devSetStatus("Select / Move mode"); }
   };
   root.querySelector("#devSnap").onchange=e=>{devSnap=Number(e.target.value)||8;};
   root.querySelector("#devGrid").onchange=e=>{devShowGrid=e.target.checked;};
   root.querySelector("#devHitboxes").onchange=e=>{devShowHitboxes=e.target.checked;};
+  root.querySelector("#devDepthLines").onchange=e=>{devShowDepthLines=e.target.checked;};
   root.querySelector("#devExport").onclick=exportDeveloperLayout;
   root.querySelector("#devLoadDraft").onclick=loadDeveloperDraft;
   root.querySelector("#devReset").onclick=resetDeveloperLayout;
@@ -941,7 +1076,7 @@ function buildDeveloperPanel(){
     const cv=document.createElement("canvas");cv.width=48;cv.height=48;
     const name=document.createElement("span");name.textContent=type.replace(/([A-Z])/g," $1");
     b.append(cv,name);
-    b.onclick=()=>{devPlaceType=type;devSelectedMob=null;devHitboxEditing=false;devHitboxDrag=null;setDeveloperTab("objects");updateDevPaletteActive();devSetStatus(`Placing ${type} — click the world`);};
+    b.onclick=()=>{devPlaceType=type;devSelectedMob=null;devHitboxEditing=false;devHitboxDrag=null;devDepthEditing=false;devDepthDrag=null;setDeveloperTab("objects");updateDevPaletteActive();devSetStatus(`Placing ${type} — click the world`);};
     palette.appendChild(b);
     drawPaletteThumb(cv,type);
   }
@@ -969,6 +1104,8 @@ function setDeveloperMode(active){
     devPlaceType=null;
     devHitboxEditing=false;
     devHitboxDrag=null;
+    devDepthEditing=false;
+    devDepthDrag=null;
     if(game?.style) game.style.cursor="";
   }
   updateDevPaletteActive();
@@ -997,6 +1134,7 @@ function initDeveloperMode(){
     if(!devModeActive)return;
     if(event.code==="Escape"){
       if(devHitboxEditing){setDeveloperHitboxEditing(false);}
+      else if(devDepthEditing){setDeveloperDepthEditing(false);}
       else if(devPlaceType){devPlaceType=null;updateDevPaletteActive();devSetStatus("Select / Move mode");}
       else if(devSelected){devSelected=null;refreshDeveloperPanel();}
       return;

@@ -1,4 +1,4 @@
-const CACHE_NAME = "little-realm-v52-visual-hitbox-editor";
+const CACHE_NAME = "little-realm-v53-depth-sort-editor";
 const FILES = [
   "./",
   "./index.html",
