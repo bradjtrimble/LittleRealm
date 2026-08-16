@@ -1,7 +1,4 @@
-/*
-  Little Realm world layout — integrated from the latest Developer Mode export.
-  This is now the project baseline layout for full packaged updates.
-*/
+/* Exported from Little Realm Developer Mode */
 window.LR_WORLD_OBJECTS = [
   {
     "id": "town-well",
@@ -40,8 +37,8 @@ window.LR_WORLD_OBJECTS = [
   {
     "id": "town-market-red",
     "type": "marketRed",
-    "x": 400,
-    "y": 224,
+    "x": 368,
+    "y": 216,
     "solid": true,
     "hitbox": {
       "x": 5,
@@ -75,7 +72,7 @@ window.LR_WORLD_OBJECTS = [
     "id": "town-bench",
     "type": "bench",
     "x": 208,
-    "y": 536,
+    "y": 528,
     "solid": true,
     "hitbox": {
       "x": 4,
@@ -91,8 +88,8 @@ window.LR_WORLD_OBJECTS = [
   {
     "id": "town-mailbox",
     "type": "mailbox",
-    "x": 728,
-    "y": 290,
+    "x": 576,
+    "y": 480,
     "solid": true,
     "hitbox": {
       "x": 11,
@@ -108,8 +105,8 @@ window.LR_WORLD_OBJECTS = [
   {
     "id": "town-lamp-west",
     "type": "lamppost",
-    "x": 312,
-    "y": 264,
+    "x": 336,
+    "y": 256,
     "solid": true,
     "hitbox": {
       "x": 14,
@@ -142,7 +139,7 @@ window.LR_WORLD_OBJECTS = [
   {
     "id": "town-flowers-a",
     "type": "flowerBoxA",
-    "x": 200,
+    "x": 184,
     "y": 248,
     "solid": false,
     "hitbox": {
@@ -210,7 +207,7 @@ window.LR_WORLD_OBJECTS = [
   {
     "id": "farm-trough",
     "type": "trough",
-    "x": 528,
+    "x": 520,
     "y": 1440,
     "solid": true,
     "hitbox": {
@@ -227,8 +224,8 @@ window.LR_WORLD_OBJECTS = [
   {
     "id": "farm-scarecrow",
     "type": "scarecrow",
-    "x": 368,
-    "y": 1312,
+    "x": 376,
+    "y": 1304,
     "solid": true,
     "hitbox": {
       "x": 15,
