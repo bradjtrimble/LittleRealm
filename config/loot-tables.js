@@ -22,11 +22,13 @@
       { itemId: "slimeGel", chancePercent: 70, minQty: 1, maxQty: 2 }
     ]
 
-  Tables are empty on purpose in this foundation build, so adding the system
-  does not change existing gameplay rewards until you start defining items.
+  Slime Gel is the first live loot item. Other default mob tables remain empty
+  until more item content is added.
 */
 window.LR_LOOT_TABLES = {
-  slime: [],
+  slime: [
+    { itemId: "slimeGel", chancePercent: 70, minQty: 1, maxQty: 2 }
+  ],
   goblin: [],
   wolf: [],
   cow: [],

@@ -15,6 +15,7 @@ slimeGel: {
   name: "Slime Gel",
   description: "A springy glob left behind by a slime.",
   symbol: "G",
+  icon: "./assets/items/slime-gel.png",
   category: "Material",
   rarity: "Common",
   stackLimit: 50,
@@ -56,4 +57,6 @@ This lets future chests, gathering, quests, fishing, bosses, or scripted rewards
 
 ## Current behavior
 
-All default loot tables are intentionally empty in v48. Existing XP, gold, and potion rewards are unchanged. Once item entries are added, mob kills automatically roll them and place successful drops in the backpack. If the backpack cannot hold the full quantity, the victory message reports the uncollected overflow instead of silently claiming it was received.
+Slimes now have the first live loot entry: **Slime Gel** at a 70% independent drop chance for **1–2** gel. The other default mob tables remain empty. Existing XP, gold, and potion rewards are unchanged. Successful item drops are placed in the backpack automatically. If the backpack cannot hold the full quantity, the victory message reports the uncollected overflow instead of silently claiming it was received.
+
+Item definitions can also set an optional `icon` path. When present, the backpack shows that artwork in the slot and item-details panel; `symbol` remains the fallback for items without artwork.

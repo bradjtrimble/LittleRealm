@@ -13,6 +13,15 @@ if(!loader.includes('keybinds.js", true')) throw new Error('keybind config not c
 if(!loader.includes('items.js", true')) throw new Error('item config not cache-busted');
 if(!loader.includes('loot-tables.js", true')) throw new Error('loot-table config not cache-busted');
 if(!loader.includes('visual-settings.js", true')) throw new Error('visual config not cache-busted');
+const itemCfg=fs.readFileSync(path.join(ROOT,'config','items.js'),'utf8');
+const itemSandbox={}; itemSandbox.window=itemSandbox; require('vm').runInNewContext(itemCfg,itemSandbox);
+if(itemSandbox.LR_ITEMS?.slimeGel?.name!=='Slime Gel') throw new Error('Slime Gel item definition missing');
+if(itemSandbox.LR_ITEMS.slimeGel.icon!=='./assets/items/slime-gel.png') throw new Error('Slime Gel icon path mismatch');
+if(!fs.existsSync(path.join(ROOT,'assets','items','slime-gel.png'))) throw new Error('Slime Gel artwork missing');
+const lootCfg=fs.readFileSync(path.join(ROOT,'config','loot-tables.js'),'utf8');
+const lootSandbox={}; lootSandbox.window=lootSandbox; require('vm').runInNewContext(lootCfg,lootSandbox);
+const slimeGelDrop=lootSandbox.LR_LOOT_TABLES?.slime?.find(entry=>entry.itemId==='slimeGel');
+if(!slimeGelDrop||slimeGelDrop.chancePercent!==70||slimeGelDrop.minQty!==1||slimeGelDrop.maxQty!==2) throw new Error('Slime Gel loot entry mismatch');
 const visualCfg=fs.readFileSync(path.join(ROOT,'config','visual-settings.js'),'utf8');
 const visualSandbox={}; visualSandbox.window=visualSandbox; require('vm').runInNewContext(visualCfg,visualSandbox);
 if(!visualSandbox.LR_VISUAL?.mobTypes?.wolf) throw new Error('per-mob visual settings missing');

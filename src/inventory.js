@@ -19,6 +19,7 @@ function getItemDefinition(itemId){
     name:typeof raw.name==="string"&&raw.name.trim()?raw.name:fallbackName,
     description:typeof raw.description==="string"?raw.description:"",
     symbol:typeof raw.symbol==="string"&&raw.symbol.trim()?raw.symbol.trim().slice(0,2):fallbackName.slice(0,1).toUpperCase(),
+    icon:typeof raw.icon==="string"&&raw.icon.trim()?raw.icon.trim():"",
     stackLimit:Math.max(1,Math.floor(numberOr(raw.stackLimit,INVENTORY_DEFAULT_STACK_LIMIT))),
     category:typeof raw.category==="string"&&raw.category.trim()?raw.category.trim():"Item",
     rarity:typeof raw.rarity==="string"&&raw.rarity.trim()?raw.rarity.trim():"Common",
@@ -145,7 +146,10 @@ function renderInventory(){
       return `<button class="inventorySlot empty" data-slot="${index}" aria-label="Empty inventory slot ${index+1}"><span class="slotNumber">${index+1}</span></button>`;
     }
     const def=getItemDefinition(slot.id);
-    return `<button class="inventorySlot${selectedInventorySlot===index?" selected":""}" data-slot="${index}" aria-label="${inventoryEscape(def.name)}, quantity ${slot.qty}"><span class="itemSymbol">${inventoryEscape(def.symbol)}</span><span class="itemQty">${slot.qty}</span></button>`;
+    const iconMarkup=def.icon
+      ?`<img class="itemIcon" src="${inventoryEscape(def.icon)}" alt="" aria-hidden="true">`
+      :`<span class="itemSymbol">${inventoryEscape(def.symbol)}</span>`;
+    return `<button class="inventorySlot${selectedInventorySlot===index?" selected":""}" data-slot="${index}" aria-label="${inventoryEscape(def.name)}, quantity ${slot.qty}">${iconMarkup}<span class="itemQty">${slot.qty}</span></button>`;
   }).join("");
 
   updateBackpackHud();
@@ -163,7 +167,10 @@ function renderInventoryDetails(){
   }
   const def=getItemDefinition(slot.id);
   const valueText=def.sellValue>0?` • Value ${def.sellValue}g`:"";
-  details.innerHTML=`<div class="inventoryDetailTitle"><span class="detailSymbol">${inventoryEscape(def.symbol)}</span><span>${inventoryEscape(def.name)}</span><b>×${slot.qty}</b></div><div class="inventoryDetailMeta">${inventoryEscape(def.category)} • ${inventoryEscape(def.rarity)} • Stack ${slot.qty}/${def.stackLimit}${valueText}</div><div class="inventoryDetailDescription">${inventoryEscape(def.description||"No description yet.")}</div>`;
+  const detailIcon=def.icon
+    ?`<img class="detailIcon" src="${inventoryEscape(def.icon)}" alt="" aria-hidden="true">`
+    :`<span class="detailSymbol">${inventoryEscape(def.symbol)}</span>`;
+  details.innerHTML=`<div class="inventoryDetailTitle">${detailIcon}<span>${inventoryEscape(def.name)}</span><b>×${slot.qty}</b></div><div class="inventoryDetailMeta">${inventoryEscape(def.category)} • ${inventoryEscape(def.rarity)} • Stack ${slot.qty}/${def.stackLimit}${valueText}</div><div class="inventoryDetailDescription">${inventoryEscape(def.description||"No description yet.")}</div>`;
 }
 
 function selectInventorySlot(index){
