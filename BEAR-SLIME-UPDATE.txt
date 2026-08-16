@@ -1,4 +1,0 @@
-v36 update
-- Replaced Snickers bear sprite sheet
-- Replaced slime sprite sheet
-- Bumped service worker cache name so new mob art refreshes correctly

@@ -1,4 +1,0 @@
-v45 startup fix
-- Combat Test panel now tolerates the pre-reset startup phase.
-- Opening Developer Mode refreshes live Combat Test values after player state exists.
-- Prevents Developer Mode UI from stopping reset() / requestAnimationFrame startup.

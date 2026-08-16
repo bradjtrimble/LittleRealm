@@ -1,6 +1,0 @@
-Little Realm v34
-
-Fixes the World Builder tabs appearing empty.
-Cause: the hidden-view CSS selector had higher specificity than the active-view selector.
-The active tab now displays correctly, and tools/devmode-test.js guards against regression.
-This build retains the v33 wolf and goblin sprite fixes and the current custom world/visual settings.

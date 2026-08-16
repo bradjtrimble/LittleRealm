@@ -1,5 +1,0 @@
-Little Realm v26 - Clean Prop Sheet
-
-The new prop sheet is mapped using tight per-sprite source rectangles, so the builder no longer relies on a uniform grid crop. Existing object IDs, display sizes, positions, and hitboxes remain compatible.
-
-IMPORTANT: If you have customized config/world-objects.js, keep your customized copy when merging this project update. The prop art update does not require replacing that file.

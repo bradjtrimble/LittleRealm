@@ -1,8 +1,0 @@
-Little Realm v53 — Depth Sort Editor
-
-- World Builder adds per-object Depth Mode: Y-Sort, Always Behind Player, Always In Front of Player, and Ground / Floor.
-- Y-Sort uses a draggable purple depth line based on the player's feet.
-- Depth lines can move outside the blue sprite bounds; collision hitboxes remain constrained to the sprite.
-- Default Y-Sort depth is derived from the bottom of each object hitbox for natural top-down overlap.
-- Updated config/world-objects.js with the latest exported object positions/hitboxes supplied for this build.
-- Existing visual hitbox editor remains intact.

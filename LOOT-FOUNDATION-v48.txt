@@ -1,9 +1,0 @@
-Little Realm v48 — Loot Foundation
-
-- Added data-driven item metadata fields for rarity, value, and tags.
-- Added config/loot-tables.js with empty tables for every current mob.
-- Added src/loot.js and stable window.LR_LOOT APIs.
-- Mob victories now roll their configured loot table and grant through the backpack system.
-- Full-backpack overflow is reported instead of silently counted as collected.
-- Added loot documentation and automated regression coverage.
-- Existing XP, gold, potion rewards, terrain, collision, camera, and combat balance remain unchanged.

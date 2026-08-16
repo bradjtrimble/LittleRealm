@@ -1,9 +1,0 @@
-Little Realm v47 polish pass
-
-Polish only; no intentional combat-balance changes.
-- Refined HUD, menus, buttons, bars, quest state, and low-HP feedback.
-- Added target threat/rank and live DEF / player hit chance to the target HUD.
-- Improved damage number colors (incoming damage, miss, heal, crit).
-- Improved selected-mob name/level presentation and scale-aware ground shadows.
-- Updated stale build/cache/version markers.
-- Preserved current world layout, visual settings, mob art, mob levels, elites, boss rules, combat tuning lab, and rebalanced game-balance.js.

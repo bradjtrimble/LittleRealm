@@ -1,9 +1,0 @@
-Little Realm v49 — Slime Gel
-
-- Added Slime Gel item definition.
-- Added 70% Slime Gel drop chance to the slime loot table.
-- Successful drops grant 1–2 Slime Gel.
-- Slime Gel stacks to 50.
-- Added item artwork support to backpack slots and item details.
-- Artwork: assets/items/slime-gel.png
-- Added validation that the configured artwork file exists.
