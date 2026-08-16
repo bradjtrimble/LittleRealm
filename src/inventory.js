@@ -20,7 +20,10 @@ function getItemDefinition(itemId){
     description:typeof raw.description==="string"?raw.description:"",
     symbol:typeof raw.symbol==="string"&&raw.symbol.trim()?raw.symbol.trim().slice(0,2):fallbackName.slice(0,1).toUpperCase(),
     stackLimit:Math.max(1,Math.floor(numberOr(raw.stackLimit,INVENTORY_DEFAULT_STACK_LIMIT))),
-    category:typeof raw.category==="string"?raw.category:"Item"
+    category:typeof raw.category==="string"&&raw.category.trim()?raw.category.trim():"Item",
+    rarity:typeof raw.rarity==="string"&&raw.rarity.trim()?raw.rarity.trim():"Common",
+    sellValue:Math.max(0,Math.floor(numberOr(raw.sellValue,0))),
+    tags:Array.isArray(raw.tags)?raw.tags.filter(tag=>typeof tag==="string"&&tag.trim()).map(tag=>tag.trim()):[]
   };
 }
 
@@ -159,7 +162,8 @@ function renderInventoryDetails(){
     return;
   }
   const def=getItemDefinition(slot.id);
-  details.innerHTML=`<div class="inventoryDetailTitle"><span class="detailSymbol">${inventoryEscape(def.symbol)}</span><span>${inventoryEscape(def.name)}</span><b>×${slot.qty}</b></div><div class="inventoryDetailMeta">${inventoryEscape(def.category)} • Stack ${slot.qty}/${def.stackLimit}</div><div class="inventoryDetailDescription">${inventoryEscape(def.description||"No description yet.")}</div>`;
+  const valueText=def.sellValue>0?` • Value ${def.sellValue}g`:"";
+  details.innerHTML=`<div class="inventoryDetailTitle"><span class="detailSymbol">${inventoryEscape(def.symbol)}</span><span>${inventoryEscape(def.name)}</span><b>×${slot.qty}</b></div><div class="inventoryDetailMeta">${inventoryEscape(def.category)} • ${inventoryEscape(def.rarity)} • Stack ${slot.qty}/${def.stackLimit}${valueText}</div><div class="inventoryDetailDescription">${inventoryEscape(def.description||"No description yet.")}</div>`;
 }
 
 function selectInventorySlot(index){

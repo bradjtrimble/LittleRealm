@@ -86,6 +86,16 @@ except Exception as e:
     failed.append('backpack inventory test'); print('FAIL backpack inventory test',e)
 
 try:
+    loot=subprocess.run(['node',str(ROOT/'tools'/'loot-test.js')],check=True,capture_output=True,text=True)
+    print(loot.stdout.strip())
+except subprocess.CalledProcessError as e:
+    failed.append('loot foundation test')
+    detail=(e.stderr or e.stdout or str(e)).strip()
+    print('FAIL loot foundation test',detail)
+except Exception as e:
+    failed.append('loot foundation test'); print('FAIL loot foundation test',e)
+
+try:
     zone=subprocess.run(['python3',str(ROOT/'tools'/'zone-test.py')],check=True,capture_output=True,text=True)
     print(zone.stdout.strip())
 except Exception as e:

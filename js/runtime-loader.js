@@ -37,6 +37,13 @@
     }
 
     try {
+      await loadScript("./config/loot-tables.js", true);
+    } catch (err) {
+      console.warn("Fresh loot-table config unavailable; trying offline cache.", err);
+      await loadScript("./config/loot-tables.js");
+    }
+
+    try {
       await loadScript("./config/keybinds.js", true);
     } catch (err) {
       console.warn("Fresh keybind config unavailable; trying offline cache.", err);

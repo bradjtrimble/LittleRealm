@@ -1,4 +1,4 @@
-const CACHE_NAME = "little-realm-v47-polish-pass";
+const CACHE_NAME = "little-realm-v48-loot-foundation";
 const FILES = [
   "./",
   "./index.html",
@@ -9,6 +9,7 @@ const FILES = [
   "./config/game-balance.js",
   "./config/visual-settings.js",
   "./config/items.js",
+  "./config/loot-tables.js",
   "./config/keybinds.js",
   "./config/world-objects.js",
   "./js/game.js",
@@ -45,7 +46,7 @@ self.addEventListener("fetch", event => {
 
   if(isLiveConfig){
     event.respondWith((async () => {
-      // Always ask the network for editable balance/keybind config and bypass
+      // Always ask the network for editable game config and bypass
       // the browser HTTP cache. Save a canonical copy only for offline use.
       const canonicalUrl = new URL(event.request.url);
       canonicalUrl.search = "";

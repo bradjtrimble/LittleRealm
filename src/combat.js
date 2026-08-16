@@ -291,6 +291,7 @@ function defeatWorldMob(mob){
   if(e.potionDropAmount>0 && Math.random()<e.potionDropChance) potionDrop=e.potionDropAmount;
 
   const xpReward=mobXpReward(mob);
+  const lootReward=grantMobLoot(mob);
   state.xp+=xpReward;
   state.gold+=gold;
   state.potions+=potionDrop;
@@ -313,11 +314,15 @@ function defeatWorldMob(mob){
   disengageCombat(false);
 
   if(mob.boss){
-    toast("You defeated Snickers!");
+    const bossLoot=lootReward.added.length?` Loot: ${formatLootDrops(lootReward.added)}.`:"";
+    const bossOverflow=lootReward.overflow.length?` Backpack full: ${formatLootDrops(lootReward.overflow)} not collected.`:"";
+    toast(`You defeated Snickers!${bossLoot}${bossOverflow}`);
   }else{
     const rewards=[`+${xpReward} XP`];
     if(gold>0) rewards.push(`+${gold} gold`);
     if(potionDrop>0) rewards.push(`+${potionDrop} potion${potionDrop===1?"":"s"}`);
+    if(lootReward.added.length) rewards.push(`Loot: ${formatLootDrops(lootReward.added)}`);
+    if(lootReward.overflow.length) rewards.push(`Backpack full: ${formatLootDrops(lootReward.overflow)} not collected`);
     toast(`Defeated ${mobDisplayName(mob)}: ${rewards.join(", ")}`);
   }
   updateUI();
@@ -622,6 +627,7 @@ function winBattle(){
   const e=enemy;
   let gold=rand(e.gold[0],e.gold[1]);
   if(e.elite && gold>0) gold=Math.max(1,Math.round(gold*numberOr(BALANCE.mobLevels?.eliteGoldMultiplier,1.5)));
+  const lootReward=grantMobLoot(currentMob||e);
   state.xp+=e.xp;
   state.gold+=gold;
   state.kills++;
@@ -644,8 +650,10 @@ function winBattle(){
   levelCheck();
   endBattle();
 
-  if(e.boss)toast("You defeated Snickers!");
-  else toast(`Defeated ${e.elite?"Elite ":""}${e.name}: +${e.xp} XP, +${gold} gold`);
+  const lootText=lootReward.added.length?`, Loot: ${formatLootDrops(lootReward.added)}`:"";
+  const overflowText=lootReward.overflow.length?`, Backpack full: ${formatLootDrops(lootReward.overflow)} not collected`:"";
+  if(e.boss)toast(`You defeated Snickers!${lootText}${overflowText}`);
+  else toast(`Defeated ${e.elite?"Elite ":""}${e.name}: +${e.xp} XP, +${gold} gold${lootText}${overflowText}`);
   updateUI();
 }
 

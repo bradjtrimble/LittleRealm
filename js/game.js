@@ -264,7 +264,10 @@ function getItemDefinition(itemId){
     description:typeof raw.description==="string"?raw.description:"",
     symbol:typeof raw.symbol==="string"&&raw.symbol.trim()?raw.symbol.trim().slice(0,2):fallbackName.slice(0,1).toUpperCase(),
     stackLimit:Math.max(1,Math.floor(numberOr(raw.stackLimit,INVENTORY_DEFAULT_STACK_LIMIT))),
-    category:typeof raw.category==="string"?raw.category:"Item"
+    category:typeof raw.category==="string"&&raw.category.trim()?raw.category.trim():"Item",
+    rarity:typeof raw.rarity==="string"&&raw.rarity.trim()?raw.rarity.trim():"Common",
+    sellValue:Math.max(0,Math.floor(numberOr(raw.sellValue,0))),
+    tags:Array.isArray(raw.tags)?raw.tags.filter(tag=>typeof tag==="string"&&tag.trim()).map(tag=>tag.trim()):[]
   };
 }
 
@@ -403,7 +406,8 @@ function renderInventoryDetails(){
     return;
   }
   const def=getItemDefinition(slot.id);
-  details.innerHTML=`<div class="inventoryDetailTitle"><span class="detailSymbol">${inventoryEscape(def.symbol)}</span><span>${inventoryEscape(def.name)}</span><b>×${slot.qty}</b></div><div class="inventoryDetailMeta">${inventoryEscape(def.category)} • Stack ${slot.qty}/${def.stackLimit}</div><div class="inventoryDetailDescription">${inventoryEscape(def.description||"No description yet.")}</div>`;
+  const valueText=def.sellValue>0?` • Value ${def.sellValue}g`:"";
+  details.innerHTML=`<div class="inventoryDetailTitle"><span class="detailSymbol">${inventoryEscape(def.symbol)}</span><span>${inventoryEscape(def.name)}</span><b>×${slot.qty}</b></div><div class="inventoryDetailMeta">${inventoryEscape(def.category)} • ${inventoryEscape(def.rarity)} • Stack ${slot.qty}/${def.stackLimit}${valueText}</div><div class="inventoryDetailDescription">${inventoryEscape(def.description||"No description yet.")}</div>`;
 }
 
 function selectInventorySlot(index){
@@ -444,6 +448,142 @@ window.LR_INVENTORY=Object.freeze({
   canAddItem,
   getUsedSlots:getInventoryUsedSlots,
   getSlotCount:()=>INVENTORY_SLOT_COUNT
+});
+
+// Data-driven loot foundation. Item definitions live in config/items.js and
+// drop rules live in config/loot-tables.js. Combat only asks this module to
+// grant a mob's loot; it never needs to know individual item IDs or chances.
+const LOOT_TABLES = window.LR_LOOT_TABLES || {};
+const warnedLootProblems = new Set();
+
+function lootWarnOnce(key,message){
+  if(warnedLootProblems.has(key)) return;
+  warnedLootProblems.add(key);
+  console.warn(`[Little Realm loot] ${message}`);
+}
+
+function getLootTable(tableId){
+  const raw=LOOT_TABLES[tableId];
+  if(Array.isArray(raw)) return raw;
+  if(raw&&Array.isArray(raw.entries)) return raw.entries;
+  return [];
+}
+
+function lootEntryAllowed(entry,context){
+  if(!entry||typeof entry.itemId!=="string"||!entry.itemId.trim()) return false;
+  if(entry.requiresElite&&!context.elite) return false;
+  if(entry.requiresBoss&&!context.boss) return false;
+  const level=Math.max(1,Math.floor(numberOr(context.level,1)));
+  if(Number.isFinite(Number(entry.minLevel))&&level<Number(entry.minLevel)) return false;
+  if(Number.isFinite(Number(entry.maxLevel))&&level>Number(entry.maxLevel)) return false;
+  return true;
+}
+
+function rollLootTable(tableId,context={},rng=Math.random){
+  const table=getLootTable(tableId);
+  const totals=new Map();
+
+  for(const entry of table){
+    if(!lootEntryAllowed(entry,context)) continue;
+    const itemId=entry.itemId.trim();
+    if(!Object.prototype.hasOwnProperty.call(ITEM_DEFS,itemId)){
+      lootWarnOnce(`missing-item:${tableId}:${itemId}`,`Table "${tableId}" references unknown item "${itemId}". Add it to config/items.js first.`);
+      continue;
+    }
+
+    const chance=clamp(numberOr(entry.chancePercent,100),0,100);
+    if(chance<=0||rng()*100>=chance) continue;
+
+    const minQty=Math.max(1,Math.floor(numberOr(entry.minQty,1)));
+    const maxQty=Math.max(minQty,Math.floor(numberOr(entry.maxQty,minQty)));
+    const qty=minQty+Math.floor(rng()*(maxQty-minQty+1));
+    totals.set(itemId,(totals.get(itemId)||0)+qty);
+  }
+
+  return [...totals].map(([itemId,qty])=>({itemId,qty}));
+}
+
+function grantLootDrops(drops){
+  const added=[];
+  const overflow=[];
+  for(const drop of Array.isArray(drops)?drops:[]){
+    if(!drop||typeof drop.itemId!=="string") continue;
+    const qty=Math.max(0,Math.floor(numberOr(drop.qty,0)));
+    if(qty<=0) continue;
+    const result=addItem(drop.itemId,qty);
+    if(result.added>0) added.push({itemId:drop.itemId,qty:result.added});
+    if(result.remaining>0) overflow.push({itemId:drop.itemId,qty:result.remaining});
+  }
+  return {added,overflow};
+}
+
+function lootTableIdForMob(mob){
+  if(!mob) return "";
+  const template=mob.template||mob;
+  return typeof template.lootTable==="string"&&template.lootTable.trim()
+    ? template.lootTable.trim()
+    : (template.configKey||mob.kind||template.kind||"");
+}
+
+function grantMobLoot(mob,rng=Math.random){
+  const tableId=lootTableIdForMob(mob);
+  if(!tableId) return {tableId:"",rolled:[],added:[],overflow:[]};
+  const template=mob?.template||mob||{};
+  const rolled=rollLootTable(tableId,{
+    level:mob?.level??template.level??template.baseLevel??1,
+    elite:!!(mob?.elite??template.elite),
+    boss:!!(mob?.boss||template.boss)
+  },rng);
+  const granted=grantLootDrops(rolled);
+  return {tableId,rolled,...granted};
+}
+
+function formatLootDrops(drops){
+  return (Array.isArray(drops)?drops:[]).map(drop=>{
+    const def=getItemDefinition(drop.itemId);
+    return `${drop.qty}× ${def.name}`;
+  }).join(", ");
+}
+
+function validateLootConfig(){
+  const errors=[];
+  for(const [tableId,raw] of Object.entries(LOOT_TABLES)){
+    const entries=Array.isArray(raw)?raw:(raw&&Array.isArray(raw.entries)?raw.entries:null);
+    if(!entries){
+      errors.push(`Loot table "${tableId}" must be an array or { entries: [] }.`);
+      continue;
+    }
+    entries.forEach((entry,index)=>{
+      if(!entry||typeof entry.itemId!=="string"||!entry.itemId.trim()){
+        errors.push(`Loot table "${tableId}" entry ${index+1} is missing itemId.`);
+        return;
+      }
+      if(!Object.prototype.hasOwnProperty.call(ITEM_DEFS,entry.itemId.trim())){
+        errors.push(`Loot table "${tableId}" entry ${index+1} references unknown item "${entry.itemId}".`);
+      }
+      const chance=Number(entry.chancePercent??100);
+      if(!Number.isFinite(chance)||chance<0||chance>100){
+        errors.push(`Loot table "${tableId}" entry ${index+1} has chancePercent outside 0–100.`);
+      }
+      const minQty=Number(entry.minQty??1);
+      const maxQty=Number(entry.maxQty??minQty);
+      if(!Number.isFinite(minQty)||!Number.isFinite(maxQty)||minQty<1||maxQty<minQty){
+        errors.push(`Loot table "${tableId}" entry ${index+1} has an invalid quantity range.`);
+      }
+    });
+  }
+  return errors;
+}
+
+// Stable API for tests, developer tools, future chests, gathering, bosses,
+// quests, and any other system that needs to roll or grant item loot.
+window.LR_LOOT=Object.freeze({
+  getTable:getLootTable,
+  rollTable:rollLootTable,
+  grantDrops:grantLootDrops,
+  grantMobLoot,
+  formatDrops:formatLootDrops,
+  validate:validateLootConfig
 });
 
 // 0 grass, 1 water, 2 forest, 3 road, 4 town, 5 legacy castle, 6 blocked forest, 7 dirt clearing
@@ -2310,6 +2450,7 @@ function createMobTemplate(name,kind,configKey,fallback,boss=false){
   const cfg=BALANCE.mobs?.[configKey] || {};
   return {
     name,kind,boss,configKey,
+    lootTable:typeof cfg.lootTable==="string"&&cfg.lootTable.trim()?cfg.lootTable.trim():configKey,
     baseLevel:Math.max(1,Math.floor(numberOr(cfg.baseLevel,fallback.baseLevel||1))),
     levelMin:Math.max(1,Math.floor(numberOr(cfg.levelMin,cfg.baseLevel??fallback.baseLevel??1))),
     levelMax:Math.max(1,Math.floor(numberOr(cfg.levelMax,cfg.baseLevel??fallback.baseLevel??1))),
@@ -2352,6 +2493,7 @@ function refreshMobTemplatesFromBalance(){
   for(const template of templates){
     const key=template.configKey || (template.boss?"snickers":template.kind);
     const cfg=BALANCE.mobs?.[key] || {};
+    template.lootTable=typeof cfg.lootTable==="string"&&cfg.lootTable.trim()?cfg.lootTable.trim():key;
     template.baseLevel=Math.max(1,Math.floor(numberOr(cfg.baseLevel,template.baseLevel||1)));
     template.levelMin=Math.max(1,Math.floor(numberOr(cfg.levelMin,template.levelMin||template.baseLevel)));
     template.levelMax=Math.max(template.levelMin,Math.floor(numberOr(cfg.levelMax,template.levelMax||template.baseLevel)));
@@ -3382,6 +3524,7 @@ function defeatWorldMob(mob){
   if(e.potionDropAmount>0 && Math.random()<e.potionDropChance) potionDrop=e.potionDropAmount;
 
   const xpReward=mobXpReward(mob);
+  const lootReward=grantMobLoot(mob);
   state.xp+=xpReward;
   state.gold+=gold;
   state.potions+=potionDrop;
@@ -3404,11 +3547,15 @@ function defeatWorldMob(mob){
   disengageCombat(false);
 
   if(mob.boss){
-    toast("You defeated Snickers!");
+    const bossLoot=lootReward.added.length?` Loot: ${formatLootDrops(lootReward.added)}.`:"";
+    const bossOverflow=lootReward.overflow.length?` Backpack full: ${formatLootDrops(lootReward.overflow)} not collected.`:"";
+    toast(`You defeated Snickers!${bossLoot}${bossOverflow}`);
   }else{
     const rewards=[`+${xpReward} XP`];
     if(gold>0) rewards.push(`+${gold} gold`);
     if(potionDrop>0) rewards.push(`+${potionDrop} potion${potionDrop===1?"":"s"}`);
+    if(lootReward.added.length) rewards.push(`Loot: ${formatLootDrops(lootReward.added)}`);
+    if(lootReward.overflow.length) rewards.push(`Backpack full: ${formatLootDrops(lootReward.overflow)} not collected`);
     toast(`Defeated ${mobDisplayName(mob)}: ${rewards.join(", ")}`);
   }
   updateUI();
@@ -3713,6 +3860,7 @@ function winBattle(){
   const e=enemy;
   let gold=rand(e.gold[0],e.gold[1]);
   if(e.elite && gold>0) gold=Math.max(1,Math.round(gold*numberOr(BALANCE.mobLevels?.eliteGoldMultiplier,1.5)));
+  const lootReward=grantMobLoot(currentMob||e);
   state.xp+=e.xp;
   state.gold+=gold;
   state.kills++;
@@ -3735,8 +3883,10 @@ function winBattle(){
   levelCheck();
   endBattle();
 
-  if(e.boss)toast("You defeated Snickers!");
-  else toast(`Defeated ${e.elite?"Elite ":""}${e.name}: +${e.xp} XP, +${gold} gold`);
+  const lootText=lootReward.added.length?`, Loot: ${formatLootDrops(lootReward.added)}`:"";
+  const overflowText=lootReward.overflow.length?`, Backpack full: ${formatLootDrops(lootReward.overflow)} not collected`:"";
+  if(e.boss)toast(`You defeated Snickers!${lootText}${overflowText}`);
+  else toast(`Defeated ${e.elite?"Elite ":""}${e.name}: +${e.xp} XP, +${gold} gold${lootText}${overflowText}`);
   updateUI();
 }
 
@@ -3889,7 +4039,7 @@ const INPUT_BINDINGS = {
 
 // Exposed only as read-only diagnostics so a desktop tester can confirm the
 // deployed build from DevTools without digging through bundled source.
-window.LR_BUILD_VERSION="v47-polish-pass";
+window.LR_BUILD_VERSION="v48-loot-foundation";
 window.LR_INPUT_BINDINGS=Object.freeze({...INPUT_BINDINGS});
 window.LR_INPUT_STATE=()=>({...input});
 

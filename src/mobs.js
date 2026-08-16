@@ -2,6 +2,7 @@ function createMobTemplate(name,kind,configKey,fallback,boss=false){
   const cfg=BALANCE.mobs?.[configKey] || {};
   return {
     name,kind,boss,configKey,
+    lootTable:typeof cfg.lootTable==="string"&&cfg.lootTable.trim()?cfg.lootTable.trim():configKey,
     baseLevel:Math.max(1,Math.floor(numberOr(cfg.baseLevel,fallback.baseLevel||1))),
     levelMin:Math.max(1,Math.floor(numberOr(cfg.levelMin,cfg.baseLevel??fallback.baseLevel??1))),
     levelMax:Math.max(1,Math.floor(numberOr(cfg.levelMax,cfg.baseLevel??fallback.baseLevel??1))),
@@ -44,6 +45,7 @@ function refreshMobTemplatesFromBalance(){
   for(const template of templates){
     const key=template.configKey || (template.boss?"snickers":template.kind);
     const cfg=BALANCE.mobs?.[key] || {};
+    template.lootTable=typeof cfg.lootTable==="string"&&cfg.lootTable.trim()?cfg.lootTable.trim():key;
     template.baseLevel=Math.max(1,Math.floor(numberOr(cfg.baseLevel,template.baseLevel||1)));
     template.levelMin=Math.max(1,Math.floor(numberOr(cfg.levelMin,template.levelMin||template.baseLevel)));
     template.levelMax=Math.max(template.levelMin,Math.floor(numberOr(cfg.levelMax,template.levelMax||template.baseLevel)));

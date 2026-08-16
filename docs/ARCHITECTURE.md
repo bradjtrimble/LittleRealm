@@ -3,7 +3,11 @@
 This is the modular source baseline created from the user-confirmed v11 stable build.
 
 - `config/game-balance.js` — live balance values; editable without rebuilding the game
+- `config/items.js` — item catalog and backpack-facing item metadata
+- `config/loot-tables.js` — mob/item drop rules; editable without rebuilding the game
 - `src/core.js` — shared canvas/assets/state/utilities
+- `src/inventory.js` — slot/stack inventory and item-definition access
+- `src/loot.js` — loot-table rolling, conditions, validation, and inventory grants
 - `src/world.js` — map generation, terrain, scenery, collision, camera/world rendering
 - `src/player.js` — player state, rendering, movement and directional input helpers
 - `src/mobs.js` — enemy templates, spawning, sprites and world AI

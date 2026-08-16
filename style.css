@@ -707,7 +707,7 @@ body.devMode #pcControls{opacity:.25}
 @media (max-width:800px){#devPanel{width:calc(100vw - 16px);right:8px;top:8px;height:calc(100vh - 16px)}#devPalette{grid-template-columns:repeat(4,1fr)}}
 
 
-/* v47 polish pass -------------------------------------------------------- */
+/* v48 loot foundation ---------------------------------------------------- */
 :root{
   --panel:rgba(45,34,58,.90);
   --border:rgba(255,255,255,.16);

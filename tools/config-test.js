@@ -11,6 +11,7 @@ const loader=fs.readFileSync(path.join(ROOT,'js','runtime-loader.js'),'utf8');
 if(!loader.includes('game-balance.js", true')) throw new Error('balance config not cache-busted');
 if(!loader.includes('keybinds.js", true')) throw new Error('keybind config not cache-busted');
 if(!loader.includes('items.js", true')) throw new Error('item config not cache-busted');
+if(!loader.includes('loot-tables.js", true')) throw new Error('loot-table config not cache-busted');
 if(!loader.includes('visual-settings.js", true')) throw new Error('visual config not cache-busted');
 const visualCfg=fs.readFileSync(path.join(ROOT,'config','visual-settings.js'),'utf8');
 const visualSandbox={}; visualSandbox.window=visualSandbox; require('vm').runInNewContext(visualCfg,visualSandbox);
