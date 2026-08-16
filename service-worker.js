@@ -1,4 +1,4 @@
-const CACHE_NAME = "little-realm-v34-world-builder-visible-fix";
+const CACHE_NAME = "little-realm-v36-bear-slime-refresh";
 const FILES = [
   "./",
   "./index.html",
