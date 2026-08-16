@@ -1,0 +1,9 @@
+Little Realm v43
+
+- Goblins are now stronger/higher-level than wolves.
+- Trivial mobs always award XP; at 5+ player levels above a mob the reward is exactly the mob level.
+- Added level-based aggro radius.
+- Added level-based hit/miss chances for player and mobs.
+- Added rare Elite normal mobs with boosted HP, attack, armor, XP, gold, and aggro range.
+- Elites are labeled in the world and target HUD.
+- All tuning lives in config/game-balance.js.

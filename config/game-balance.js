@@ -66,15 +66,46 @@ window.LR_BALANCE = {
     dangerArmorPerExtraLevel: 0.6,
     dangerXpPerExtraLevelPercent: 10,
 
-    // Bosses/elite mobs get these multipliers after normal level scaling.
+    // Rare elites sit between normal mobs and bosses. Species can opt into
+    // elites with eliteChancePercent in their mob config below.
+    eliteHpMultiplier: 1.65,
+    eliteAttackMultiplier: 1.20,
+    eliteArmorBonus: 2,
+    eliteXpMultiplier: 1.60,
+    eliteGoldMultiplier: 1.50,
+    eliteAggroMultiplier: 1.15,
+
+    // Bosses get these multipliers after normal level scaling.
     bossHpMultiplier: 1.50,
     bossAttackMultiplier: 1.25,
     bossArmorMultiplier: 1.25,
     bossXpMultiplier: 1.75,
+    bossAggroMultiplier: 1.25,
 
-    // WoW-like reward falloff for trivial enemies. Five or more levels below
-    // the player awards no XP; each lower level before that reduces XP.
-    noXpWhenBelowPlayerByLevels: 5,
+    // Higher-level mobs notice the player from farther away. Lower-level mobs
+    // become less eager to engage, but aggressive mobs keep a small minimum.
+    aggroRangePerLevelDifference: 7,
+    alertRangePerLevelDifference: 9,
+    minimumAggroTriggerRange: 20,
+    minimumAlertRange: 34,
+
+    // Level-based hit/miss. This makes fighting above your level riskier
+    // without requiring every difficulty increase to come from raw HP.
+    playerBaseHitChancePercent: 96,
+    enemyBaseHitChancePercent: 92,
+    playerHitChancePerLevelAdvantagePercent: 4,
+    enemyHitChancePerLevelAdvantagePercent: 3,
+    minimumHitChancePercent: 55,
+    maximumHitChancePercent: 99,
+    elitePlayerHitPenaltyPercent: 3,
+    eliteEnemyHitBonusPercent: 3,
+    bossPlayerHitPenaltyPercent: 5,
+    bossEnemyHitBonusPercent: 5,
+
+    // Low-level mobs NEVER stop rewarding XP. At five or more player levels
+    // above a mob, its reward becomes exactly the mob's level (Lv 1 = 1 XP,
+    // Lv 8 = 8 XP). This deliberately preserves very-long-term grind routes.
+    trivialXpStartsAboveMobLevels: 5,
     lowLevelXpPenaltyPerLevelPercent: 20,
     higherLevelXpBonusPerLevelPercent: 8
   },
@@ -100,6 +131,7 @@ window.LR_BALANCE = {
       goldDropChancePercent: 100,
       potionDropChancePercent: 0,
       potionDropAmount: 1,
+      eliteChancePercent: 5,
       attackIntervalSeconds: 1.45,
       respawnMinSeconds: 18,
       respawnMaxSeconds: 28,
@@ -115,16 +147,17 @@ window.LR_BALANCE = {
     },
 
     goblin: {
-      baseLevel: 4, levelMin: 3, levelMax: 5,
-      hp: 20,
-      attack: 6,
-      defense: 1,
-      xp: 13,
+      baseLevel: 5, levelMin: 4, levelMax: 6,
+      hp: 22,
+      attack: 7,
+      defense: 2,
+      xp: 16,
       goldMin: 4,
       goldMax: 8,
       goldDropChancePercent: 100,
       potionDropChancePercent: 0,
       potionDropAmount: 1,
+      eliteChancePercent: 12,
       attackIntervalSeconds: 1.45,
       respawnMinSeconds: 18,
       respawnMaxSeconds: 28,
@@ -140,16 +173,17 @@ window.LR_BALANCE = {
     },
 
     wolf: {
-      baseLevel: 5, levelMin: 4, levelMax: 6,
+      baseLevel: 4, levelMin: 3, levelMax: 5,
       hp: 18,
-      attack: 7,
+      attack: 6,
       defense: 1,
-      xp: 14,
+      xp: 13,
       goldMin: 3,
       goldMax: 7,
       goldDropChancePercent: 100,
       potionDropChancePercent: 0,
       potionDropAmount: 1,
+      eliteChancePercent: 8,
       attackIntervalSeconds: 1.33,
       respawnMinSeconds: 18,
       respawnMaxSeconds: 28,
@@ -169,7 +203,7 @@ window.LR_BALANCE = {
       baseLevel: 2, levelMin: 1, levelMax: 2,
       hp: 12, attack: 1, defense: 0, xp: 4,
       goldMin: 0, goldMax: 0, goldDropChancePercent: 0,
-      potionDropChancePercent: 0, potionDropAmount: 0,
+      potionDropChancePercent: 0, potionDropAmount: 0, eliteChancePercent: 0,
       attackIntervalSeconds: 1.8, respawnMinSeconds: 20, respawnMaxSeconds: 30,
       aggressive: false, aggroTriggerRange: 0, alertRange: 0,
       chaseSpeed: 28, wanderSpeed: 12, leashDistance: 54, leashSpeed: 26,
@@ -180,7 +214,7 @@ window.LR_BALANCE = {
       baseLevel: 1, levelMin: 1, levelMax: 2,
       hp: 8, attack: 1, defense: 0, xp: 3,
       goldMin: 0, goldMax: 0, goldDropChancePercent: 0,
-      potionDropChancePercent: 0, potionDropAmount: 0,
+      potionDropChancePercent: 0, potionDropAmount: 0, eliteChancePercent: 0,
       attackIntervalSeconds: 1.8, respawnMinSeconds: 20, respawnMaxSeconds: 30,
       aggressive: false, aggroTriggerRange: 0, alertRange: 0,
       chaseSpeed: 30, wanderSpeed: 14, leashDistance: 48, leashSpeed: 26,
@@ -191,7 +225,7 @@ window.LR_BALANCE = {
       baseLevel: 1, levelMin: 1, levelMax: 1,
       hp: 4, attack: 1, defense: 0, xp: 2,
       goldMin: 0, goldMax: 0, goldDropChancePercent: 0,
-      potionDropChancePercent: 0, potionDropAmount: 0,
+      potionDropChancePercent: 0, potionDropAmount: 0, eliteChancePercent: 0,
       attackIntervalSeconds: 1.7, respawnMinSeconds: 16, respawnMaxSeconds: 25,
       aggressive: false, aggroTriggerRange: 0, alertRange: 0,
       chaseSpeed: 34, wanderSpeed: 18, leashDistance: 46, leashSpeed: 28,
@@ -211,6 +245,7 @@ window.LR_BALANCE = {
       goldDropChancePercent: 100,
       potionDropChancePercent: 20,
       potionDropAmount: 2,
+      eliteChancePercent: 0,
       attackIntervalSeconds: 1.55,
       respawnMinSeconds: 999999,
       respawnMaxSeconds: 999999,

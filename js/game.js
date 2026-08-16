@@ -1232,7 +1232,7 @@ function drawWorld(){
 
       const mScale=mobVisualScale(mob);
       if(mob===selectedTarget || mob===combatTarget){
-        ctx.strokeStyle=mob===combatTarget?"rgba(255,154,92,.96)":"rgba(255,220,96,.96)";
+        ctx.strokeStyle=mob.elite?"rgba(197,140,255,.98)":(mob===combatTarget?"rgba(255,154,92,.96)":"rgba(255,220,96,.96)");
         ctx.lineWidth=2;
         ctx.beginPath();ctx.ellipse(sx,sy+12,(mob.boss?25:18)*mScale,(mob.boss?10:7)*mScale,0,0,Math.PI*2);ctx.stroke();
       }
@@ -1252,8 +1252,8 @@ function drawWorld(){
         ctx.save();
         ctx.font=mob.boss?"900 8px system-ui":"800 7px system-ui";
         ctx.textAlign="center";
-        ctx.fillStyle=mobLevelColor(mob.level,mob.boss);
-        ctx.fillText(`Lv ${mob.level}`,Math.round(sx),Math.round(hpY-5));
+        ctx.fillStyle=mobLevelColor(mob.level,mob.boss,mob.elite);
+        ctx.fillText(`Lv ${mob.level}${mob.elite?" Elite":""}`,Math.round(sx),Math.round(hpY-5));
         ctx.restore();
         drawWorldHpBar(sx,hpY,mob.hp,mob.maxHp,(mob.boss?52:38)*Math.min(1.5,mScale));
       }else if(mob.aggro){
@@ -2155,6 +2155,7 @@ function createMobTemplate(name,kind,configKey,fallback,boss=false){
     goldDropChance:percentOr(cfg.goldDropChancePercent,100),
     potionDropChance:percentOr(cfg.potionDropChancePercent,0),
     potionDropAmount:Math.max(0,Math.floor(numberOr(cfg.potionDropAmount,1))),
+    eliteChance:percentOr(cfg.eliteChancePercent,0),
     attackInterval:numberOr(cfg.attackIntervalSeconds,fallback.attackInterval),
     respawnMin:numberOr(cfg.respawnMinSeconds,18),
     respawnMax:numberOr(cfg.respawnMaxSeconds,28),
@@ -2172,8 +2173,8 @@ function createMobTemplate(name,kind,configKey,fallback,boss=false){
 
 const enemyTemplates = [
   createMobTemplate("Slime","slime","slime",{baseLevel:2,hp:14,atk:4,def:0,xp:8,gold:[2,5],attackInterval:1.45,aggressive:false,chaseSpeed:45,wanderSpeed:20}),
-  createMobTemplate("Goblin","goblin","goblin",{baseLevel:4,hp:20,atk:6,def:1,xp:13,gold:[4,8],attackInterval:1.45,aggressive:true,chaseSpeed:58,wanderSpeed:20}),
-  createMobTemplate("Wolf","wolf","wolf",{baseLevel:5,hp:18,atk:7,def:1,xp:14,gold:[3,7],attackInterval:1.33,aggressive:true,chaseSpeed:72,wanderSpeed:30}),
+  createMobTemplate("Goblin","goblin","goblin",{baseLevel:5,hp:22,atk:7,def:2,xp:16,gold:[4,8],attackInterval:1.45,aggressive:true,chaseSpeed:58,wanderSpeed:20}),
+  createMobTemplate("Wolf","wolf","wolf",{baseLevel:4,hp:18,atk:6,def:1,xp:13,gold:[3,7],attackInterval:1.33,aggressive:true,chaseSpeed:72,wanderSpeed:30}),
   createMobTemplate("Cow","cow","cow",{baseLevel:2,hp:12,atk:1,def:0,xp:4,gold:[0,0],attackInterval:1.8,aggressive:false,chaseSpeed:28,wanderSpeed:12}),
   createMobTemplate("Pig","pig","pig",{baseLevel:1,hp:8,atk:1,def:0,xp:3,gold:[0,0],attackInterval:1.8,aggressive:false,chaseSpeed:30,wanderSpeed:14}),
   createMobTemplate("Chicken","chicken","chicken",{baseLevel:1,hp:4,atk:1,def:0,xp:2,gold:[0,0],attackInterval:1.7,aggressive:false,chaseSpeed:34,wanderSpeed:18})
@@ -2195,8 +2196,9 @@ function mobDangerSteps(level){
   return Math.max(0,Math.floor(level-state.level-threshold));
 }
 
-function mobLevelColor(level,boss=false){
+function mobLevelColor(level,boss=false,elite=false){
   if(boss) return "#ff6b5f";
+  if(elite) return "#c58cff";
   const delta=level-state.level;
   if(delta>=4) return "#ff5d55";
   if(delta>=2) return "#ffad4a";
@@ -2205,7 +2207,43 @@ function mobLevelColor(level,boss=false){
   return "#f1d56a";
 }
 
-function mobScaledStats(template,level){
+function rollMobElite(template){
+  if(!template || template.boss || template.eliteChance<=0) return false;
+  return Math.random()<template.eliteChance;
+}
+
+function mobRankLabel(mob){
+  if(!mob) return "";
+  if(mob.boss || mob.template?.boss) return "Boss";
+  if(mob.elite) return "Elite";
+  return "";
+}
+
+function mobDisplayName(mob){
+  if(!mob) return "Mob";
+  const rank=mobRankLabel(mob);
+  return `${rank?rank+" ":""}${mob.template?.name||mob.name||"Mob"}`;
+}
+
+function mobAggroRanges(mob){
+  if(!mob || !mob.template?.aggressive) return {trigger:0,alert:0};
+  const cfg=BALANCE.mobLevels||{};
+  const delta=(mob.level||1)-state.level;
+  const baseTrigger=Math.max(0,numberOr(mob.template.aggroTriggerRange,58));
+  const baseAlert=Math.max(baseTrigger,numberOr(mob.template.alertRange,82));
+  const minTrigger=Math.max(0,numberOr(cfg.minimumAggroTriggerRange,20));
+  const minAlert=Math.max(minTrigger,numberOr(cfg.minimumAlertRange,34));
+  let trigger=Math.max(minTrigger,baseTrigger+delta*numberOr(cfg.aggroRangePerLevelDifference,7));
+  let alert=Math.max(minAlert,baseAlert+delta*numberOr(cfg.alertRangePerLevelDifference,9));
+  let rankMult=1;
+  if(mob.boss || mob.template?.boss) rankMult=numberOr(cfg.bossAggroMultiplier,1.25);
+  else if(mob.elite) rankMult=numberOr(cfg.eliteAggroMultiplier,1.15);
+  trigger*=rankMult;
+  alert*=rankMult;
+  return {trigger,alert:Math.max(trigger,alert)};
+}
+
+function mobScaledStats(template,level,elite=false){
   const cfg=BALANCE.mobLevels||{};
   const mobLevel=Math.max(1,Math.floor(numberOr(level,template.baseLevel||1)));
   const levelDelta=mobLevel-(template.baseLevel||1);
@@ -2218,6 +2256,13 @@ function mobScaledStats(template,level){
   let atk=Math.max(1,Math.round(template.atk*Math.max(.25,1+levelDelta*atkGrowth)));
   let def=Math.max(0,Math.round(template.def+levelDelta*armorPerLevel));
   let xp=Math.max(1,Math.round(template.xp*Math.max(.25,1+levelDelta*xpGrowth)));
+
+  if(elite && !template.boss){
+    maxHp=Math.max(1,Math.round(maxHp*numberOr(cfg.eliteHpMultiplier,1.65)));
+    atk=Math.max(1,Math.round(atk*numberOr(cfg.eliteAttackMultiplier,1.20)));
+    def=Math.max(0,Math.round(def+numberOr(cfg.eliteArmorBonus,2)));
+    xp=Math.max(1,Math.round(xp*numberOr(cfg.eliteXpMultiplier,1.60)));
+  }
 
   if(template.boss){
     maxHp=Math.max(1,Math.round(maxHp*numberOr(cfg.bossHpMultiplier,1.5)));
@@ -2240,10 +2285,14 @@ function mobScaledStats(template,level){
 function mobXpReward(mob){
   if(!mob) return 0;
   const cfg=BALANCE.mobLevels||{};
-  const base=Math.max(0,Math.floor(numberOr(mob.xp,mob.template?.xp||0)));
+  const base=Math.max(1,Math.floor(numberOr(mob.xp,mob.template?.xp||1)));
   const diff=mob.level-state.level;
-  const noXpGap=Math.max(1,Math.floor(numberOr(cfg.noXpWhenBelowPlayerByLevels,5)));
-  if(diff<=-noXpGap) return 0;
+  const trivialGap=Math.max(1,Math.floor(numberOr(cfg.trivialXpStartsAboveMobLevels,5)));
+  if(state.level-mob.level>=trivialGap){
+    // Intentional infinite-grind rule: trivial enemies always remain worth
+    // exactly their level in XP, even for extremely high-level players.
+    return Math.max(1,Math.floor(mob.level));
+  }
   if(diff<0){
     const penalty=Math.abs(diff)*percentOr(cfg.lowLevelXpPenaltyPerLevelPercent,20);
     return Math.max(1,Math.round(base*Math.max(0,1-penalty)));
@@ -2258,7 +2307,7 @@ function restoreMobStats(mob,fullHeal=true){
   const oldMax=Math.max(1,numberOr(mob.maxHp,1));
   const oldHp=Math.max(0,numberOr(mob.hp,oldMax));
   const ratio=Math.max(0,Math.min(1,oldHp/oldMax));
-  const stats=mobScaledStats(mob.template,mob.level);
+  const stats=mobScaledStats(mob.template,mob.level,!!mob.elite);
   mob.maxHp=stats.maxHp;
   mob.hp=fullHeal?stats.maxHp:Math.max(1,Math.round(stats.maxHp*ratio));
   mob.atk=stats.atk;
@@ -2739,6 +2788,7 @@ function updateMobs(dt){
         mob.x=mob.homeX; mob.y=mob.homeY;
         mob.vx=0; mob.vy=0; mob.drawVx=0; mob.drawVy=0;
         mob.facing="down"; mob.facingCandidate="down"; mob.facingCandidateTime=0; mob.aggro=false;
+        mob.elite=rollMobElite(mob.template);
         restoreMobStats(mob);
       }
       continue;
@@ -2750,11 +2800,12 @@ function updateMobs(dt){
 
     // Aggression and movement are data-driven so routine mob tuning only
     // requires editing config/game-balance.js.
-    if(!combatTarget && mob.template.aggressive && d<mob.template.aggroTriggerRange){
+    const aggroRanges=mobAggroRanges(mob);
+    if(!combatTarget && mob.template.aggressive && d<aggroRanges.trigger){
       engageMob(mob,true);
     }
 
-    mob.aggro=isTarget || (!combatTarget && mob.template.aggressive && d<mob.template.alertRange);
+    mob.aggro=isTarget || (!combatTarget && mob.template.aggressive && d<aggroRanges.alert);
 
     let vx=0,vy=0;
     if(isTarget){
@@ -2852,6 +2903,39 @@ let potionCooldown=0;
 let combatFx=[];
 let bossMob=null;
 
+function combatHitChancePercent(base,levelAdvantage,perLevel,rankAdjustment=0){
+  const cfg=BALANCE.mobLevels||{};
+  const min=Math.max(0,numberOr(cfg.minimumHitChancePercent,55));
+  const max=Math.min(100,numberOr(cfg.maximumHitChancePercent,99));
+  return clamp(numberOr(base,95)+levelAdvantage*numberOr(perLevel,4)+rankAdjustment,min,max);
+}
+
+function playerHitChanceAgainst(mob){
+  const cfg=BALANCE.mobLevels||{};
+  let rankPenalty=0;
+  if(mob?.boss || mob?.template?.boss) rankPenalty-=numberOr(cfg.bossPlayerHitPenaltyPercent,5);
+  else if(mob?.elite) rankPenalty-=numberOr(cfg.elitePlayerHitPenaltyPercent,3);
+  return combatHitChancePercent(
+    cfg.playerBaseHitChancePercent,
+    state.level-(mob?.level||state.level),
+    cfg.playerHitChancePerLevelAdvantagePercent,
+    rankPenalty
+  );
+}
+
+function mobHitChanceAgainstPlayer(mob){
+  const cfg=BALANCE.mobLevels||{};
+  let rankBonus=0;
+  if(mob?.boss || mob?.template?.boss) rankBonus+=numberOr(cfg.bossEnemyHitBonusPercent,5);
+  else if(mob?.elite) rankBonus+=numberOr(cfg.eliteEnemyHitBonusPercent,3);
+  return combatHitChancePercent(
+    cfg.enemyBaseHitChancePercent,
+    (mob?.level||state.level)-state.level,
+    cfg.enemyHitChancePerLevelAdvantagePercent,
+    rankBonus
+  );
+}
+
 function getMobRespawnSeconds(mob){
   if(!mob||mob.boss) return 999999;
   const min=Math.min(mob.template.respawnMin,mob.template.respawnMax);
@@ -2863,7 +2947,7 @@ function selectMob(mob,showToast=true){
   if(!mob||!mob.alive) return false;
   selectedTarget=mob;
   updateCombatHud();
-  if(showToast) toast(`Lv ${mob.level} ${mob.template.name} targeted • ${Math.max(0,Math.ceil(mob.hp))}/${mob.maxHp} HP`);
+  if(showToast) toast(`Lv ${mob.level} ${mobDisplayName(mob)} targeted • ${Math.max(0,Math.ceil(mob.hp))}/${mob.maxHp} HP`);
   return true;
 }
 
@@ -2938,8 +3022,8 @@ function updateCombatHud(){
   if(target){
     hud.classList.add("show");
     const targetName=document.getElementById("targetName");
-    targetName.textContent=`Lv ${target.level} ${target.template.name}`;
-    targetName.style.color=mobLevelColor(target.level,target.boss);
+    targetName.textContent=`Lv ${target.level} ${mobDisplayName(target)}`;
+    targetName.style.color=mobLevelColor(target.level,target.boss,target.elite);
     document.getElementById("targetHpText").textContent=`${Math.max(0,Math.ceil(target.hp))}/${target.maxHp} HP`;
     document.getElementById("targetHpFill").style.width=`${Math.max(0,100*target.hp/target.maxHp)}%`;
     const d=dist(state.x,state.y,target.x,target.y);
@@ -3002,7 +3086,7 @@ function engageMob(mob,forced=false){
   enemyAttackTimer=Math.max(enemyAttackTimer,ATTACK_START_DELAY-.08);
   heroFacing=vectorFacing(mob.x-state.x,mob.y-state.y,heroFacing);
   updateCombatHud();
-  if(!forced) toast(`Engaged Lv ${mob.level} ${mob.template.name}.`);
+  if(!forced) toast(`Engaged Lv ${mob.level} ${mobDisplayName(mob)}.`);
   return true;
 }
 
@@ -3020,13 +3104,17 @@ function addCombatFx(x,y,text,kind="damage"){
 
 function performPlayerAutoAttack(mob){
   if(!mob||!mob.alive) return;
+  playerAttackAnim=.20;
+  if(Math.random()*100>=playerHitChanceAgainst(mob)){
+    addCombatFx(mob.x,mob.y-18,"MISS","miss");
+    return;
+  }
   const crit=Math.random()<PLAYER_CRIT_CHANCE;
   const low=Math.min(PLAYER_DAMAGE_MIN,PLAYER_DAMAGE_MAX);
   const high=Math.max(PLAYER_DAMAGE_MIN,PLAYER_DAMAGE_MAX);
   let dmg=Math.max(1,state.atk+rand(low,high)-mob.def);
   if(crit) dmg*=2;
   mob.hp-=dmg;
-  playerAttackAnim=.20;
   addCombatFx(mob.x,mob.y-18,crit?`★ ${dmg}`:`${dmg}`,crit?"crit":"damage");
   if(mob.hp<=0){
     mob.hp=0;
@@ -3036,12 +3124,16 @@ function performPlayerAutoAttack(mob){
 
 function performEnemyAutoAttack(mob){
   if(!mob||!mob.alive) return;
+  mob.attackAnim=.20;
+  enemyAttackAnim=.20;
+  if(Math.random()*100>=mobHitChanceAgainstPlayer(mob)){
+    addCombatFx(state.x,state.y-20,"MISS","miss");
+    return;
+  }
   const low=Math.min(ENEMY_DAMAGE_MIN,ENEMY_DAMAGE_MAX);
   const high=Math.max(ENEMY_DAMAGE_MIN,ENEMY_DAMAGE_MAX);
   let dmg=Math.max(1,mob.atk+rand(low,high)-state.def);
   state.hp=Math.max(0,state.hp-dmg);
-  mob.attackAnim=.20;
-  enemyAttackAnim=.20;
   addCombatFx(state.x,state.y-20,`${dmg}`,"damage");
   updateUI();
   if(state.hp<=0) worldCombatDeath();
@@ -3053,6 +3145,7 @@ function defeatWorldMob(mob){
   let gold=0;
   let potionDrop=0;
   if(Math.random()<e.goldDropChance) gold=rand(Math.floor(e.gold[0]),Math.floor(e.gold[1]));
+  if(mob.elite && gold>0) gold=Math.max(1,Math.round(gold*numberOr(BALANCE.mobLevels?.eliteGoldMultiplier,1.5)));
   if(e.potionDropAmount>0 && Math.random()<e.potionDropChance) potionDrop=e.potionDropAmount;
 
   const xpReward=mobXpReward(mob);
@@ -3080,10 +3173,10 @@ function defeatWorldMob(mob){
   if(mob.boss){
     toast("You defeated Snickers!");
   }else{
-    const rewards=[xpReward>0?`+${xpReward} XP`:"No XP (trivial level)"];
+    const rewards=[`+${xpReward} XP`];
     if(gold>0) rewards.push(`+${gold} gold`);
     if(potionDrop>0) rewards.push(`+${potionDrop} potion${potionDrop===1?"":"s"}`);
-    toast(`Defeated ${e.name}: ${rewards.join(", ")}`);
+    toast(`Defeated ${mobDisplayName(mob)}: ${rewards.join(", ")}`);
   }
   updateUI();
 }
@@ -3219,6 +3312,7 @@ function startBattle(base,mobRef=null){
   enemy={...base};
   if(mobRef){
     enemy.level=mobRef.level;
+    enemy.elite=!!mobRef.elite;
     enemy.hp=mobRef.hp;
     enemy.maxHp=mobRef.maxHp;
     enemy.atk=mobRef.atk;
@@ -3226,7 +3320,7 @@ function startBattle(base,mobRef=null){
     enemy.xp=mobXpReward(mobRef);
   }else{
     const temp={...base,baseLevel:base.baseLevel||base.level||1,boss:!!base.boss};
-    const stats=mobScaledStats(temp,base.level||temp.baseLevel);
+    const stats=mobScaledStats(temp,base.level||temp.baseLevel,!!base.elite);
     enemy.level=base.level||temp.baseLevel;
     enemy.hp=stats.maxHp; enemy.maxHp=stats.maxHp; enemy.atk=stats.atk; enemy.def=stats.def; enemy.xp=stats.xp;
   }
@@ -3235,7 +3329,7 @@ function startBattle(base,mobRef=null){
   attackButtonCooldown=0;
   input={up:false,down:false,left:false,right:false};
 
-  document.getElementById("battleTitle").textContent=`Lv ${enemy.level||1} ${enemy.name} Encounter`;
+  document.getElementById("battleTitle").textContent=`Lv ${enemy.level||1} ${enemy.elite?"Elite ":""}${enemy.name} Encounter`;
   document.getElementById("battleScene").dataset.kind=enemy.kind||"slime";
   document.getElementById("battleFxLayer").innerHTML="";
   showEnemyIntent(false);
@@ -3254,12 +3348,20 @@ function heroAttack(){
   battleMessage("You rush forward!");
   animateBattleActor("hero","lunge",360);
 
-  const crit=Math.random()<.12;
-  let dmg=Math.max(1,state.atk+rand(0,3)-enemy.def);
+  const hitTarget=currentMob||enemy;
+  const hit=Math.random()*100<playerHitChanceAgainst(hitTarget);
+  const crit=hit && Math.random()<.12;
+  let dmg=hit?Math.max(1,state.atk+rand(0,3)-enemy.def):0;
   if(crit)dmg*=2;
 
   setTimeout(()=>{
     if(!enemy)return;
+    if(!hit){
+      battleFloat("enemy","MISS","guard");
+      battleMessage("Your attack misses.");
+      setTimeout(enemyTurn,650);
+      return;
+    }
     enemy.hp-=dmg;
     animateBattleActor("enemy","hit",300);
     battleFloat("enemy",crit?`CRIT ${dmg}`:`-${dmg}`,crit?"crit":"damage");
@@ -3342,6 +3444,16 @@ function enemyTurn(){
 
     setTimeout(()=>{
       if(!enemy)return;
+      const hitSource=currentMob||enemy;
+      const hit=Math.random()*100<mobHitChanceAgainstPlayer(hitSource);
+      if(!hit){
+        defending=false;
+        document.getElementById("heroBattleSprite").classList.remove("guardGlow");
+        battleFloat("hero","MISS","guard");
+        battleMessage(`${enemy.name} misses you.`);
+        setTimeout(returnPlayerTurn,650);
+        return;
+      }
       let dmg=Math.max(1,enemy.atk+rand(0,2)-state.def);
       if(defending)dmg=Math.max(1,Math.floor(dmg/2));
       const guarded=defending;
@@ -3366,7 +3478,8 @@ function enemyTurn(){
 function winBattle(){
   if(!enemy)return;
   const e=enemy;
-  const gold=rand(e.gold[0],e.gold[1]);
+  let gold=rand(e.gold[0],e.gold[1]);
+  if(e.elite && gold>0) gold=Math.max(1,Math.round(gold*numberOr(BALANCE.mobLevels?.eliteGoldMultiplier,1.5)));
   state.xp+=e.xp;
   state.gold+=gold;
   state.kills++;
@@ -3390,7 +3503,7 @@ function winBattle(){
   endBattle();
 
   if(e.boss)toast("You defeated Snickers!");
-  else toast(`Defeated ${e.name}: +${e.xp} XP, +${gold} gold`);
+  else toast(`Defeated ${e.elite?"Elite ":""}${e.name}: +${e.xp} XP, +${gold} gold`);
   updateUI();
 }
 

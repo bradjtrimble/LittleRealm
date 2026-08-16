@@ -784,7 +784,7 @@ function drawWorld(){
 
       const mScale=mobVisualScale(mob);
       if(mob===selectedTarget || mob===combatTarget){
-        ctx.strokeStyle=mob===combatTarget?"rgba(255,154,92,.96)":"rgba(255,220,96,.96)";
+        ctx.strokeStyle=mob.elite?"rgba(197,140,255,.98)":(mob===combatTarget?"rgba(255,154,92,.96)":"rgba(255,220,96,.96)");
         ctx.lineWidth=2;
         ctx.beginPath();ctx.ellipse(sx,sy+12,(mob.boss?25:18)*mScale,(mob.boss?10:7)*mScale,0,0,Math.PI*2);ctx.stroke();
       }
@@ -804,8 +804,8 @@ function drawWorld(){
         ctx.save();
         ctx.font=mob.boss?"900 8px system-ui":"800 7px system-ui";
         ctx.textAlign="center";
-        ctx.fillStyle=mobLevelColor(mob.level,mob.boss);
-        ctx.fillText(`Lv ${mob.level}`,Math.round(sx),Math.round(hpY-5));
+        ctx.fillStyle=mobLevelColor(mob.level,mob.boss,mob.elite);
+        ctx.fillText(`Lv ${mob.level}${mob.elite?" Elite":""}`,Math.round(sx),Math.round(hpY-5));
         ctx.restore();
         drawWorldHpBar(sx,hpY,mob.hp,mob.maxHp,(mob.boss?52:38)*Math.min(1.5,mScale));
       }else if(mob.aggro){

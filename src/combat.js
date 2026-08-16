@@ -29,6 +29,39 @@ let potionCooldown=0;
 let combatFx=[];
 let bossMob=null;
 
+function combatHitChancePercent(base,levelAdvantage,perLevel,rankAdjustment=0){
+  const cfg=BALANCE.mobLevels||{};
+  const min=Math.max(0,numberOr(cfg.minimumHitChancePercent,55));
+  const max=Math.min(100,numberOr(cfg.maximumHitChancePercent,99));
+  return clamp(numberOr(base,95)+levelAdvantage*numberOr(perLevel,4)+rankAdjustment,min,max);
+}
+
+function playerHitChanceAgainst(mob){
+  const cfg=BALANCE.mobLevels||{};
+  let rankPenalty=0;
+  if(mob?.boss || mob?.template?.boss) rankPenalty-=numberOr(cfg.bossPlayerHitPenaltyPercent,5);
+  else if(mob?.elite) rankPenalty-=numberOr(cfg.elitePlayerHitPenaltyPercent,3);
+  return combatHitChancePercent(
+    cfg.playerBaseHitChancePercent,
+    state.level-(mob?.level||state.level),
+    cfg.playerHitChancePerLevelAdvantagePercent,
+    rankPenalty
+  );
+}
+
+function mobHitChanceAgainstPlayer(mob){
+  const cfg=BALANCE.mobLevels||{};
+  let rankBonus=0;
+  if(mob?.boss || mob?.template?.boss) rankBonus+=numberOr(cfg.bossEnemyHitBonusPercent,5);
+  else if(mob?.elite) rankBonus+=numberOr(cfg.eliteEnemyHitBonusPercent,3);
+  return combatHitChancePercent(
+    cfg.enemyBaseHitChancePercent,
+    (mob?.level||state.level)-state.level,
+    cfg.enemyHitChancePerLevelAdvantagePercent,
+    rankBonus
+  );
+}
+
 function getMobRespawnSeconds(mob){
   if(!mob||mob.boss) return 999999;
   const min=Math.min(mob.template.respawnMin,mob.template.respawnMax);
@@ -40,7 +73,7 @@ function selectMob(mob,showToast=true){
   if(!mob||!mob.alive) return false;
   selectedTarget=mob;
   updateCombatHud();
-  if(showToast) toast(`Lv ${mob.level} ${mob.template.name} targeted • ${Math.max(0,Math.ceil(mob.hp))}/${mob.maxHp} HP`);
+  if(showToast) toast(`Lv ${mob.level} ${mobDisplayName(mob)} targeted • ${Math.max(0,Math.ceil(mob.hp))}/${mob.maxHp} HP`);
   return true;
 }
 
@@ -115,8 +148,8 @@ function updateCombatHud(){
   if(target){
     hud.classList.add("show");
     const targetName=document.getElementById("targetName");
-    targetName.textContent=`Lv ${target.level} ${target.template.name}`;
-    targetName.style.color=mobLevelColor(target.level,target.boss);
+    targetName.textContent=`Lv ${target.level} ${mobDisplayName(target)}`;
+    targetName.style.color=mobLevelColor(target.level,target.boss,target.elite);
     document.getElementById("targetHpText").textContent=`${Math.max(0,Math.ceil(target.hp))}/${target.maxHp} HP`;
     document.getElementById("targetHpFill").style.width=`${Math.max(0,100*target.hp/target.maxHp)}%`;
     const d=dist(state.x,state.y,target.x,target.y);
@@ -179,7 +212,7 @@ function engageMob(mob,forced=false){
   enemyAttackTimer=Math.max(enemyAttackTimer,ATTACK_START_DELAY-.08);
   heroFacing=vectorFacing(mob.x-state.x,mob.y-state.y,heroFacing);
   updateCombatHud();
-  if(!forced) toast(`Engaged Lv ${mob.level} ${mob.template.name}.`);
+  if(!forced) toast(`Engaged Lv ${mob.level} ${mobDisplayName(mob)}.`);
   return true;
 }
 
@@ -197,13 +230,17 @@ function addCombatFx(x,y,text,kind="damage"){
 
 function performPlayerAutoAttack(mob){
   if(!mob||!mob.alive) return;
+  playerAttackAnim=.20;
+  if(Math.random()*100>=playerHitChanceAgainst(mob)){
+    addCombatFx(mob.x,mob.y-18,"MISS","miss");
+    return;
+  }
   const crit=Math.random()<PLAYER_CRIT_CHANCE;
   const low=Math.min(PLAYER_DAMAGE_MIN,PLAYER_DAMAGE_MAX);
   const high=Math.max(PLAYER_DAMAGE_MIN,PLAYER_DAMAGE_MAX);
   let dmg=Math.max(1,state.atk+rand(low,high)-mob.def);
   if(crit) dmg*=2;
   mob.hp-=dmg;
-  playerAttackAnim=.20;
   addCombatFx(mob.x,mob.y-18,crit?`★ ${dmg}`:`${dmg}`,crit?"crit":"damage");
   if(mob.hp<=0){
     mob.hp=0;
@@ -213,12 +250,16 @@ function performPlayerAutoAttack(mob){
 
 function performEnemyAutoAttack(mob){
   if(!mob||!mob.alive) return;
+  mob.attackAnim=.20;
+  enemyAttackAnim=.20;
+  if(Math.random()*100>=mobHitChanceAgainstPlayer(mob)){
+    addCombatFx(state.x,state.y-20,"MISS","miss");
+    return;
+  }
   const low=Math.min(ENEMY_DAMAGE_MIN,ENEMY_DAMAGE_MAX);
   const high=Math.max(ENEMY_DAMAGE_MIN,ENEMY_DAMAGE_MAX);
   let dmg=Math.max(1,mob.atk+rand(low,high)-state.def);
   state.hp=Math.max(0,state.hp-dmg);
-  mob.attackAnim=.20;
-  enemyAttackAnim=.20;
   addCombatFx(state.x,state.y-20,`${dmg}`,"damage");
   updateUI();
   if(state.hp<=0) worldCombatDeath();
@@ -230,6 +271,7 @@ function defeatWorldMob(mob){
   let gold=0;
   let potionDrop=0;
   if(Math.random()<e.goldDropChance) gold=rand(Math.floor(e.gold[0]),Math.floor(e.gold[1]));
+  if(mob.elite && gold>0) gold=Math.max(1,Math.round(gold*numberOr(BALANCE.mobLevels?.eliteGoldMultiplier,1.5)));
   if(e.potionDropAmount>0 && Math.random()<e.potionDropChance) potionDrop=e.potionDropAmount;
 
   const xpReward=mobXpReward(mob);
@@ -257,10 +299,10 @@ function defeatWorldMob(mob){
   if(mob.boss){
     toast("You defeated Snickers!");
   }else{
-    const rewards=[xpReward>0?`+${xpReward} XP`:"No XP (trivial level)"];
+    const rewards=[`+${xpReward} XP`];
     if(gold>0) rewards.push(`+${gold} gold`);
     if(potionDrop>0) rewards.push(`+${potionDrop} potion${potionDrop===1?"":"s"}`);
-    toast(`Defeated ${e.name}: ${rewards.join(", ")}`);
+    toast(`Defeated ${mobDisplayName(mob)}: ${rewards.join(", ")}`);
   }
   updateUI();
 }
@@ -396,6 +438,7 @@ function startBattle(base,mobRef=null){
   enemy={...base};
   if(mobRef){
     enemy.level=mobRef.level;
+    enemy.elite=!!mobRef.elite;
     enemy.hp=mobRef.hp;
     enemy.maxHp=mobRef.maxHp;
     enemy.atk=mobRef.atk;
@@ -403,7 +446,7 @@ function startBattle(base,mobRef=null){
     enemy.xp=mobXpReward(mobRef);
   }else{
     const temp={...base,baseLevel:base.baseLevel||base.level||1,boss:!!base.boss};
-    const stats=mobScaledStats(temp,base.level||temp.baseLevel);
+    const stats=mobScaledStats(temp,base.level||temp.baseLevel,!!base.elite);
     enemy.level=base.level||temp.baseLevel;
     enemy.hp=stats.maxHp; enemy.maxHp=stats.maxHp; enemy.atk=stats.atk; enemy.def=stats.def; enemy.xp=stats.xp;
   }
@@ -412,7 +455,7 @@ function startBattle(base,mobRef=null){
   attackButtonCooldown=0;
   input={up:false,down:false,left:false,right:false};
 
-  document.getElementById("battleTitle").textContent=`Lv ${enemy.level||1} ${enemy.name} Encounter`;
+  document.getElementById("battleTitle").textContent=`Lv ${enemy.level||1} ${enemy.elite?"Elite ":""}${enemy.name} Encounter`;
   document.getElementById("battleScene").dataset.kind=enemy.kind||"slime";
   document.getElementById("battleFxLayer").innerHTML="";
   showEnemyIntent(false);
@@ -431,12 +474,20 @@ function heroAttack(){
   battleMessage("You rush forward!");
   animateBattleActor("hero","lunge",360);
 
-  const crit=Math.random()<.12;
-  let dmg=Math.max(1,state.atk+rand(0,3)-enemy.def);
+  const hitTarget=currentMob||enemy;
+  const hit=Math.random()*100<playerHitChanceAgainst(hitTarget);
+  const crit=hit && Math.random()<.12;
+  let dmg=hit?Math.max(1,state.atk+rand(0,3)-enemy.def):0;
   if(crit)dmg*=2;
 
   setTimeout(()=>{
     if(!enemy)return;
+    if(!hit){
+      battleFloat("enemy","MISS","guard");
+      battleMessage("Your attack misses.");
+      setTimeout(enemyTurn,650);
+      return;
+    }
     enemy.hp-=dmg;
     animateBattleActor("enemy","hit",300);
     battleFloat("enemy",crit?`CRIT ${dmg}`:`-${dmg}`,crit?"crit":"damage");
@@ -519,6 +570,16 @@ function enemyTurn(){
 
     setTimeout(()=>{
       if(!enemy)return;
+      const hitSource=currentMob||enemy;
+      const hit=Math.random()*100<mobHitChanceAgainstPlayer(hitSource);
+      if(!hit){
+        defending=false;
+        document.getElementById("heroBattleSprite").classList.remove("guardGlow");
+        battleFloat("hero","MISS","guard");
+        battleMessage(`${enemy.name} misses you.`);
+        setTimeout(returnPlayerTurn,650);
+        return;
+      }
       let dmg=Math.max(1,enemy.atk+rand(0,2)-state.def);
       if(defending)dmg=Math.max(1,Math.floor(dmg/2));
       const guarded=defending;
@@ -543,7 +604,8 @@ function enemyTurn(){
 function winBattle(){
   if(!enemy)return;
   const e=enemy;
-  const gold=rand(e.gold[0],e.gold[1]);
+  let gold=rand(e.gold[0],e.gold[1]);
+  if(e.elite && gold>0) gold=Math.max(1,Math.round(gold*numberOr(BALANCE.mobLevels?.eliteGoldMultiplier,1.5)));
   state.xp+=e.xp;
   state.gold+=gold;
   state.kills++;
@@ -567,7 +629,7 @@ function winBattle(){
   endBattle();
 
   if(e.boss)toast("You defeated Snickers!");
-  else toast(`Defeated ${e.name}: +${e.xp} XP, +${gold} gold`);
+  else toast(`Defeated ${e.elite?"Elite ":""}${e.name}: +${e.xp} XP, +${gold} gold`);
   updateUI();
 }
 
