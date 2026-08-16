@@ -1,5 +1,13 @@
 # Little Realm Changelog
 
+## v58.1 — Project Cleanup Migration Fix
+
+- Fixed an in-place-upgrade edge case: copying/extracting v58 over an older project does not remove files that no longer exist in the archive, so legacy root release-note `.txt` files could remain and make the new hygiene validation fail.
+- Added `tools/cleanup-legacy-notes.py`, which removes only the known pre-v58 release-note files and is safe to run repeatedly.
+- GitHub Pages now runs the legacy-note cleanup before validation, so repositories upgraded by overlaying files can still validate and deploy cleanly.
+- Kept the hygiene test strict after cleanup, so genuinely new root-level `.txt` clutter is still caught.
+- No gameplay, balance, content, rendering, save-format, or World Builder behavior changed.
+
 Release history is kept here so the project root stays clean. New entries should be added at the top; do not create a separate update-note `.txt` file for each release.
 
 ## v58 — Project Cleanup

@@ -1,4 +1,4 @@
-const CACHE_NAME = "little-realm-v58-project-cleanup";
+const CACHE_NAME = "little-realm-v58.1-project-cleanup-fix";
 const FILES = [
   "./",
   "./index.html",
