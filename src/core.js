@@ -46,45 +46,101 @@ const heroCtx = heroCanvas.getContext("2d");
 const enemyCanvas = document.getElementById("enemyBattleSprite");
 const enemyCtx = enemyCanvas.getContext("2d");
 
+const SPRITE_FRAME_META = new WeakMap();
+
+function buildSpriteFrameMeta(image){
+  if(!image || !image.naturalWidth || !image.naturalHeight) return null;
+  try{
+    const canvas=document.createElement("canvas");
+    canvas.width=image.naturalWidth;
+    canvas.height=image.naturalHeight;
+    const c=canvas.getContext("2d",{willReadFrequently:true});
+    c.clearRect(0,0,canvas.width,canvas.height);
+    c.drawImage(image,0,0);
+    const pixels=c.getImageData(0,0,canvas.width,canvas.height).data;
+    const frames=[];
+    for(let row=0;row<4;row++){
+      frames[row]=[];
+      const sy0=Math.round(row*canvas.height/4);
+      const sy1=Math.round((row+1)*canvas.height/4);
+      for(let col=0;col<4;col++){
+        const sx0=Math.round(col*canvas.width/4);
+        const sx1=Math.round((col+1)*canvas.width/4);
+        let minX=sx1,minY=sy1,maxX=sx0-1,maxY=sy0-1;
+        for(let py=sy0;py<sy1;py++){
+          let idx=(py*canvas.width+sx0)*4+3;
+          for(let px=sx0;px<sx1;px++,idx+=4){
+            if(pixels[idx]>8){
+              if(px<minX) minX=px;
+              if(px>maxX) maxX=px;
+              if(py<minY) minY=py;
+              if(py>maxY) maxY=py;
+            }
+          }
+        }
+        if(maxX>=minX && maxY>=minY){
+          frames[row][col]={
+            sx:minX, sy:minY,
+            sw:maxX-minX+1, sh:maxY-minY+1,
+            cellW:sx1-sx0, cellH:sy1-sy0
+          };
+        }else{
+          frames[row][col]={sx:sx0,sy:sy0,sw:sx1-sx0,sh:sy1-sy0,cellW:sx1-sx0,cellH:sy1-sy0};
+        }
+      }
+    }
+    SPRITE_FRAME_META.set(image,frames);
+    return frames;
+  }catch(err){
+    console.warn("Could not analyze sprite frame bounds",err);
+    return null;
+  }
+}
+
+function spriteFrameMeta(image,row,col){
+  const frames=SPRITE_FRAME_META.get(image) || buildSpriteFrameMeta(image);
+  return frames?.[row]?.[col] || null;
+}
+
 const playerSheet = new Image();
 playerSheet.src = "./assets/characters/player.png";
 let playerSheetReady = playerSheet.complete && playerSheet.naturalWidth > 0;
-playerSheet.onload = () => { playerSheetReady = true; };
+playerSheet.onload = () => { playerSheetReady = true; buildSpriteFrameMeta(playerSheet); };
 
 const slimeSheet = new Image();
 slimeSheet.src = "./assets/mobs/slime.png";
 let slimeSheetReady = slimeSheet.complete && slimeSheet.naturalWidth > 0;
-slimeSheet.onload = () => { slimeSheetReady = true; };
+slimeSheet.onload = () => { slimeSheetReady = true; buildSpriteFrameMeta(slimeSheet); };
 
 const wolfSheet = new Image();
 wolfSheet.src = "./assets/mobs/wolf.png";
 let wolfSheetReady = wolfSheet.complete && wolfSheet.naturalWidth > 0;
-wolfSheet.onload = () => { wolfSheetReady = true; };
+wolfSheet.onload = () => { wolfSheetReady = true; buildSpriteFrameMeta(wolfSheet); };
 
 const goblinSheet = new Image();
 goblinSheet.src = "./assets/mobs/goblin.png";
 let goblinSheetReady = goblinSheet.complete && goblinSheet.naturalWidth > 0;
-goblinSheet.onload = () => { goblinSheetReady = true; };
+goblinSheet.onload = () => { goblinSheetReady = true; buildSpriteFrameMeta(goblinSheet); };
 
 const bearSheet = new Image();
 bearSheet.src = "./assets/mobs/bear.png";
 let bearSheetReady = bearSheet.complete && bearSheet.naturalWidth > 0;
-bearSheet.onload = () => { bearSheetReady = true; };
+bearSheet.onload = () => { bearSheetReady = true; buildSpriteFrameMeta(bearSheet); };
 
 const cowSheet = new Image();
 cowSheet.src = "./assets/mobs/cow.png";
 let cowSheetReady = cowSheet.complete && cowSheet.naturalWidth > 0;
-cowSheet.onload = () => { cowSheetReady = true; };
+cowSheet.onload = () => { cowSheetReady = true; buildSpriteFrameMeta(cowSheet); };
 
 const pigSheet = new Image();
 pigSheet.src = "./assets/mobs/pig.png";
 let pigSheetReady = pigSheet.complete && pigSheet.naturalWidth > 0;
-pigSheet.onload = () => { pigSheetReady = true; };
+pigSheet.onload = () => { pigSheetReady = true; buildSpriteFrameMeta(pigSheet); };
 
 const chickenSheet = new Image();
 chickenSheet.src = "./assets/mobs/chicken.png";
 let chickenSheetReady = chickenSheet.complete && chickenSheet.naturalWidth > 0;
-chickenSheet.onload = () => { chickenSheetReady = true; };
+chickenSheet.onload = () => { chickenSheetReady = true; buildSpriteFrameMeta(chickenSheet); };
 
 const environmentAtlas = new Image();
 environmentAtlas.src = "./assets/environment/environment-atlas.png";

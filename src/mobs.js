@@ -173,7 +173,7 @@ function drawSheetSprite(c, sheet, ready, x, y, scale=1, facing="down", animT=0,
 
   c.fillStyle = "rgba(0,0,0,.18)";
   c.beginPath();
-  c.ellipse(x, y + 12, 9 * scale / 0.23, 3.2 * scale / 0.23, 0, 0, Math.PI * 2);
+  c.ellipse(x, y + 10, 9 * scale / 0.23, 3.2 * scale / 0.23, 0, 0, Math.PI * 2);
   c.fill();
 
   if(ready && sheet.naturalWidth && sheet.naturalHeight){
@@ -183,11 +183,23 @@ function drawSheetSprite(c, sheet, ready, x, y, scale=1, facing="down", animT=0,
     const sy1 = Math.round((row + 1) * sheet.naturalHeight / 4);
     const frameW = sx1 - sx0;
     const frameH = sy1 - sy0;
-    const dw = frameW * scale;
-    const dh = frameH * scale;
-    const dx = Math.round(x - dw / 2);
-    const dy = Math.round(y - dh + 18 - bob);
-    c.drawImage(sheet, sx0, sy0, frameW, frameH, dx, dy, dw, dh);
+    const meta=spriteFrameMeta(sheet,row,col);
+    if(meta){
+      // Draw only the visible pixels from the frame. This makes the actual feet,
+      // not transparent padding at the bottom of the cell, define ground contact.
+      const dw=meta.sw*scale;
+      const dh=meta.sh*scale;
+      const dx=Math.round(x-dw/2);
+      const groundY=Math.round(y+8-bob);
+      const dy=Math.round(groundY-dh);
+      c.drawImage(sheet,meta.sx,meta.sy,meta.sw,meta.sh,dx,dy,dw,dh);
+    }else{
+      const dw = frameW * scale;
+      const dh = frameH * scale;
+      const dx = Math.round(x - dw / 2);
+      const dy = Math.round(y - dh + 8 - bob);
+      c.drawImage(sheet, sx0, sy0, frameW, frameH, dx, dy, dw, dh);
+    }
   } else {
     if(fallbackKind === "slime") drawSlime(c,x,y,scale * 2.2);
     else if(fallbackKind === "wolf") drawWolf(c,x,y,scale * 2.0);

@@ -13,3 +13,7 @@ let bad=false;
 for(const [name,ok] of checks){console.log((ok?"PASS":"FAIL"),name);if(!ok)bad=true;}
 if(bad)process.exit(1);
 console.log("PASS mob motion stability test");
+if(!src.includes('spriteFrameMeta(sheet,row,col)')) fail('visible-frame grounding helper missing');
+if(!src.includes('groundY=Math.round(y+8-bob)')) fail('mob feet are not anchored to ground');
+console.log('PASS visible-frame mob grounding');
+

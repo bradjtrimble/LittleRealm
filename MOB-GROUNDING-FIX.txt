@@ -1,0 +1,5 @@
+v39 mob grounding fix
+- Mob sprite frames now calculate actual alpha/visible bounds at runtime.
+- Visible feet are anchored to the ground instead of transparent cell padding.
+- Applies to slime, wolf, goblin, Snickers, cow, pig, and chicken.
+- Keeps v37 smooth-facing/pathing fixes and v38 farm-animal models.

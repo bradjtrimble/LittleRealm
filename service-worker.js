@@ -1,4 +1,4 @@
-const CACHE_NAME = "little-realm-v38-farm-animal-refresh";
+const CACHE_NAME = "little-realm-v39-grounded-mobs";
 const FILES = [
   "./",
   "./index.html",
