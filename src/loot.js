@@ -120,9 +120,10 @@ function isLootWindowOpen(){
 }
 
 function renderLootInventory(){
-  if(!isLootWindowOpen()) return;
-  renderInventoryGrid(document.getElementById("lootInventoryGrid"));
-  updateBackpackHud();
+  // The backpack is its own floating panel now. Keep it in sync if the player
+  // chooses to leave it open while looting.
+  if(document.getElementById("backpack")?.classList.contains("show")) renderInventory();
+  else updateBackpackHud();
 }
 
 function renderLootWindow(){
@@ -135,7 +136,7 @@ function renderLootWindow(){
     }else{
       grid.innerHTML=pendingLoot.map((drop,index)=>{
         const def=getItemDefinition(drop.itemId);
-        return `<button class="lootSlot" data-loot-index="${index}" aria-label="Take ${drop.qty} ${inventoryEscape(def.name)}">${itemVisualMarkup(def,"lootItemIcon","lootItemSymbol")}<span class="lootItemName">${inventoryEscape(def.name)}</span><span class="lootItemQty">×${drop.qty}</span></button>`;
+        return `<button class="lootSlot" data-loot-index="${index}" aria-label="Take ${drop.qty} ${inventoryEscape(def.name)}">${itemVisualMarkup(def,"lootItemIcon","lootItemSymbol")}<span class="lootItemName">${inventoryEscape(def.name)}</span><span class="lootItemQty">${drop.qty}</span></button>`;
       }).join("");
     }
   }
@@ -145,15 +146,20 @@ function renderLootWindow(){
 function openLootWindow(drops,sourceLabel="Defeated enemy"){
   const normalized=normalizePendingLoot(drops);
   if(!normalized.length) return false;
-  pendingLoot=normalized;
-  pendingLootSource=String(sourceLabel||"Defeated enemy");
-  resetHeldKeyboardMovement?.();
-  input={up:false,down:false,left:false,right:false};
-  isHeroMoving=false;
-  closeBackpack?.();
-  document.getElementById("menu")?.classList.remove("show");
+
+  // Because loot no longer pauses the game, another mob may die while the
+  // window is still open. Merge new drops instead of replacing unclaimed loot.
+  if(isLootWindowOpen()){
+    pendingLoot=normalizePendingLoot([...pendingLoot,...normalized]);
+    if(pendingLootSource!==String(sourceLabel||"Defeated enemy")) pendingLootSource="Recent Loot";
+  }else{
+    pendingLoot=normalized;
+    pendingLootSource=String(sourceLabel||"Defeated enemy");
+  }
+
   document.getElementById("lootWindow")?.classList.add("show");
   renderLootWindow();
+  constrainFloatingPanel?.("lootPanel");
   return true;
 }
 

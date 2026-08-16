@@ -49,11 +49,15 @@ function overlayIsShown(id){
 }
 
 function isGameplayModalOpen(){
-  return overlayIsShown("menu") || overlayIsShown("backpack") || overlayIsShown("lootWindow") || overlayIsShown("disposePrompt");
+  // Backpack and loot are intentionally non-modal floating panels in v51.
+  // Only true dialogs should stop movement/combat input.
+  return overlayIsShown("menu") || overlayIsShown("disposePrompt");
 }
 
 function isLootInteractionOpen(){
-  return overlayIsShown("lootWindow") || overlayIsShown("disposePrompt");
+  // Loot can remain open while the world keeps running. Disposal confirmation
+  // is still modal so an item cannot be lost while combat advances behind it.
+  return overlayIsShown("disposePrompt");
 }
 
 const game = document.getElementById("game");
@@ -469,9 +473,9 @@ function updateBackpackHud(){
   const counter=document.getElementById("backpackCount");
   if(counter) counter.textContent=`${used}/${INVENTORY_SLOT_COUNT}`;
   const panelCounter=document.getElementById("inventoryCapacity");
-  if(panelCounter) panelCounter.textContent=`${used} / ${INVENTORY_SLOT_COUNT} slots`;
+  if(panelCounter) panelCounter.textContent=`${used} / ${INVENTORY_SLOT_COUNT}`;
   const lootCounter=document.getElementById("lootInventoryCapacity");
-  if(lootCounter) lootCounter.textContent=`${used} / ${INVENTORY_SLOT_COUNT} slots`;
+  if(lootCounter) lootCounter.textContent=`${used} / ${INVENTORY_SLOT_COUNT}`;
 }
 
 function renderInventoryGrid(grid){
@@ -650,25 +654,21 @@ function bindInventoryInteractions(){
 }
 
 function openBackpack(){
-  if(!state||document.getElementById("lootWindow")?.classList.contains("show")) return;
-  resetHeldKeyboardMovement?.();
-  input={up:false,down:false,left:false,right:false};
-  isHeroMoving=false;
-  document.getElementById("menu")?.classList.remove("show");
+  if(!state) return;
   selectedInventorySlot=null;
   renderInventory();
   document.getElementById("backpack")?.classList.add("show");
+  constrainFloatingPanel?.("backpackPanel");
 }
 
 function closeBackpack(){
   document.getElementById("backpack")?.classList.remove("show");
   selectedInventorySlot=null;
-  cancelDisposePrompt();
 }
 
 function toggleBackpack(){
   const backpack=document.getElementById("backpack");
-  if(!backpack||document.getElementById("lootWindow")?.classList.contains("show")) return;
+  if(!backpack) return;
   if(backpack.classList.contains("show")) closeBackpack();
   else openBackpack();
 }
@@ -810,9 +810,10 @@ function isLootWindowOpen(){
 }
 
 function renderLootInventory(){
-  if(!isLootWindowOpen()) return;
-  renderInventoryGrid(document.getElementById("lootInventoryGrid"));
-  updateBackpackHud();
+  // The backpack is its own floating panel now. Keep it in sync if the player
+  // chooses to leave it open while looting.
+  if(document.getElementById("backpack")?.classList.contains("show")) renderInventory();
+  else updateBackpackHud();
 }
 
 function renderLootWindow(){
@@ -825,7 +826,7 @@ function renderLootWindow(){
     }else{
       grid.innerHTML=pendingLoot.map((drop,index)=>{
         const def=getItemDefinition(drop.itemId);
-        return `<button class="lootSlot" data-loot-index="${index}" aria-label="Take ${drop.qty} ${inventoryEscape(def.name)}">${itemVisualMarkup(def,"lootItemIcon","lootItemSymbol")}<span class="lootItemName">${inventoryEscape(def.name)}</span><span class="lootItemQty">×${drop.qty}</span></button>`;
+        return `<button class="lootSlot" data-loot-index="${index}" aria-label="Take ${drop.qty} ${inventoryEscape(def.name)}">${itemVisualMarkup(def,"lootItemIcon","lootItemSymbol")}<span class="lootItemName">${inventoryEscape(def.name)}</span><span class="lootItemQty">${drop.qty}</span></button>`;
       }).join("");
     }
   }
@@ -835,15 +836,20 @@ function renderLootWindow(){
 function openLootWindow(drops,sourceLabel="Defeated enemy"){
   const normalized=normalizePendingLoot(drops);
   if(!normalized.length) return false;
-  pendingLoot=normalized;
-  pendingLootSource=String(sourceLabel||"Defeated enemy");
-  resetHeldKeyboardMovement?.();
-  input={up:false,down:false,left:false,right:false};
-  isHeroMoving=false;
-  closeBackpack?.();
-  document.getElementById("menu")?.classList.remove("show");
+
+  // Because loot no longer pauses the game, another mob may die while the
+  // window is still open. Merge new drops instead of replacing unclaimed loot.
+  if(isLootWindowOpen()){
+    pendingLoot=normalizePendingLoot([...pendingLoot,...normalized]);
+    if(pendingLootSource!==String(sourceLabel||"Defeated enemy")) pendingLootSource="Recent Loot";
+  }else{
+    pendingLoot=normalized;
+    pendingLootSource=String(sourceLabel||"Defeated enemy");
+  }
+
   document.getElementById("lootWindow")?.classList.add("show");
   renderLootWindow();
+  constrainFloatingPanel?.("lootPanel");
   return true;
 }
 
@@ -4351,6 +4357,8 @@ function closeAll(){
   document.getElementById("menu").classList.remove("show");
   document.getElementById("battle").classList.remove("show");
   document.getElementById("backpack")?.classList.remove("show");
+  closeLootWindow();
+  cancelDisposePrompt();
 }
 
 function updateUI(){
@@ -4400,6 +4408,110 @@ function updateUI(){
   const quickPotion=document.getElementById("quickPotion");
   if(quickPotion) quickPotion.textContent=`POTION ${state.potions}`;
   updateCombatHud();
+}
+
+// v51 compact floating panels ------------------------------------------------
+// Backpack and loot use lightweight, non-modal windows so the world remains
+// playable while either panel is open. Positions persist locally per device.
+let floatingPanelDrag=null;
+let floatingPanelsBound=false;
+
+function floatingPanelById(panelId){
+  return typeof panelId==="string"?document.getElementById(panelId):panelId;
+}
+
+function constrainFloatingPanel(panelId){
+  const panel=floatingPanelById(panelId);
+  if(!panel||typeof panel.getBoundingClientRect!=="function") return;
+  const rect=panel.getBoundingClientRect();
+  if(!rect.width||!rect.height) return;
+  const margin=6;
+  const maxLeft=Math.max(margin,innerWidth-rect.width-margin);
+  const maxTop=Math.max(margin,innerHeight-rect.height-margin);
+  const currentLeft=Number.isFinite(parseFloat(panel.style.left))?parseFloat(panel.style.left):rect.left;
+  const currentTop=Number.isFinite(parseFloat(panel.style.top))?parseFloat(panel.style.top):rect.top;
+  panel.style.left=`${clamp(currentLeft,margin,maxLeft)}px`;
+  panel.style.top=`${clamp(currentTop,margin,maxTop)}px`;
+  panel.style.right="auto";
+  panel.style.bottom="auto";
+}
+
+function saveFloatingPanelPosition(panel,key){
+  if(!panel||!key) return;
+  try{
+    localStorage.setItem(key,JSON.stringify({left:parseFloat(panel.style.left)||0,top:parseFloat(panel.style.top)||0}));
+  }catch(_err){}
+}
+
+function restoreFloatingPanelPosition(panel,key){
+  if(!panel||!key) return;
+  try{
+    const saved=JSON.parse(localStorage.getItem(key)||"null");
+    if(saved&&Number.isFinite(Number(saved.left))&&Number.isFinite(Number(saved.top))){
+      panel.style.left=`${Number(saved.left)}px`;
+      panel.style.top=`${Number(saved.top)}px`;
+      panel.style.right="auto";
+      panel.style.bottom="auto";
+    }
+  }catch(_err){}
+}
+
+function bindFloatingPanel(panelId,handleId,storageKey){
+  const panel=document.getElementById(panelId);
+  const handle=document.getElementById(handleId);
+  if(!panel||!handle) return;
+  restoreFloatingPanelPosition(panel,storageKey);
+
+  handle.addEventListener("pointerdown",event=>{
+    if(event.button!=null&&event.button!==0) return;
+    if(event.target?.closest?.(".panelClose")) return;
+    const rect=panel.getBoundingClientRect();
+    floatingPanelDrag={
+      pointerId:event.pointerId,
+      panel,
+      storageKey,
+      startX:event.clientX,
+      startY:event.clientY,
+      left:rect.left,
+      top:rect.top
+    };
+    handle.setPointerCapture?.(event.pointerId);
+    panel.classList.add("panelDragging");
+    event.preventDefault?.();
+  });
+}
+
+function bindFloatingPanels(){
+  if(floatingPanelsBound) return;
+  floatingPanelsBound=true;
+  bindFloatingPanel("backpackPanel","backpackDragHandle","lr-ui-backpack-position-v51");
+  bindFloatingPanel("lootPanel","lootDragHandle","lr-ui-loot-position-v51");
+
+  document.addEventListener("pointermove",event=>{
+    const drag=floatingPanelDrag;
+    if(!drag||event.pointerId!==drag.pointerId) return;
+    drag.panel.style.left=`${drag.left+(event.clientX-drag.startX)}px`;
+    drag.panel.style.top=`${drag.top+(event.clientY-drag.startY)}px`;
+    drag.panel.style.right="auto";
+    drag.panel.style.bottom="auto";
+    constrainFloatingPanel(drag.panel);
+    event.preventDefault?.();
+  },{passive:false});
+
+  const finish=event=>{
+    const drag=floatingPanelDrag;
+    if(!drag||event.pointerId!==drag.pointerId) return;
+    floatingPanelDrag=null;
+    drag.panel.classList.remove("panelDragging");
+    constrainFloatingPanel(drag.panel);
+    saveFloatingPanelPosition(drag.panel,drag.storageKey);
+  };
+  document.addEventListener("pointerup",finish,{passive:false});
+  document.addEventListener("pointercancel",finish,{passive:false});
+  window.addEventListener("resize",()=>{
+    constrainFloatingPanel("backpackPanel");
+    constrainFloatingPanel("lootPanel");
+  });
 }
 
 function save(){
@@ -4456,7 +4568,7 @@ const INPUT_BINDINGS = {
 
 // Exposed only as read-only diagnostics so a desktop tester can confirm the
 // deployed build from DevTools without digging through bundled source.
-window.LR_BUILD_VERSION="v50-loot-window";
+window.LR_BUILD_VERSION="v51-floating-loot-ui";
 window.LR_INPUT_BINDINGS=Object.freeze({...INPUT_BINDINGS});
 window.LR_INPUT_STATE=()=>({...input});
 
@@ -4527,7 +4639,6 @@ function toggleMenuFromKeyboard(){
   const menu=document.getElementById("menu");
   resetHeldKeyboardMovement();
   isHeroMoving=false;
-  closeBackpack();
   menu.classList.toggle("show");
 }
 
@@ -4654,12 +4765,13 @@ document.getElementById("backpackBtn").onclick=toggleBackpack;
 document.getElementById("closeBackpack").onclick=closeBackpack;
 document.getElementById("inventoryGrid").onclick=handleInventoryGridClick;
 document.getElementById("lootGrid").onclick=handleLootGridClick;
-document.getElementById("takeAllLoot").onclick=takeAllLoot;
+document.getElementById("takeAllLoot")?.addEventListener("click",takeAllLoot);
 document.getElementById("closeLootWindow").onclick=closeLootWindow;
 document.getElementById("disposeCancel").onclick=cancelDisposePrompt;
 document.getElementById("disposeConfirm").onclick=confirmDisposePrompt;
 bindInventoryInteractions();
 bindLootInteractions();
+bindFloatingPanels();
 game.addEventListener("pointerdown",handleWorldTap);
 document.getElementById("menuBtn").onclick=()=>{
   input={up:false,down:false,left:false,right:false};

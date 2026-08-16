@@ -1,0 +1,13 @@
+Little Realm v51 — Compact Floating Backpack + Loot UI
+
+- Backpack is now a compact 5x4 item-only panel with a small close button.
+- Loot is now a compact item list; click an item to take it.
+- Backpack and loot panels can be dragged anywhere on screen by their title bars.
+- Panel positions persist locally on the device/browser.
+- Backpack and loot are non-modal: movement, targeting, combat, mob AI, and respawns continue while they are open.
+- Backpack and loot can be open at the same time.
+- Loot dragging to an open backpack slot remains supported.
+- Inventory slot rearranging and drag-out disposal confirmation remain supported.
+- If another mob drops loot while the loot window is already open, the new drops merge with the unclaimed loot instead of replacing it.
+- Closing the loot window still abandons any unclaimed drops.
+- Disposal confirmation remains modal for safety.

@@ -213,9 +213,9 @@ function updateBackpackHud(){
   const counter=document.getElementById("backpackCount");
   if(counter) counter.textContent=`${used}/${INVENTORY_SLOT_COUNT}`;
   const panelCounter=document.getElementById("inventoryCapacity");
-  if(panelCounter) panelCounter.textContent=`${used} / ${INVENTORY_SLOT_COUNT} slots`;
+  if(panelCounter) panelCounter.textContent=`${used} / ${INVENTORY_SLOT_COUNT}`;
   const lootCounter=document.getElementById("lootInventoryCapacity");
-  if(lootCounter) lootCounter.textContent=`${used} / ${INVENTORY_SLOT_COUNT} slots`;
+  if(lootCounter) lootCounter.textContent=`${used} / ${INVENTORY_SLOT_COUNT}`;
 }
 
 function renderInventoryGrid(grid){
@@ -394,25 +394,21 @@ function bindInventoryInteractions(){
 }
 
 function openBackpack(){
-  if(!state||document.getElementById("lootWindow")?.classList.contains("show")) return;
-  resetHeldKeyboardMovement?.();
-  input={up:false,down:false,left:false,right:false};
-  isHeroMoving=false;
-  document.getElementById("menu")?.classList.remove("show");
+  if(!state) return;
   selectedInventorySlot=null;
   renderInventory();
   document.getElementById("backpack")?.classList.add("show");
+  constrainFloatingPanel?.("backpackPanel");
 }
 
 function closeBackpack(){
   document.getElementById("backpack")?.classList.remove("show");
   selectedInventorySlot=null;
-  cancelDisposePrompt();
 }
 
 function toggleBackpack(){
   const backpack=document.getElementById("backpack");
-  if(!backpack||document.getElementById("lootWindow")?.classList.contains("show")) return;
+  if(!backpack) return;
   if(backpack.classList.contains("show")) closeBackpack();
   else openBackpack();
 }

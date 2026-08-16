@@ -29,12 +29,13 @@ document.getElementById("backpackBtn").onclick=toggleBackpack;
 document.getElementById("closeBackpack").onclick=closeBackpack;
 document.getElementById("inventoryGrid").onclick=handleInventoryGridClick;
 document.getElementById("lootGrid").onclick=handleLootGridClick;
-document.getElementById("takeAllLoot").onclick=takeAllLoot;
+document.getElementById("takeAllLoot")?.addEventListener("click",takeAllLoot);
 document.getElementById("closeLootWindow").onclick=closeLootWindow;
 document.getElementById("disposeCancel").onclick=cancelDisposePrompt;
 document.getElementById("disposeConfirm").onclick=confirmDisposePrompt;
 bindInventoryInteractions();
 bindLootInteractions();
+bindFloatingPanels();
 game.addEventListener("pointerdown",handleWorldTap);
 document.getElementById("menuBtn").onclick=()=>{
   input={up:false,down:false,left:false,right:false};

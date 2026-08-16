@@ -71,3 +71,7 @@ If a mob needs a different table, add a string such as `lootTable: "forestGoblin
 ## Current live loot
 
 Slimes have the first live loot entry: **Slime Gel** at a 70% independent drop chance for **1–2** gel. Other default mob tables remain empty.
+
+## v51 floating loot UI
+
+Mob item drops open a small, non-modal loot panel that contains only the dropped items and a close button. Clicking a loot item transfers it into the backpack. The loot panel can be moved by dragging its title bar and can remain open during normal gameplay. If more loot drops before the window is closed, new drops merge into the pending list so unclaimed loot is not overwritten. If the backpack is also open, loot can still be dragged directly into a chosen inventory slot. Closing the loot window abandons all remaining pending loot.

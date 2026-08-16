@@ -36,3 +36,7 @@ Loot can target an exact backpack slot through `placeItemInInventorySlot`. An ex
 - `moveSlot(fromIndex, toIndex)`
 - `disposeSlot(slotIndex)`
 - `requestDispose(slotIndex)`
+
+## v51 floating backpack UI
+
+The backpack is a compact, non-modal 5x4 panel. It can stay open while the player moves, targets mobs, and fights. Drag the title bar to reposition it; the browser stores that position locally. Drag item stacks between slots to organize them. Dragging a stack outside the backpack still opens the disposal confirmation.

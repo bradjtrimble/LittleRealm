@@ -46,9 +46,10 @@ try{
   if(rolledOnly.rolled.length!==2) throw new Error('rollMobLoot did not return rolled drops');
   if(global.LR_INVENTORY.getItemCount('slimeGel')!==beforeRollOnly) throw new Error('rollMobLoot should not auto-grant items');
 
-  global.LR_LOOT.openWindow([{itemId:'slimeGel',qty:3}],'Test Slime');
+  global.LR_LOOT.openWindow([{itemId:'slimeGel',qty:1}],'Test Slime');
+  global.LR_LOOT.openWindow([{itemId:'slimeGel',qty:2}],'Second Slime');
   if(!get('lootWindow').classList.contains('show')) throw new Error('loot window did not open');
-  if(global.LR_LOOT.getPending()[0]?.qty!==3) throw new Error('loot window pending stack mismatch');
+  if(global.LR_LOOT.getPending()[0]?.qty!==3) throw new Error('new loot should merge with unclaimed loot while the floating window stays open');
   const targeted=global.LR_LOOT.takeAt(0,7);
   if(targeted.added!==3||global.LR_INVENTORY.getSlots()[7]?.id!=='slimeGel') throw new Error('drag-target loot placement failed');
   if(get('lootWindow').classList.contains('show')) throw new Error('loot window should close when all loot is collected');

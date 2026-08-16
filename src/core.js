@@ -44,11 +44,15 @@ function overlayIsShown(id){
 }
 
 function isGameplayModalOpen(){
-  return overlayIsShown("menu") || overlayIsShown("backpack") || overlayIsShown("lootWindow") || overlayIsShown("disposePrompt");
+  // Backpack and loot are intentionally non-modal floating panels in v51.
+  // Only true dialogs should stop movement/combat input.
+  return overlayIsShown("menu") || overlayIsShown("disposePrompt");
 }
 
 function isLootInteractionOpen(){
-  return overlayIsShown("lootWindow") || overlayIsShown("disposePrompt");
+  // Loot can remain open while the world keeps running. Disposal confirmation
+  // is still modal so an item cannot be lost while combat advances behind it.
+  return overlayIsShown("disposePrompt");
 }
 
 const game = document.getElementById("game");

@@ -96,6 +96,16 @@ except Exception as e:
     failed.append('loot foundation test'); print('FAIL loot foundation test',e)
 
 try:
+    floating_ui=subprocess.run(['python3',str(ROOT/'tools'/'floating-ui-test.py')],check=True,capture_output=True,text=True)
+    print(floating_ui.stdout.strip())
+except subprocess.CalledProcessError as e:
+    failed.append('compact floating UI test')
+    detail=(e.stderr or e.stdout or str(e)).strip()
+    print('FAIL compact floating UI test',detail)
+except Exception as e:
+    failed.append('compact floating UI test'); print('FAIL compact floating UI test',e)
+
+try:
     zone=subprocess.run(['python3',str(ROOT/'tools'/'zone-test.py')],check=True,capture_output=True,text=True)
     print(zone.stdout.strip())
 except Exception as e:
