@@ -1,0 +1,24 @@
+Little Realm v49 — Slime Gel
+
+Added the first live loot item to the v48 loot foundation.
+
+Item:
+- ID: slimeGel
+- Name: Slime Gel
+- Category: Material
+- Rarity: Common
+- Stack limit: 50
+- Base sell value: 1g
+- Artwork: assets/items/slime-gel.png
+- Description: A small glossy blob of bright lime-green translucent slime gel, slightly irregular in shape, with a few tiny bubbles inside and bright white highlights.
+
+Slime loot table:
+- 70% drop chance
+- 1–2 Slime Gel per successful roll
+
+Backpack:
+- Item definitions now support an optional `icon` image path.
+- Artwork is shown in inventory slots and the details panel.
+- Existing `symbol` rendering remains as a fallback.
+
+Other mob loot tables are unchanged and remain empty.

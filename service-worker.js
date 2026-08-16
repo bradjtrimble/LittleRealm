@@ -1,4 +1,4 @@
-const CACHE_NAME = "little-realm-v48-loot-foundation";
+const CACHE_NAME = "little-realm-v49-slime-gel";
 const FILES = [
   "./",
   "./index.html",
@@ -15,6 +15,7 @@ const FILES = [
   "./js/game.js",
   "./assets/icons/icon-192.png",
   "./assets/icons/icon-512.png",
+  "./assets/items/slime-gel.png",
   "./assets/environment/terrain-seamless.png",
   "./assets/environment/water-seamless.png",
   "./assets/environment/environment-atlas.png",

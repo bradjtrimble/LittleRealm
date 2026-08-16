@@ -658,6 +658,16 @@ button.action:active{transform:scale(.98)}
   font-weight:950;
   text-shadow:0 2px rgba(0,0,0,.35);
 }
+.itemIcon{
+  display:block;
+  width:82%;
+  height:82%;
+  margin:auto;
+  object-fit:contain;
+  image-rendering:pixelated;
+  filter:drop-shadow(0 2px 2px rgba(0,0,0,.35));
+  pointer-events:none;
+}
 .itemQty{
   position:absolute;
   right:4px;
@@ -683,6 +693,7 @@ button.action:active{transform:scale(.98)}
 .inventoryDetailTitle{display:flex;align-items:center;gap:8px;font-size:14px;font-weight:900}
 .inventoryDetailTitle b{margin-left:auto;font-size:12px;color:#f3d69a}
 .detailSymbol{display:inline-flex;width:27px;height:27px;align-items:center;justify-content:center;border-radius:6px;background:#80552e;color:#fff0cf}
+.detailIcon{width:34px;height:34px;object-fit:contain;image-rendering:pixelated;filter:drop-shadow(0 2px 2px rgba(0,0,0,.32))}
 .inventoryDetailMeta{margin-top:5px;color:#c8b8cf;font-size:9px;font-weight:750;text-transform:uppercase;letter-spacing:.06em}
 .inventoryDetailDescription{margin-top:6px;color:#eee5f2;font-size:11px;line-height:1.35}
 #closeBackpack{width:100%;margin-top:12px}
