@@ -1,0 +1,9 @@
+v44 Combat Tuning Lab
+- Adds a fourth World Builder tab: Combat Test.
+- Player Test Level: set Lv 1-200 instantly, with quick buttons through Lv 100.
+- Per-species live tuning for level range, base HP/damage/armor/XP, elite chance, attack speed, aggro and chase speed.
+- Global live tuning for level growth, high-level danger boosts, elite/boss multipliers, aggro scaling, hit/miss, and XP rules.
+- Reroll one species or all mob levels/elites without reloading.
+- Live preview displays HP, damage, armor, current XP reward, hit chances, aggro range and rank.
+- Export game-balance.js from Developer Mode.
+- Reset live tuning back to project balance.

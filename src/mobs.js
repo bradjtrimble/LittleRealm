@@ -1,7 +1,7 @@
 function createMobTemplate(name,kind,configKey,fallback,boss=false){
   const cfg=BALANCE.mobs?.[configKey] || {};
   return {
-    name,kind,boss,
+    name,kind,boss,configKey,
     baseLevel:Math.max(1,Math.floor(numberOr(cfg.baseLevel,fallback.baseLevel||1))),
     levelMin:Math.max(1,Math.floor(numberOr(cfg.levelMin,cfg.baseLevel??fallback.baseLevel??1))),
     levelMax:Math.max(1,Math.floor(numberOr(cfg.levelMax,cfg.baseLevel??fallback.baseLevel??1))),
@@ -38,6 +38,57 @@ const enemyTemplates = [
   createMobTemplate("Chicken","chicken","chicken",{baseLevel:1,hp:4,atk:1,def:0,xp:2,gold:[0,0],attackInterval:1.7,aggressive:false,chaseSpeed:34,wanderSpeed:18})
 ];
 const bossTemplate = createMobTemplate("Snickers","boss","snickers",{baseLevel:8,hp:70,atk:10,def:3,xp:55,gold:[35,55],attackInterval:1.55,aggressive:true,chaseSpeed:52,wanderSpeed:0},true);
+
+function refreshMobTemplatesFromBalance(){
+  const templates=[...enemyTemplates,bossTemplate];
+  for(const template of templates){
+    const key=template.configKey || (template.boss?"snickers":template.kind);
+    const cfg=BALANCE.mobs?.[key] || {};
+    template.baseLevel=Math.max(1,Math.floor(numberOr(cfg.baseLevel,template.baseLevel||1)));
+    template.levelMin=Math.max(1,Math.floor(numberOr(cfg.levelMin,template.levelMin||template.baseLevel)));
+    template.levelMax=Math.max(template.levelMin,Math.floor(numberOr(cfg.levelMax,template.levelMax||template.baseLevel)));
+    template.hp=Math.max(1,numberOr(cfg.hp,template.hp));
+    template.atk=Math.max(0,numberOr(cfg.attack,template.atk));
+    template.def=Math.max(0,numberOr(cfg.defense,template.def));
+    template.xp=Math.max(1,numberOr(cfg.xp,template.xp));
+    template.gold=[numberOr(cfg.goldMin,template.gold?.[0]||0),numberOr(cfg.goldMax,template.gold?.[1]||0)];
+    template.goldDropChance=percentOr(cfg.goldDropChancePercent,(template.goldDropChance||0)*100);
+    template.potionDropChance=percentOr(cfg.potionDropChancePercent,(template.potionDropChance||0)*100);
+    template.potionDropAmount=Math.max(0,Math.floor(numberOr(cfg.potionDropAmount,template.potionDropAmount||0)));
+    template.eliteChance=percentOr(cfg.eliteChancePercent,(template.eliteChance||0)*100);
+    template.attackInterval=Math.max(.1,numberOr(cfg.attackIntervalSeconds,template.attackInterval));
+    template.respawnMin=Math.max(0,numberOr(cfg.respawnMinSeconds,template.respawnMin));
+    template.respawnMax=Math.max(template.respawnMin,numberOr(cfg.respawnMaxSeconds,template.respawnMax));
+    template.aggressive=booleanOr(cfg.aggressive,template.aggressive);
+    template.aggroTriggerRange=Math.max(0,numberOr(cfg.aggroTriggerRange,template.aggroTriggerRange));
+    template.alertRange=Math.max(0,numberOr(cfg.alertRange,template.alertRange));
+    template.chaseSpeed=Math.max(0,numberOr(cfg.chaseSpeed,template.chaseSpeed));
+    template.wanderSpeed=Math.max(0,numberOr(cfg.wanderSpeed,template.wanderSpeed));
+    template.leashDistance=Math.max(0,numberOr(cfg.leashDistance,template.leashDistance));
+    template.leashSpeed=Math.max(0,numberOr(cfg.leashSpeed,template.leashSpeed));
+    template.wanderDelayMin=Math.max(0,numberOr(cfg.wanderDelayMinSeconds,template.wanderDelayMin));
+    template.wanderDelayMax=Math.max(template.wanderDelayMin,numberOr(cfg.wanderDelayMaxSeconds,template.wanderDelayMax));
+  }
+  for(const mob of mobs){
+    const t=mob.template;
+    if(!t) continue;
+    mob.level=Math.max(t.levelMin,Math.min(t.levelMax,Math.floor(numberOr(mob.level,t.baseLevel))));
+    if(mob.alive) restoreMobStats(mob,false);
+  }
+}
+
+function rerollMobLevelsAndElites(typeKey=null){
+  refreshMobTemplatesFromBalance();
+  for(const mob of mobs){
+    const key=mob.template?.configKey || (mob.boss?"snickers":mob.kind);
+    if(typeKey && key!==typeKey) continue;
+    mob.level=mobSpawnLevel(mob.template);
+    mob.elite=rollMobElite(mob.template);
+    restoreMobStats(mob,true);
+    mob.aggro=false;
+  }
+  updateCombatHud?.();
+}
 
 function mobSpawnLevel(template,tx=0,ty=0){
   const min=Math.min(template.levelMin,template.levelMax);

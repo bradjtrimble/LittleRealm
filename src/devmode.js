@@ -11,6 +11,9 @@ let devSnap=8;
 let devStatusTimer=null;
 let devSelectedMob=null;
 let devActiveTab="objects";
+let devCombatMobType="goblin";
+let devPlayerTestBaseline=null;
+const DEV_PROJECT_BALANCE=JSON.parse(JSON.stringify(BALANCE));
 
 function ensureDeveloperStyles(){
   if(document.getElementById("littleRealmDevStyles")) return;
@@ -28,7 +31,7 @@ function ensureDeveloperStyles(){
     #devPanel .devToolbar button,#devPanel .devToolbar select,#devPanel .devProjectActions button,#devPanel .devRow button,#devPanel .devMobTypeChip{border:1px solid rgba(255,255,255,.14);background:#5a4869;color:#fff;border-radius:8px;padding:8px 10px;font-weight:700}
     #devPanel .devToolbar button.active,#devPanel .devPropButton.active,#devPanel .devTab.active,#devPanel .devMobTypeChip.active{outline:2px solid #63e6ff;background:#385a64}
     #devPanel .devToolbar label{display:flex;gap:5px;align-items:center;color:#e5d9ec}
-    #devPanel .devTabs{display:grid;grid-template-columns:repeat(3,1fr);gap:6px;padding:8px 12px;border-bottom:1px solid rgba(255,255,255,.1);background:#211a28}
+    #devPanel .devTabs{display:grid;grid-template-columns:repeat(4,1fr);gap:6px;padding:8px 12px;border-bottom:1px solid rgba(255,255,255,.1);background:#211a28}
     #devPanel .devTab{border:1px solid rgba(255,255,255,.12);background:#30283a;color:#d9cfdf;border-radius:9px;padding:9px 10px;font-weight:800;cursor:pointer}
     #devPanel .devBody{flex:1;min-height:0;overflow:auto;padding:12px}
     #devPanel .devView{display:none}#devPanel .devView.active{display:block}
@@ -58,9 +61,18 @@ function ensureDeveloperStyles(){
     #devPanel .devSubhead{font-weight:800;margin-top:10px;color:#c9b9d2} #devPanel .devRow{display:flex;gap:7px;margin-top:10px} #devPanel .devRow button{flex:1} #devPanel .devRow .danger{background:#713b47}
     #devPanel .devProjectActions{display:grid;grid-template-columns:1fr 1fr;gap:7px;margin-top:12px} #devPanel .devProjectActions button:first-child{grid-column:1/-1;background:#38606a}
     #devPanel #devStatus{padding:9px 12px;background:#1d1822;color:#bdb0c5;font-size:11px;border-top:1px solid rgba(255,255,255,.08)}
+
+    #devPanel .devCombatGrid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px}
+    #devPanel .devCombatField{display:flex;flex-direction:column;gap:4px;color:#d7cbdc;font-size:11px;font-weight:700}
+    #devPanel .devCombatField input,#devPanel .devCombatField select{width:100%;background:#1c1821;color:#fff;border:1px solid #594b62;border-radius:7px;padding:8px}
+    #devPanel .devCombatCheck{display:flex;align-items:center;gap:7px;background:#2b2432;border-radius:8px;padding:9px;color:#ddd;font-weight:700}
+    #devPanel .devCombatActions{display:flex;gap:7px;flex-wrap:wrap;margin-top:10px}.devCombatActions button{border:1px solid rgba(255,255,255,.14);background:#5a4869;color:#fff;border-radius:8px;padding:8px 10px;font-weight:800;cursor:pointer}.devCombatActions .primary{background:#38606a}.devCombatActions .danger{background:#713b47}
+    #devPanel .devCombatDetails{background:#211b27;border:1px solid rgba(255,255,255,.08);border-radius:10px;margin:8px 0;overflow:hidden}.devCombatDetails summary{cursor:pointer;padding:10px 11px;font-weight:900;color:#d8c1e7;user-select:none}.devCombatDetails>div{padding:0 10px 10px}
+    #devPanel .devPlayerTest{display:grid;grid-template-columns:minmax(110px,160px) 1fr;gap:10px;align-items:end}.devQuickLevels{display:flex;gap:5px;flex-wrap:wrap}.devQuickLevels button{border:1px solid rgba(255,255,255,.12);background:#30283a;color:#fff;border-radius:7px;padding:7px 9px;font-weight:800}
+    #devPanel .devStatPreview{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:6px;margin-top:9px}.devStatPreview div{background:#2b2432;border-radius:8px;padding:8px;text-align:center}.devStatPreview b{display:block;color:#7ceaff;font-size:14px}.devStatPreview span{font-size:9px;color:#a99bb3;text-transform:uppercase;letter-spacing:.05em}
     body.devMode #pcControls{opacity:.25}
     @media(max-width:1100px){#devPanel{width:min(650px,68vw)!important}#devPanel #devPalette{grid-template-columns:repeat(5,minmax(0,1fr))!important}}
-    @media(max-width:760px){#devPanel{width:calc(100vw - 12px)!important;right:6px!important;top:6px!important;height:calc(100vh - 12px)!important}#devPanel #devPalette{grid-template-columns:repeat(4,minmax(0,1fr))!important}#devPanel #devObjectList{grid-template-columns:repeat(2,minmax(0,1fr))}#devPanel #devScalePanel{grid-template-columns:1fr}.devQuad{grid-template-columns:repeat(2,1fr)!important}}
+    @media(max-width:760px){#devPanel .devTabs{grid-template-columns:repeat(2,1fr)}#devPanel .devCombatGrid{grid-template-columns:repeat(2,minmax(0,1fr))}#devPanel .devStatPreview{grid-template-columns:repeat(2,minmax(0,1fr))}#devPanel{width:calc(100vw - 12px)!important;right:6px!important;top:6px!important;height:calc(100vh - 12px)!important}#devPanel #devPalette{grid-template-columns:repeat(4,minmax(0,1fr))!important}#devPanel #devObjectList{grid-template-columns:repeat(2,minmax(0,1fr))}#devPanel #devScalePanel{grid-template-columns:1fr}.devQuad{grid-template-columns:repeat(2,1fr)!important}}
   `;
   document.head.appendChild(style);
 }
@@ -250,9 +262,11 @@ function devPointerDown(event){
     devSelectedMob=mob;
     devSelected=null;
     devDragging=false;
-    setDeveloperTab("scale");
+    devCombatMobType=mobTypeScaleKey(mob);
+    if(devActiveTab!=="combat") setDeveloperTab("scale");
     refreshDeveloperPanel();
-    devSetStatus(`${mobTypeScaleLabel(mobTypeScaleKey(mob))} selected — scale changes affect every ${mobTypeScaleLabel(mobTypeScaleKey(mob)).toLowerCase()}`);
+    if(devActiveTab==="combat") devSetStatus(`${mobTypeScaleLabel(devCombatMobType)} selected — combat tuning now targets this species`);
+    else devSetStatus(`${mobTypeScaleLabel(devCombatMobType)} selected — scale changes affect every ${mobTypeScaleLabel(devCombatMobType).toLowerCase()}`);
     return;
   }
 
@@ -432,6 +446,7 @@ function refreshDeveloperPanel(rebuild=true){
   if(!inspector) return;
   refreshDeveloperObjectList();
   refreshDeveloperMobPanel();
+  refreshDeveloperCombatPanel();
   if(!devSelected){
     inspector.innerHTML='<div class="devEmpty">Select an object in the world or choose a prop from the palette and click to place it.</div>';
     return;
@@ -470,6 +485,7 @@ function setMobTypeScale(key,value){
 function selectDeveloperMobType(key){
   const match=mobs.find(m=>mobTypeScaleKey(m)===key) || {kind:key,boss:key==="snickers",alive:false};
   devSelectedMob=match;
+  devCombatMobType=key;
   devSelected=null;
   setDeveloperTab("scale");
   refreshDeveloperPanel();
@@ -542,12 +558,143 @@ function resetVisualScale(){
   devSetStatus("Visual scale reset to project settings");
 }
 
+
+function devBalanceClone(value){ return JSON.parse(JSON.stringify(value)); }
+function devReplaceBalance(source){
+  for(const key of Object.keys(BALANCE)) delete BALANCE[key];
+  Object.assign(BALANCE,devBalanceClone(source));
+}
+function devCombatNum(value,fallback=0){
+  const n=Number(value); return Number.isFinite(n)?n:fallback;
+}
+function devCombatField(field,label,value,step="1",min=null,max=null){
+  return `<label class="devCombatField">${label}<input type="number" data-combat-field="${field}" value="${value}" step="${step}"${min!==null?` min="${min}"`:""}${max!==null?` max="${max}"`:""}></label>`;
+}
+function devGlobalField(field,label,value,step="1",min=null,max=null){
+  return `<label class="devCombatField">${label}<input type="number" data-global-field="${field}" value="${value}" step="${step}"${min!==null?` min="${min}"`:""}${max!==null?` max="${max}"`:""}></label>`;
+}
+function developerXpNextForLevel(level){
+  const growth=1+percentOr(BALANCE.progression?.xpRequirementGrowthPercent,35);
+  let next=Math.max(1,Math.floor(numberOr(BALANCE.progression?.startingXpToLevel,25)));
+  for(let i=1;i<level;i++) next=Math.min(Number.MAX_SAFE_INTEGER,Math.floor(next*growth));
+  return next;
+}
+function captureDeveloperPlayerBaseline(){
+  if(devPlayerTestBaseline) return;
+  devPlayerTestBaseline={level:state.level,xp:state.xp,xpNext:state.xpNext,hp:state.hp,maxHp:state.maxHp,atk:state.atk,def:state.def};
+}
+function applyDeveloperPlayerLevel(rawLevel){
+  captureDeveloperPlayerBaseline();
+  const level=Math.max(1,Math.min(200,Math.floor(devCombatNum(rawLevel,state.level))));
+  const steps=level-1;
+  state.level=level;
+  state.xp=0;
+  state.xpNext=developerXpNextForLevel(level);
+  state.maxHp=Math.max(1,Math.floor(numberOr(BALANCE.player?.maxHp,30)+steps*numberOr(BALANCE.progression?.hpPerLevel,8)));
+  state.atk=Math.max(0,Math.floor(numberOr(BALANCE.player?.attack,5)+steps*numberOr(BALANCE.progression?.attackPerLevel,2)));
+  state.def=Math.max(0,Math.floor(numberOr(BALANCE.player?.defense,1)+steps*numberOr(BALANCE.progression?.defensePerLevel,1)));
+  state.hp=state.maxHp;
+  refreshAliveMobStatsForPlayer();
+  updateUI(); updateCombatHud(); refreshDeveloperCombatPanel();
+  devSetStatus(`Player test level set to ${level}`);
+}
+function restoreDeveloperPlayerBaseline(){
+  if(!devPlayerTestBaseline){devSetStatus("No player test-level baseline captured yet");return;}
+  Object.assign(state,devPlayerTestBaseline);
+  devPlayerTestBaseline=null;
+  refreshAliveMobStatsForPlayer(); updateUI(); updateCombatHud(); refreshDeveloperCombatPanel();
+  devSetStatus(`Restored player to level ${state.level}`);
+}
+function applyDeveloperSpeciesBalance(){
+  if(!devPanel) return;
+  const cfg=BALANCE.mobs?.[devCombatMobType];
+  if(!cfg) return;
+  const panel=devPanel.querySelector("#devCombatSpecies");
+  panel?.querySelectorAll("[data-combat-field]").forEach(input=>{
+    const key=input.dataset.combatField;
+    cfg[key]=input.type==="checkbox"?input.checked:devCombatNum(input.value,cfg[key]);
+  });
+  cfg.baseLevel=Math.max(1,Math.floor(devCombatNum(cfg.baseLevel,1)));
+  cfg.levelMin=Math.max(1,Math.floor(devCombatNum(cfg.levelMin,cfg.baseLevel)));
+  cfg.levelMax=Math.max(cfg.levelMin,Math.floor(devCombatNum(cfg.levelMax,cfg.baseLevel)));
+  cfg.hp=Math.max(1,devCombatNum(cfg.hp,1));
+  cfg.attack=Math.max(0,devCombatNum(cfg.attack,0));
+  cfg.defense=Math.max(0,devCombatNum(cfg.defense,0));
+  cfg.xp=Math.max(1,devCombatNum(cfg.xp,1));
+  cfg.eliteChancePercent=Math.max(0,Math.min(100,devCombatNum(cfg.eliteChancePercent,0)));
+  refreshMobTemplatesFromBalance();
+  refreshDeveloperCombatPanel(); updateCombatHud();
+  devSetStatus(`${mobTypeScaleLabel(devCombatMobType)} combat settings applied live`);
+}
+function applyDeveloperGlobalCombatBalance(){
+  if(!devPanel) return;
+  BALANCE.mobLevels=BALANCE.mobLevels||{};
+  devPanel.querySelectorAll("#devCombatGlobals [data-global-field]").forEach(input=>{
+    BALANCE.mobLevels[input.dataset.globalField]=devCombatNum(input.value,BALANCE.mobLevels[input.dataset.globalField]);
+  });
+  refreshMobTemplatesFromBalance(); refreshAliveMobStatsForPlayer(); updateCombatHud(); refreshDeveloperCombatPanel();
+  devSetStatus("Global mob-level combat settings applied live");
+}
+function exportDeveloperBalance(){
+  const text=`/* Exported from Little Realm Developer Mode */\nwindow.LR_BALANCE = ${JSON.stringify(BALANCE,null,2)};\n`;
+  const blob=new Blob([text],{type:"text/javascript"});
+  const url=URL.createObjectURL(blob); const a=document.createElement("a");
+  a.href=url; a.download="game-balance.js"; document.body.appendChild(a); a.click(); a.remove(); setTimeout(()=>URL.revokeObjectURL(url),1000);
+  devSetStatus("Exported game-balance.js");
+}
+function resetDeveloperCombatBalance(){
+  if(!confirm("Reset live combat tuning to the project game-balance.js values?")) return;
+  devReplaceBalance(DEV_PROJECT_BALANCE); refreshMobTemplatesFromBalance(); rerollMobLevelsAndElites(); refreshDeveloperCombatPanel(); updateCombatHud();
+  devSetStatus("Combat tuning reset to project balance");
+}
+function developerMobPreview(){
+  const mob=(devSelectedMob && mobTypeScaleKey(devSelectedMob)===devCombatMobType && devSelectedMob.alive)?devSelectedMob:mobs.find(m=>mobTypeScaleKey(m)===devCombatMobType && m.alive);
+  if(!mob) return `<div class="devEmpty">No live ${mobTypeScaleLabel(devCombatMobType)} spawn available for preview.</div>`;
+  const aggro=mobAggroRanges(mob);
+  return `<div class="devHint">Live preview: Lv ${mob.level} ${mobDisplayName(mob)}${mob.dangerSteps?` • ${mob.dangerSteps} danger stack${mob.dangerSteps===1?"":"s"}`:""}</div><div class="devStatPreview"><div><b>${mob.maxHp}</b><span>HP</span></div><div><b>${mob.atk}</b><span>Damage</span></div><div><b>${mob.def}</b><span>Armor</span></div><div><b>${mobXpReward(mob)}</b><span>XP now</span></div><div><b>${Math.round(playerHitChanceAgainst(mob))}%</b><span>Your hit</span></div><div><b>${Math.round(mobHitChanceAgainstPlayer(mob))}%</b><span>Mob hit</span></div><div><b>${Math.round(aggro.trigger)}</b><span>Aggro</span></div><div><b>${mob.elite?"ELITE":mob.boss?"BOSS":"NORMAL"}</b><span>Rank</span></div></div>`;
+}
+function refreshDeveloperCombatPanel(){
+  if(!devPanel) return;
+  const player=devPanel.querySelector("#devPlayerTestPanel");
+  const species=devPanel.querySelector("#devCombatSpecies");
+  const globals=devPanel.querySelector("#devCombatGlobals");
+  if(!player||!species||!globals) return;
+
+  player.innerHTML=`<div class="devPlayerTest"><label class="devCombatField">Player Test Level<input id="devPlayerTestLevel" type="number" min="1" max="200" step="1" value="${state.level}"></label><div><div class="devHint">Temporary testing control. Recalculates player HP/Attack/Defense and immediately refreshes danger scaling on living mobs.</div><div class="devQuickLevels">${[1,5,10,25,50,100].map(n=>`<button data-test-level="${n}">Lv ${n}</button>`).join("")}</div></div></div><div class="devStatPreview"><div><b>${state.level}</b><span>Level</span></div><div><b>${state.maxHp}</b><span>HP</span></div><div><b>${state.atk}</b><span>Attack</span></div><div><b>${state.def}</b><span>Defense</span></div></div><div class="devCombatActions"><button id="devSetPlayerLevel" class="primary">Apply Test Level</button><button id="devRestorePlayerLevel">Restore Before Testing</button><button id="devFullHeal">Full Heal</button></div>`;
+  player.querySelector("#devSetPlayerLevel").onclick=()=>applyDeveloperPlayerLevel(player.querySelector("#devPlayerTestLevel").value);
+  player.querySelectorAll("[data-test-level]").forEach(b=>b.onclick=()=>applyDeveloperPlayerLevel(b.dataset.testLevel));
+  player.querySelector("#devRestorePlayerLevel").onclick=restoreDeveloperPlayerBaseline;
+  player.querySelector("#devFullHeal").onclick=()=>{state.hp=state.maxHp;updateUI();devSetStatus("Player fully healed");};
+
+  const types=["slime","wolf","goblin","cow","pig","chicken","snickers"];
+  const cfg=BALANCE.mobs?.[devCombatMobType]||{};
+  species.innerHTML=`<div id="devCombatMobChips">${types.map(k=>`<button class="devMobTypeChip${k===devCombatMobType?" active":""}" data-combat-mob="${k}">${mobTypeScaleLabel(k)}</button>`).join("")}</div><div class="devCombatGrid" style="margin-top:10px">${devCombatField("baseLevel","Base level",cfg.baseLevel??1,1,1,200)}${devCombatField("levelMin","Min spawn level",cfg.levelMin??cfg.baseLevel??1,1,1,200)}${devCombatField("levelMax","Max spawn level",cfg.levelMax??cfg.baseLevel??1,1,1,200)}${devCombatField("hp","Base HP",cfg.hp??1,1,1)}${devCombatField("attack","Base damage",cfg.attack??0,1,0)}${devCombatField("defense","Base armor",cfg.defense??0,.1,0)}${devCombatField("xp","Base XP",cfg.xp??1,1,1)}${devCombatField("eliteChancePercent","Elite chance %",cfg.eliteChancePercent??0,.5,0,100)}${devCombatField("attackIntervalSeconds","Attack interval",cfg.attackIntervalSeconds??1.5,.05,.1)}${devCombatField("aggroTriggerRange","Base aggro range",cfg.aggroTriggerRange??0,1,0)}${devCombatField("alertRange","Base alert range",cfg.alertRange??0,1,0)}${devCombatField("chaseSpeed","Chase speed",cfg.chaseSpeed??0,1,0)}</div><label class="devCombatCheck" style="margin-top:9px"><input type="checkbox" data-combat-field="aggressive" ${cfg.aggressive?"checked":""}> Aggressive / auto-aggro</label>${developerMobPreview()}<div class="devCombatActions"><button id="devApplySpecies" class="primary">Apply ${mobTypeScaleLabel(devCombatMobType)} Stats</button><button id="devRerollSpecies">Reroll Levels + Elites</button></div>`;
+  species.querySelectorAll("[data-combat-mob]").forEach(b=>b.onclick=()=>{devCombatMobType=b.dataset.combatMob;devSelectedMob=mobs.find(m=>mobTypeScaleKey(m)===devCombatMobType)||devSelectedMob;refreshDeveloperCombatPanel();});
+  species.querySelector("#devApplySpecies").onclick=applyDeveloperSpeciesBalance;
+  species.querySelector("#devRerollSpecies").onclick=()=>{applyDeveloperSpeciesBalance();rerollMobLevelsAndElites(devCombatMobType);refreshDeveloperCombatPanel();devSetStatus(`${mobTypeScaleLabel(devCombatMobType)} levels and elite rolls refreshed`);};
+
+  const g=BALANCE.mobLevels||{};
+  globals.innerHTML=`
+  <details class="devCombatDetails" open><summary>Normal Level Scaling</summary><div class="devCombatGrid">${devGlobalField("hpGrowthPerLevelPercent","HP growth / level %",g.hpGrowthPerLevelPercent??14,.5)}${devGlobalField("attackGrowthPerLevelPercent","Damage growth / level %",g.attackGrowthPerLevelPercent??10,.5)}${devGlobalField("armorPerLevel","Armor / level",g.armorPerLevel??.55,.05)}${devGlobalField("xpGrowthPerLevelPercent","XP growth / level %",g.xpGrowthPerLevelPercent??18,.5)}</div></details>
+  <details class="devCombatDetails" open><summary>High-Level Danger Boost</summary><div class="devCombatGrid">${devGlobalField("dangerStartsAbovePlayerLevels","Starts above player levels",g.dangerStartsAbovePlayerLevels??3,1,0)}${devGlobalField("dangerHpPerExtraLevelPercent","HP / danger level %",g.dangerHpPerExtraLevelPercent??12,.5)}${devGlobalField("dangerAttackPerExtraLevelPercent","Damage / danger level %",g.dangerAttackPerExtraLevelPercent??9,.5)}${devGlobalField("dangerArmorPerExtraLevel","Armor / danger level",g.dangerArmorPerExtraLevel??.6,.05)}${devGlobalField("dangerXpPerExtraLevelPercent","XP / danger level %",g.dangerXpPerExtraLevelPercent??10,.5)}</div></details>
+  <details class="devCombatDetails"><summary>Elite Multipliers</summary><div class="devCombatGrid">${devGlobalField("eliteHpMultiplier","Elite HP ×",g.eliteHpMultiplier??1.65,.05)}${devGlobalField("eliteAttackMultiplier","Elite damage ×",g.eliteAttackMultiplier??1.2,.05)}${devGlobalField("eliteArmorBonus","Elite armor +",g.eliteArmorBonus??2,.1)}${devGlobalField("eliteXpMultiplier","Elite XP ×",g.eliteXpMultiplier??1.6,.05)}${devGlobalField("eliteGoldMultiplier","Elite gold ×",g.eliteGoldMultiplier??1.5,.05)}${devGlobalField("eliteAggroMultiplier","Elite aggro ×",g.eliteAggroMultiplier??1.15,.05)}</div></details>
+  <details class="devCombatDetails"><summary>Boss Multipliers</summary><div class="devCombatGrid">${devGlobalField("bossHpMultiplier","Boss HP ×",g.bossHpMultiplier??1.5,.05)}${devGlobalField("bossAttackMultiplier","Boss damage ×",g.bossAttackMultiplier??1.25,.05)}${devGlobalField("bossArmorMultiplier","Boss armor ×",g.bossArmorMultiplier??1.25,.05)}${devGlobalField("bossXpMultiplier","Boss XP ×",g.bossXpMultiplier??1.75,.05)}${devGlobalField("bossAggroMultiplier","Boss aggro ×",g.bossAggroMultiplier??1.25,.05)}</div></details>
+  <details class="devCombatDetails"><summary>Level-Based Aggro</summary><div class="devCombatGrid">${devGlobalField("aggroRangePerLevelDifference","Aggro / level diff",g.aggroRangePerLevelDifference??7,1)}${devGlobalField("alertRangePerLevelDifference","Alert / level diff",g.alertRangePerLevelDifference??9,1)}${devGlobalField("minimumAggroTriggerRange","Minimum aggro",g.minimumAggroTriggerRange??20,1,0)}${devGlobalField("minimumAlertRange","Minimum alert",g.minimumAlertRange??34,1,0)}</div></details>
+  <details class="devCombatDetails"><summary>Hit / Miss</summary><div class="devCombatGrid">${devGlobalField("playerBaseHitChancePercent","Player base hit %",g.playerBaseHitChancePercent??96,.5,0,100)}${devGlobalField("enemyBaseHitChancePercent","Mob base hit %",g.enemyBaseHitChancePercent??92,.5,0,100)}${devGlobalField("playerHitChancePerLevelAdvantagePercent","Player hit / level %",g.playerHitChancePerLevelAdvantagePercent??4,.5)}${devGlobalField("enemyHitChancePerLevelAdvantagePercent","Mob hit / level %",g.enemyHitChancePerLevelAdvantagePercent??3,.5)}${devGlobalField("minimumHitChancePercent","Minimum hit %",g.minimumHitChancePercent??55,.5,0,100)}${devGlobalField("maximumHitChancePercent","Maximum hit %",g.maximumHitChancePercent??99,.5,0,100)}${devGlobalField("elitePlayerHitPenaltyPercent","Elite player penalty %",g.elitePlayerHitPenaltyPercent??3,.5)}${devGlobalField("eliteEnemyHitBonusPercent","Elite mob bonus %",g.eliteEnemyHitBonusPercent??3,.5)}${devGlobalField("bossPlayerHitPenaltyPercent","Boss player penalty %",g.bossPlayerHitPenaltyPercent??5,.5)}${devGlobalField("bossEnemyHitBonusPercent","Boss mob bonus %",g.bossEnemyHitBonusPercent??5,.5)}</div></details>
+  <details class="devCombatDetails"><summary>XP Rules</summary><div class="devCombatGrid">${devGlobalField("trivialXpStartsAboveMobLevels","Level-gap XP floor starts",g.trivialXpStartsAboveMobLevels??5,1,1)}${devGlobalField("lowLevelXpPenaltyPerLevelPercent","Low-level penalty / level %",g.lowLevelXpPenaltyPerLevelPercent??20,.5)}${devGlobalField("higherLevelXpBonusPerLevelPercent","High-level XP bonus / level %",g.higherLevelXpBonusPerLevelPercent??8,.5)}</div><div class="devHint" style="margin-top:8px">At the configured trivial gap, mobs still award XP equal to their own level — the infinite-grind rule remains intact.</div></details>
+  <div class="devCombatActions"><button id="devApplyGlobals" class="primary">Apply Global Combat Settings</button><button id="devRerollAll">Reroll All Mob Levels + Elites</button><button id="devExportBalance">Export game-balance.js</button><button id="devResetBalance" class="danger">Reset Combat Tuning</button></div>`;
+  globals.querySelector("#devApplyGlobals").onclick=applyDeveloperGlobalCombatBalance;
+  globals.querySelector("#devRerollAll").onclick=()=>{applyDeveloperGlobalCombatBalance();rerollMobLevelsAndElites();refreshDeveloperCombatPanel();devSetStatus("All mob levels and elite rolls refreshed");};
+  globals.querySelector("#devExportBalance").onclick=()=>{applyDeveloperSpeciesBalance();applyDeveloperGlobalCombatBalance();exportDeveloperBalance();};
+  globals.querySelector("#devResetBalance").onclick=resetDeveloperCombatBalance;
+}
+
 function buildDeveloperPanel(){
   ensureDeveloperStyles();
   const root=document.createElement("aside");
   root.id="devPanel";
   root.innerHTML=`
-    <div class="devHeader"><div><b>WORLD BUILDER</b><span>F2 to close • click a mob to tune only that type</span></div><button id="devClose">×</button></div>
+    <div class="devHeader"><div><b>WORLD BUILDER</b><span>F2 to close • build, scale, and live-test combat</span></div><button id="devClose">×</button></div>
     <div class="devToolbar">
       <button id="devSelect" class="active">Select / Move</button>
       <label>Snap <select id="devSnap"><option>4</option><option selected>8</option><option>16</option><option>32</option><option>64</option></select></label>
@@ -558,6 +705,7 @@ function buildDeveloperPanel(){
       <button class="devTab active" data-dev-tab="objects">Objects</button>
       <button class="devTab" data-dev-tab="selection">Selection</button>
       <button class="devTab" data-dev-tab="scale">Visual Scale</button>
+      <button class="devTab" data-dev-tab="combat">Combat Test</button>
     </div>
     <div class="devBody">
       <section class="devView active" data-dev-view="objects">
@@ -576,6 +724,11 @@ function buildDeveloperPanel(){
           <div class="devScaleControl"><div class="devScaleTop"><span>NPCs</span><span data-scale-value="npcs"></span></div><input data-scale-key="npcs" type="range" min="0.50" max="3.00" step="0.05" value="${VISUAL_SCALE.npcs}"></div>
           <div class="devScaleControl"><div class="devScaleTop"><span>Props</span><span data-scale-value="props"></span></div><input data-scale-key="props" type="range" min="0.50" max="3.00" step="0.05" value="${VISUAL_SCALE.props}"></div>
         </div><div class="devRow"><button id="devExportScale">Export visual-settings.js</button><button id="devResetScale">Reset Scale Settings</button></div></div>
+      </section>
+      <section class="devView" data-dev-view="combat">
+        <div class="devSection"><div class="devSectionTitle">Player Test Level</div><div id="devPlayerTestPanel"></div></div>
+        <div class="devSection"><div class="devSectionTitle">Mob Species Tuning</div><div class="devHint">Change a species' level range and base combat values, apply them live, then reroll its current spawns if you want new levels/elites immediately.</div><div id="devCombatSpecies"></div></div>
+        <div class="devSection"><div class="devSectionTitle">Global Mob-Level Rules</div><div class="devHint">These values control level growth, danger boosts, elites, bosses, aggro, hit chance, and XP across the whole game.</div><div id="devCombatGlobals"></div></div>
       </section>
     </div>
     <div id="devStatus">F2 toggles World Builder</div>`;
@@ -610,7 +763,7 @@ function buildDeveloperPanel(){
   if(!propAtlasReady) propAtlas.addEventListener("load",()=>root.querySelectorAll(".devPropButton").forEach(b=>drawPaletteThumb(b.querySelector("canvas"),b.dataset.type)),{once:true});
   setDeveloperTab(devActiveTab);
   refreshDeveloperPanel();
-  devSetStatus(`${propTypes.length} props • ${sceneryProps.length} objects • click mobs for per-type scale`);
+  devSetStatus(`${propTypes.length} props • ${sceneryProps.length} objects • Combat Test supports live level/stat tuning`);
   return root;
 }
 function updateDevPaletteActive(){
@@ -628,7 +781,7 @@ function setDeveloperMode(active){
   isHeroMoving=false;
   if(!devModeActive){devDragging=false;devPlaceType=null;}
   updateDevPaletteActive();
-  if(devModeActive) devSetStatus("Developer Mode active — use tabs for objects, selection, and mob-specific scale");
+  if(devModeActive) devSetStatus("Developer Mode active — Combat Test can change player level and mob balance live");
 }
 function toggleDeveloperMode(){setDeveloperMode(!devModeActive);}
 

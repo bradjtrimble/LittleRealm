@@ -119,6 +119,12 @@ try:
 except Exception as e:
     failed.append('mob level system test'); print('FAIL mob level system test',e)
 
+try:
+    tuning=subprocess.run(['node',str(ROOT/'tools'/'combat-tuning-test.js')],check=True,capture_output=True,text=True)
+    print(tuning.stdout.strip())
+except Exception as e:
+    failed.append('combat tuning lab test'); print('FAIL combat tuning lab test',e)
+
 if failed:
     print('\nValidation failed:',', '.join(failed)); sys.exit(1)
 print('\nAll protected-system checks passed.')
