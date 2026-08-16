@@ -660,6 +660,15 @@ function refreshDeveloperCombatPanel(){
   const globals=devPanel.querySelector("#devCombatGlobals");
   if(!player||!species||!globals) return;
 
+  // Developer Mode is initialized before reset() creates the player state.
+  // Do not let the optional tuning UI interrupt normal game startup.
+  if(!state){
+    player.innerHTML='<div class="devEmpty">Combat testing becomes available after the game finishes initializing.</div>';
+    species.innerHTML='<div class="devEmpty">Mob tuning will load when Developer Mode is opened.</div>';
+    globals.innerHTML='<div class="devEmpty">Global combat tuning will load when Developer Mode is opened.</div>';
+    return;
+  }
+
   player.innerHTML=`<div class="devPlayerTest"><label class="devCombatField">Player Test Level<input id="devPlayerTestLevel" type="number" min="1" max="200" step="1" value="${state.level}"></label><div><div class="devHint">Temporary testing control. Recalculates player HP/Attack/Defense and immediately refreshes danger scaling on living mobs.</div><div class="devQuickLevels">${[1,5,10,25,50,100].map(n=>`<button data-test-level="${n}">Lv ${n}</button>`).join("")}</div></div></div><div class="devStatPreview"><div><b>${state.level}</b><span>Level</span></div><div><b>${state.maxHp}</b><span>HP</span></div><div><b>${state.atk}</b><span>Attack</span></div><div><b>${state.def}</b><span>Defense</span></div></div><div class="devCombatActions"><button id="devSetPlayerLevel" class="primary">Apply Test Level</button><button id="devRestorePlayerLevel">Restore Before Testing</button><button id="devFullHeal">Full Heal</button></div>`;
   player.querySelector("#devSetPlayerLevel").onclick=()=>applyDeveloperPlayerLevel(player.querySelector("#devPlayerTestLevel").value);
   player.querySelectorAll("[data-test-level]").forEach(b=>b.onclick=()=>applyDeveloperPlayerLevel(b.dataset.testLevel));
@@ -781,7 +790,11 @@ function setDeveloperMode(active){
   isHeroMoving=false;
   if(!devModeActive){devDragging=false;devPlaceType=null;}
   updateDevPaletteActive();
-  if(devModeActive) devSetStatus("Developer Mode active — Combat Test can change player level and mob balance live");
+  if(devModeActive){
+    // Rebuild the live panels now that normal game state is guaranteed to exist.
+    refreshDeveloperPanel();
+    devSetStatus("Developer Mode active — Combat Test can change player level and mob balance live");
+  }
 }
 function toggleDeveloperMode(){setDeveloperMode(!devModeActive);}
 

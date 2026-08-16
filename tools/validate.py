@@ -125,6 +125,12 @@ try:
 except Exception as e:
     failed.append('combat tuning lab test'); print('FAIL combat tuning lab test',e)
 
+try:
+    startup=subprocess.run(['node',str(ROOT/'tools'/'combat-startup-test.js')],check=True,capture_output=True,text=True)
+    print(startup.stdout.strip())
+except Exception as e:
+    failed.append('combat tuning startup safety test'); print('FAIL combat tuning startup safety test',e)
+
 if failed:
     print('\nValidation failed:',', '.join(failed)); sys.exit(1)
 print('\nAll protected-system checks passed.')
