@@ -186,6 +186,16 @@ except Exception as e:
     failed.append('mob motion stability test'); print('FAIL mob motion stability test',e)
 
 try:
+    leash=subprocess.run(['node',str(ROOT/'tools'/'mob-leash-test.js')],check=True,capture_output=True,text=True)
+    print(leash.stdout.strip())
+except subprocess.CalledProcessError as e:
+    failed.append('mob leash + health reset test')
+    detail=(e.stderr or e.stdout or str(e)).strip()
+    print('FAIL mob leash + health reset test',detail)
+except Exception as e:
+    failed.append('mob leash + health reset test'); print('FAIL mob leash + health reset test',e)
+
+try:
     levels=subprocess.run(['node',str(ROOT/'tools'/'mob-level-test.js')],check=True,capture_output=True,text=True)
     print(levels.stdout.strip())
 except Exception as e:

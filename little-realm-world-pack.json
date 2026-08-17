@@ -1,7 +1,7 @@
 {
   "format": "little-realm-world-pack",
   "schemaVersion": 1,
-  "build": "v60-remnant-loot",
+  "build": "v61-mob-leashing",
   "exportedAt": "2026-08-17T00:33:53.813Z",
   "worldObjects": [
     {
@@ -991,7 +991,8 @@
       "enemyDamageBonusMin": 0,
       "enemyDamageBonusMax": 2,
       "targetClickRadius": 34,
-      "keyboardTargetRange": 220
+      "keyboardTargetRange": 220,
+      "mobLeashDistance": 260
     },
     "progression": {
       "levelCap": 100,

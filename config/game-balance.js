@@ -1,4 +1,4 @@
-/* Integrated from Little Realm World Pack v60 */
+/* Integrated from Little Realm World Pack v61 */
 window.LR_BALANCE = {
   "player": {
     "maxHp": 30,
@@ -19,6 +19,7 @@ window.LR_BALANCE = {
     "meleeRange": 30,
     "engageRange": 72,
     "disengageRange": 260,
+    "mobLeashDistance": 260,
     "autoChaseRange": 82,
     "attackButtonCooldownSeconds": 0.9,
     "openingAttackDelaySeconds": 0.62,

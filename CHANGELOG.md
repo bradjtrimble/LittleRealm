@@ -1,3 +1,13 @@
+## v61 — Mob Leashing + Health Reset
+
+- Added a true combat leash/evade state. When a mob loses aggro, it no longer remains where combat ended; it runs back to its original spawn point.
+- Mobs now immediately restore to full health when they lose aggro and begin returning home.
+- Added a hard spawn-distance leash (`combat.mobLeashDistance`, default 260) in addition to the existing player-to-mob disengage range, preventing mobs from being dragged indefinitely around their spawn area.
+- Returning mobs cannot be selected, attacked, or automatically re-aggro until they reach home, preventing reset/aggro ping-pong.
+- Return movement uses at least the mob's chase speed so the reset reads as a run rather than slow wandering.
+- Added a collision fail-safe so a returning mob that becomes wedged against scenery cannot remain stuck in the evade state forever.
+- Added dedicated mob leash/health-reset regression coverage and bumped build/cache metadata to `v61-mob-leashing`.
+
 ## v60 — World Remnant Loot
 
 - Replaced automatic mob loot popups with 60-second world dust remnants.

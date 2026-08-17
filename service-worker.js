@@ -1,4 +1,4 @@
-const CACHE_NAME = "little-realm-v60-remnant-loot";
+const CACHE_NAME = "little-realm-v61-mob-leashing";
 const FILES = [
   "./",
   "./index.html",

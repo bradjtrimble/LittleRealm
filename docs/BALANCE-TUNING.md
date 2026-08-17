@@ -14,6 +14,8 @@ For a balance-only change, edit that one file, save it, commit/push it to GitHub
 - Player attack speed: `combat.playerAttackIntervalSeconds`
 - Player critical hit chance: `combat.playerCritChancePercent`
 - Melee distance: `combat.meleeRange`
+- Player-to-mob aggro break distance: `combat.disengageRange`
+- Maximum combat distance from a mob's spawn before it evades: `combat.mobLeashDistance`
 - Potion heal: `player.potionHeal`
 - Level-up stat gains: `progression.*`
 
@@ -32,4 +34,9 @@ Player leveling is table-driven under `progression.xpToNextLevel` rather than ge
 Standard hostile mob XP is also level-driven: `progression.sameLevelMobXpBase` is 50 XP at level 1 and `progression.sameLevelMobXpPerLevel` adds 5 XP per mob level. Individual species use `mobs.<type>.xpMultiplier`; normal hostile species are `1.0`, while passive farm animals intentionally award less. Elite, boss, danger, and player-vs-mob level-gap modifiers are applied afterward.
 
 Older saves keep their current level and accumulated XP, but `xpNext` is recalculated from the active progression table when the save loads.
+## Mob leashing and health reset (v61)
+
+Open-world mobs now have a true evade/return state. Combat ends when either the player exceeds `combat.disengageRange` from the active mob or the mob exceeds `combat.mobLeashDistance` from its original spawn point. On disengage, the mob immediately restores to full HP, runs back to its spawn point, and cannot be targeted or re-aggro until the return finishes.
+
+The older per-species `mobs.<type>.leashDistance` setting still controls how far an idle/wandering non-combat mob may drift from its home. It is separate from the new combat leash. Return-home movement uses at least the mob's normal chase speed; `mobs.<type>.leashSpeed` remains the lower-speed idle wander correction value.
 

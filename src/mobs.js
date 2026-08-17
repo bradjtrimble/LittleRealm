@@ -25,6 +25,7 @@ function createMobTemplate(name,kind,configKey,fallback,boss=false){
     chaseSpeed:numberOr(cfg.chaseSpeed,fallback.chaseSpeed),
     wanderSpeed:numberOr(cfg.wanderSpeed,fallback.wanderSpeed),
     leashDistance:numberOr(cfg.leashDistance,120),
+    combatLeashDistance:numberOr(cfg.combatLeashDistance,numberOr(BALANCE.combat?.mobLeashDistance,260)),
     leashSpeed:numberOr(cfg.leashSpeed,34),
     wanderDelayMin:numberOr(cfg.wanderDelayMinSeconds,1.2),
     wanderDelayMax:numberOr(cfg.wanderDelayMaxSeconds,4.0)
@@ -69,6 +70,7 @@ function refreshMobTemplatesFromBalance(){
     template.chaseSpeed=Math.max(0,numberOr(cfg.chaseSpeed,template.chaseSpeed));
     template.wanderSpeed=Math.max(0,numberOr(cfg.wanderSpeed,template.wanderSpeed));
     template.leashDistance=Math.max(0,numberOr(cfg.leashDistance,template.leashDistance));
+    template.combatLeashDistance=Math.max(0,numberOr(cfg.combatLeashDistance,numberOr(BALANCE.combat?.mobLeashDistance,template.combatLeashDistance)));
     template.leashSpeed=Math.max(0,numberOr(cfg.leashSpeed,template.leashSpeed));
     template.wanderDelayMin=Math.max(0,numberOr(cfg.wanderDelayMinSeconds,template.wanderDelayMin));
     template.wanderDelayMax=Math.max(template.wanderDelayMin,numberOr(cfg.wanderDelayMaxSeconds,template.wanderDelayMax));
@@ -90,6 +92,7 @@ function rerollMobLevelsAndElites(typeKey=null){
     mob.elite=rollMobElite(mob.template);
     restoreMobStats(mob,true);
     mob.aggro=false;
+    mob.returningHome=false; mob.leashStuckTime=0;
   }
   updateCombatHud?.();
 }
@@ -285,6 +288,8 @@ function spawnMobs(){
       alive:true,
       respawnTimer:0,
       aggro:false,
+      returningHome:false,
+      leashStuckTime:0,
       boss:false
     };
     restoreMobStats(mob);
@@ -310,6 +315,8 @@ function spawnMobs(){
     alive:true,
     respawnTimer:0,
     aggro:false,
+    returningHome:false,
+    leashStuckTime:0,
     boss:true
   };
   restoreMobStats(boss);
@@ -699,6 +706,30 @@ function drawBattleSprites(){
   else drawBoss(enemyCtx,36,38,.95);
 }
 
+function finishMobLeashReturn(mob){
+  if(!mob) return;
+  mob.x=mob.homeX; mob.y=mob.homeY;
+  mob.vx=0; mob.vy=0; mob.drawVx=0; mob.drawVy=0;
+  mob.aggro=false;
+  mob.returningHome=false;
+  mob.leashStuckTime=0;
+  mob.moveTimer=Math.max(.45,numberOr(mob.template?.wanderDelayMin,.8));
+  mob.facingCandidateTime=0;
+  if(mob.alive && Number.isFinite(mob.maxHp)) mob.hp=mob.maxHp;
+}
+
+function startMobLeashReturn(mob){
+  if(!mob||!mob.alive) return false;
+  mob.aggro=false;
+  mob.returningHome=true;
+  mob.vx=0; mob.vy=0;
+  mob.leashStuckTime=0;
+  if(Number.isFinite(mob.maxHp)) mob.hp=mob.maxHp;
+  if(typeof selectedTarget!=="undefined" && selectedTarget===mob) selectedTarget=null;
+  if(dist(mob.x,mob.y,mob.homeX,mob.homeY)<=3) finishMobLeashReturn(mob);
+  return true;
+}
+
 function updateMobs(dt){
   if(isLootInteractionOpen()) return;
   for(const mob of mobs){
@@ -710,6 +741,7 @@ function updateMobs(dt){
         mob.x=mob.homeX; mob.y=mob.homeY;
         mob.vx=0; mob.vy=0; mob.drawVx=0; mob.drawVy=0;
         mob.facing="down"; mob.facingCandidate="down"; mob.facingCandidateTime=0; mob.aggro=false;
+        mob.returningHome=false; mob.leashStuckTime=0;
         mob.elite=rollMobElite(mob.template);
         restoreMobStats(mob);
       }
@@ -718,19 +750,39 @@ function updateMobs(dt){
 
     mob.attackAnim=Math.max(0,(mob.attackAnim||0)-dt);
     const d=dist(state.x,state.y,mob.x,mob.y);
-    const isTarget=mob===combatTarget;
+    let isTarget=mob===combatTarget;
+    let homeDist=dist(mob.x,mob.y,mob.homeX,mob.homeY);
 
-    // Aggression and movement are data-driven so routine mob tuning only
-    // requires editing config/game-balance.js.
-    const aggroRanges=mobAggroRanges(mob);
-    if(!combatTarget && mob.template.aggressive && d<aggroRanges.trigger){
-      engageMob(mob,true);
+    // The spawn point is the hard combat leash anchor. Once a mob has been
+    // pulled beyond its configured leash, it evades immediately: combat ends,
+    // HP resets, and the mob runs home before it can be engaged again.
+    if(isTarget && !mob.returningHome && homeDist>mob.template.combatLeashDistance){
+      disengageCombat(false);
+      isTarget=false;
     }
 
-    mob.aggro=isTarget || (!combatTarget && mob.template.aggressive && d<aggroRanges.alert);
+    // Aggression and movement are data-driven so routine mob tuning only
+    // requires editing config/game-balance.js. Returning mobs are in an evade
+    // state and cannot re-aggro until they have reached their spawn point.
+    const aggroRanges=mobAggroRanges(mob);
+    if(!mob.returningHome && !combatTarget && mob.template.aggressive && d<aggroRanges.trigger){
+      engageMob(mob,true);
+      isTarget=mob===combatTarget;
+    }
+
+    mob.aggro=!mob.returningHome && (isTarget || (!combatTarget && mob.template.aggressive && d<aggroRanges.alert));
 
     let vx=0,vy=0;
-    if(isTarget){
+    if(mob.returningHome){
+      if(homeDist<=3){
+        finishMobLeashReturn(mob);
+        continue;
+      }
+      const dx=mob.homeX-mob.x, dy=mob.homeY-mob.y;
+      const len=Math.max(.001,Math.hypot(dx,dy));
+      const returnSpeed=Math.max(mob.template.leashSpeed,mob.template.chaseSpeed);
+      vx=dx/len*returnSpeed; vy=dy/len*returnSpeed;
+    }else if(isTarget){
       const desired=ATTACK_RANGE-8;
       if(d>desired){
         const dx=state.x-mob.x, dy=state.y-mob.y;
@@ -750,7 +802,7 @@ function updateMobs(dt){
         mob.vx=Math.cos(ang)*mob.template.wanderSpeed; mob.vy=Math.sin(ang)*mob.template.wanderSpeed;
       }
       vx=mob.vx; vy=mob.vy;
-      const homeDist=dist(mob.x,mob.y,mob.homeX,mob.homeY);
+      homeDist=dist(mob.x,mob.y,mob.homeX,mob.homeY);
       if(homeDist>mob.template.leashDistance){
         const dx=mob.homeX-mob.x, dy=mob.homeY-mob.y;
         const len=Math.max(.001,Math.hypot(dx,dy));
@@ -772,14 +824,24 @@ function updateMobs(dt){
     let blocked=false;
     if(canStand(nx,mob.y,10)) mob.x=nx; else blocked=true;
     if(canStand(mob.x,ny,10)) mob.y=ny; else blocked=true;
-    if(blocked && !isTarget && !mob.boss){
+
+    if(mob.returningHome){
+      // Normal movement usually slides around terrain one axis at a time. This
+      // fail-safe prevents an evading mob from remaining permanently wedged.
+      mob.leashStuckTime=blocked?(mob.leashStuckTime||0)+dt:Math.max(0,(mob.leashStuckTime||0)-dt*2);
+      const remaining=dist(mob.x,mob.y,mob.homeX,mob.homeY);
+      if(remaining<=3 || mob.leashStuckTime>=1.5){
+        finishMobLeashReturn(mob);
+        continue;
+      }
+    }else if(blocked && !isTarget && !mob.boss){
       // Do not bounce the stored wander vector back and forth against a wall.
       // Stop briefly and choose a fresh direction on the next wander decision.
       mob.vx=0; mob.vy=0; mob.moveTimer=0;
     }
 
     if(!mob.boss && tileAtWorld(mob.x,mob.y)===4){
-      mob.x=mob.homeX; mob.y=mob.homeY;
+      finishMobLeashReturn(mob);
     }
   }
 }
@@ -787,7 +849,7 @@ function updateMobs(dt){
 function findNearestMob(maxDistance=Infinity){
   let best=null,bestD=maxDistance;
   for(const mob of mobs){
-    if(!mob.alive) continue;
+    if(!mob.alive || mob.returningHome) continue;
     const d=dist(state.x,state.y,mob.x,mob.y);
     if(d<bestD){best=mob;bestD=d}
   }

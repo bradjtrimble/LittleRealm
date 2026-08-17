@@ -71,7 +71,7 @@ function getMobRespawnSeconds(mob){
 }
 
 function selectMob(mob,showToast=true){
-  if(!mob||!mob.alive) return false;
+  if(!mob||!mob.alive||mob.returningHome) return false;
   selectedTarget=mob;
   updateCombatHud();
   if(showToast) toast(`Lv ${mob.level} ${mobDisplayName(mob)} targeted • ${Math.max(0,Math.ceil(mob.hp))}/${mob.maxHp} HP`);
@@ -84,7 +84,7 @@ function clearSelectedTarget(){
 }
 
 function getHudTarget(){
-  if(selectedTarget && selectedTarget.alive) return selectedTarget;
+  if(selectedTarget && selectedTarget.alive && !selectedTarget.returningHome) return selectedTarget;
   if(combatTarget && combatTarget.alive) return combatTarget;
   selectedTarget=null;
   return null;
@@ -235,7 +235,7 @@ function updateCombatHud(){
 }
 
 function engageMob(mob,forced=false){
-  if(!mob||!mob.alive) return false;
+  if(!mob||!mob.alive||mob.returningHome) return false;
   if(combatTarget===mob) return true;
 
   const engageDistance=dist(state.x,state.y,mob.x,mob.y);
@@ -249,6 +249,7 @@ function engageMob(mob,forced=false){
     return false;
   }
 
+  if(combatTarget && combatTarget!==mob) startMobLeashReturn(combatTarget);
   selectedTarget=mob;
   combatTarget=mob;
   currentMob=mob;
@@ -265,7 +266,11 @@ function engageMob(mob,forced=false){
 }
 
 function disengageCombat(showToast=true){
-  if(combatTarget) combatTarget.aggro=false;
+  const disengagedMob=combatTarget;
+  if(disengagedMob){
+    disengagedMob.aggro=false;
+    startMobLeashReturn(disengagedMob);
+  }
   combatTarget=null; currentMob=null;
   playerAttackTimer=0; enemyAttackTimer=0;
   updateCombatHud();
@@ -412,7 +417,7 @@ function handleWorldTap(ev){
   let best=null;
   let bestScore=Infinity;
   for(const mob of mobs){
-    if(!mob.alive) continue;
+    if(!mob.alive || mob.returningHome) continue;
     // Mobs are taller than their feet position, so use a generous vertical
     // selection box rather than requiring a click directly on their feet.
     const dx=Math.abs(wx-mob.x);
