@@ -7,6 +7,11 @@ window.LR_VISUAL = {
   "houses": 1.7,
   "npcs": 0.5,
   "props": 0.75,
+  "remnants": {
+    "scale": 1,
+    "depthMode": "ysort",
+    "depthY": 3
+  },
   "mobTypes": {
     "slime": 0.5,
     "goblin": 1.3,

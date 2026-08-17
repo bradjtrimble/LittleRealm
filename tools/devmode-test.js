@@ -10,13 +10,17 @@ const required=[
   'initDeveloperMode','toggleDeveloperMode','drawDeveloperOverlay',
   'rebuildWorldObjectCollision','exportDeveloperLayout','DEV_DRAFT_KEY',
   'ensureDeveloperStyles','refreshDeveloperObjectList','devObjectList',
-  'devPalette','Existing Objects','findDeveloperMobAt','refreshDeveloperMobPanel','mobTypeScaleKey','MOB_TYPE_SCALE','Selected Mob Type','Visual Scale',
+  'devPalette','Existing Objects','findDeveloperMobAt','refreshDeveloperMobPanel','mobTypeScaleKey','MOB_TYPE_SCALE','Selected Mob Type','Visual Scale','devSelectedRemnant','devRemnantPreview','LOOT_REMNANT_VISUAL','Remnant Scale','Move Preview Near Player','visualSettings.remnants',
   'devHitboxEditing','devHitboxDrag','findDeveloperHitboxInteraction','updateDeveloperHitboxDrag','Edit Hitbox Visually','Finish Hitbox Editing',
   'devDepthEditing','devDepthDrag','findDeveloperDepthInteraction','updateDeveloperDepthDrag','Edit Depth Line Visually','Depth Lines','worldObjectRenderDepth','worldObjectDepthMode'
 ];
 for(const s of required) if(!bundle.includes(s)) throw new Error('missing developer feature: '+s);
 if(!bundle.includes('#devPanel .devView{display:none}#devPanel .devView.active{display:block}')) throw new Error('developer tab active-view CSS specificity regression');
 if(!loader.includes('config/world-objects.js')) throw new Error('world object config is not live-loaded');
+
+if(!bundle.includes('const n=visualScaleOr(value,VISUAL_SCALE[key]||1)')) throw new Error('world visual scale live handler still clamps above the 0.25 slider minimum');
+if(!bundle.includes('const n=visualScaleOr(value,MOB_TYPE_SCALE[key]||1)')) throw new Error('mob visual scale live handler still clamps above the 0.25 slider minimum');
+if(!bundle.includes('queueWorldRenderable("devLootPile"')) throw new Error('remnant preview is not rendered in world depth sorting');
 
 // Execute the user-editable config in a sandbox instead of testing for the
 // original starter layout's exact text/contents. Developer Mode is allowed to

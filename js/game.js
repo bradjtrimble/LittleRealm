@@ -741,6 +741,15 @@ const LOOTABLE_DUST_SHEET_COLUMNS = 4;
 const LOOTABLE_DUST_SHEET_ROWS = 4;
 const LOOTABLE_DUST_FRAME_COUNT = LOOTABLE_DUST_SHEET_COLUMNS*LOOTABLE_DUST_SHEET_ROWS;
 const LOOTABLE_DUST_FRAME_MS = 90;
+const LOOT_REMNANT_DEPTH_MODES = new Set(["ysort","behind","front","ground"]);
+const LOOT_REMNANT_VISUAL = {
+  scale: visualScaleOr(VISUAL_CONFIG.remnants?.scale,1),
+  depthMode: LOOT_REMNANT_DEPTH_MODES.has(String(VISUAL_CONFIG.remnants?.depthMode||"").toLowerCase())
+    ? String(VISUAL_CONFIG.remnants.depthMode).toLowerCase()
+    : "ysort",
+  depthY: numberOr(VISUAL_CONFIG.remnants?.depthY,3)
+};
+const PROJECT_LOOT_REMNANT_VISUAL = {...LOOT_REMNANT_VISUAL};
 const warnedLootProblems = new Set();
 const lootPiles = [];
 let nextLootPileId = 1;
@@ -926,6 +935,27 @@ function lootPileRemainingMs(pile,now=performance.now()){
   return Math.max(0,numberOr(pile?.expiresAt,0)-numberOr(now,performance.now()));
 }
 
+function lootRemnantDepthMode(){
+  const raw=String(LOOT_REMNANT_VISUAL.depthMode||"ysort").toLowerCase();
+  return LOOT_REMNANT_DEPTH_MODES.has(raw)?raw:"ysort";
+}
+
+function lootRemnantDepthY(){
+  return numberOr(LOOT_REMNANT_VISUAL.depthY,3);
+}
+
+function lootRemnantRenderDepth(pile,heroY){
+  const mode=lootRemnantDepthMode();
+  if(mode==="ground") return -1000000000;
+  if(mode==="behind") return heroY-0.25;
+  if(mode==="front") return heroY+0.25;
+  return numberOr(pile?.y,0)+lootRemnantDepthY();
+}
+
+function lootRemnantDrawSize(){
+  return LOOT_PILE_DRAW_SIZE*visualScaleOr(LOOT_REMNANT_VISUAL.scale,1);
+}
+
 
 function lootableDustFrameRect(image,frameIndex){
   const cols=LOOTABLE_DUST_SHEET_COLUMNS;
@@ -958,7 +988,7 @@ function drawLootPile(c,pile,camX,camY,now=performance.now()){
 
   const fade=remaining<LOOT_PILE_FADE_MS?clamp(remaining/LOOT_PILE_FADE_MS,0,1):1;
   const pulse=hasLoot?1+Math.sin(numberOr(now,0)/240)*.018:1;
-  const size=LOOT_PILE_DRAW_SIZE*pulse;
+  const size=lootRemnantDrawSize()*pulse;
   const sx=pile.x-camX;
   const sy=pile.y-camY;
   c.save();
@@ -2226,7 +2256,14 @@ function drawWorld(){
   for(const pile of lootPiles){
     const sx=pile.x-camX, sy=pile.y-camY;
     if(sx<-70||sy<-70||sx>viewW+70||sy>viewH+70) continue;
-    queueWorldRenderable("lootPile",pile.y+3,pile);
+    queueWorldRenderable("lootPile",lootRemnantRenderDepth(pile,state.y),pile);
+  }
+
+  if(devModeActive && devSelectedRemnant && devRemnantPreview){
+    const sx=devRemnantPreview.x-camX, sy=devRemnantPreview.y-camY;
+    if(sx>=-90&&sy>=-90&&sx<=viewW+90&&sy<=viewH+90){
+      queueWorldRenderable("devLootPile",lootRemnantRenderDepth(devRemnantPreview,state.y),devRemnantPreview);
+    }
   }
 
   for(const mob of mobs){
@@ -2252,7 +2289,7 @@ function drawWorld(){
       drawPropObject(item.obj,camX,camY);
     }else if(item.kind==="npc"){
       drawNpcObject(item.obj,camX,camY);
-    }else if(item.kind==="lootPile"){
+    }else if(item.kind==="lootPile" || item.kind==="devLootPile"){
       drawLootPile(ctx,item.obj,camX,camY);
     }else if(item.kind==="mob"){
       const mob=item.obj;
@@ -2942,6 +2979,10 @@ let devQuestFormDraft=null;
 let devActiveTab="objects";
 let devCombatMobType="goblin";
 let devPlayerTestBaseline=null;
+let devSelectedRemnant=null;
+let devRemnantPreview=null;
+let devRemnantDragging=false;
+let devRemnantDragOffset={x:0,y:0};
 const DEV_PROJECT_BALANCE=JSON.parse(JSON.stringify(BALANCE));
 
 function ensureDeveloperStyles(){
@@ -3259,6 +3300,53 @@ function findWorldObjectAt(wx,wy){
   return null;
 }
 
+function makeDeveloperRemnantPreview(kind="dust"){
+  const lootable=kind==="lootable";
+  const existing=devRemnantPreview;
+  return {
+    id:"developer-remnant-preview",
+    x:Number.isFinite(existing?.x)?existing.x:state.x+56,
+    y:Number.isFinite(existing?.y)?existing.y:state.y+8,
+    sourceLabel:"World Builder Remnant Preview",
+    items:[],
+    gold:lootable?1:0,
+    potions:0,
+    createdAt:0,
+    expiresAt:Number.POSITIVE_INFINITY,
+    devKind:lootable?"lootable":"dust"
+  };
+}
+
+function selectDeveloperRemnant(kind){
+  devSelectedRemnant=kind==="lootable"?"lootable":"dust";
+  devRemnantPreview=makeDeveloperRemnantPreview(devSelectedRemnant);
+  devSelected=null;devSelectedNpc=null;devSelectedMob=null;
+  devHitboxEditing=false;devHitboxDrag=null;devDepthEditing=false;devDepthDrag=null;
+  setDeveloperTab("selection");
+  refreshDeveloperPanel();
+  devSetStatus(`${devSelectedRemnant==="lootable"?"Lootable Dust":"Dust"} preview selected — drag it in the world and tune scale/depth here`);
+}
+
+function developerRemnantPreviewBounds(){
+  if(!devRemnantPreview) return null;
+  const size=lootRemnantDrawSize();
+  return {x:devRemnantPreview.x-size/2,y:devRemnantPreview.y-size*.72,w:size,h:size};
+}
+
+function findDeveloperRemnantPreviewAt(wx,wy){
+  const b=developerRemnantPreviewBounds();
+  return !!b && wx>=b.x-6 && wx<=b.x+b.w+6 && wy>=b.y-6 && wy<=b.y+b.h+6;
+}
+
+function updateDeveloperRemnantVisual({scale,depthMode,depthY}={}){
+  if(scale!==undefined) LOOT_REMNANT_VISUAL.scale=Math.round(visualScaleOr(scale,LOOT_REMNANT_VISUAL.scale)*100)/100;
+  if(depthMode!==undefined){
+    const mode=String(depthMode).toLowerCase();
+    if(LOOT_REMNANT_DEPTH_MODES.has(mode)) LOOT_REMNANT_VISUAL.depthMode=mode;
+  }
+  if(depthY!==undefined&&Number.isFinite(Number(depthY))) LOOT_REMNANT_VISUAL.depthY=Math.round(Number(depthY));
+}
+
 function mobTypeScaleKey(mob){
   if(!mob) return null;
   return (mob.boss || mob.kind==="boss") ? "snickers" : mob.kind;
@@ -3299,12 +3387,12 @@ function developerWorldPack(){
   return {
     format:"little-realm-world-pack",
     schemaVersion:1,
-    build:"v61-mob-leashing",
+    build:"v63-remnant-world-builder",
     exportedAt:new Date().toISOString(),
     worldObjects:sceneryProps.map(cloneWorldObject),
     npcs:sceneryNPCs.map(cloneNpc),
     quests:questDefinitions.map(cloneQuest),
-    visualSettings:{...VISUAL_SCALE,mobTypes:{...MOB_TYPE_SCALE}},
+    visualSettings:{...VISUAL_SCALE,mobTypes:{...MOB_TYPE_SCALE},remnants:{...LOOT_REMNANT_VISUAL}},
     balance:devBalanceClone(BALANCE)
   };
 }
@@ -3323,13 +3411,19 @@ function applyDeveloperWorldPack(pack,{quiet=false}={}){
   if(pack.visualSettings&&typeof pack.visualSettings==="object"){
     for(const key of Object.keys(VISUAL_SCALE)) if(Number.isFinite(Number(pack.visualSettings[key]))) VISUAL_SCALE[key]=visualScaleOr(pack.visualSettings[key],VISUAL_SCALE[key]);
     if(pack.visualSettings.mobTypes) for(const key of Object.keys(MOB_TYPE_SCALE)) if(Number.isFinite(Number(pack.visualSettings.mobTypes[key]))) MOB_TYPE_SCALE[key]=visualScaleOr(pack.visualSettings.mobTypes[key],MOB_TYPE_SCALE[key]);
+    if(pack.visualSettings.remnants&&typeof pack.visualSettings.remnants==="object"){
+      if(Number.isFinite(Number(pack.visualSettings.remnants.scale))) LOOT_REMNANT_VISUAL.scale=visualScaleOr(pack.visualSettings.remnants.scale,LOOT_REMNANT_VISUAL.scale);
+      const mode=String(pack.visualSettings.remnants.depthMode||"").toLowerCase();
+      if(LOOT_REMNANT_DEPTH_MODES.has(mode)) LOOT_REMNANT_VISUAL.depthMode=mode;
+      if(Number.isFinite(Number(pack.visualSettings.remnants.depthY))) LOOT_REMNANT_VISUAL.depthY=Number(pack.visualSettings.remnants.depthY);
+    }
   }
   if(pack.balance&&typeof pack.balance==="object"){
     devReplaceBalance(pack.balance);
     if(typeof refreshMobTemplatesFromBalance==="function") refreshMobTemplatesFromBalance();
     if(typeof refreshAliveMobStatsForPlayer==="function"&&state) refreshAliveMobStatsForPlayer();
   }
-  devSelected=null;devSelectedNpc=null;devSelectedMob=null;devSelectedQuestId=questDefinitions[0]?.id||null;devQuestFormDraft=null;
+  devSelected=null;devSelectedNpc=null;devSelectedMob=null;devSelectedRemnant=null;devSelectedQuestId=questDefinitions[0]?.id||null;devQuestFormDraft=null;
   refreshDeveloperPanel();
   updateUI?.();
   if(!quiet) devSetStatus(`Loaded World Pack • ${sceneryProps.length} props • ${sceneryNPCs.length} NPCs • ${questDefinitions.length} quests`);
@@ -3378,11 +3472,12 @@ function resetDeveloperProject(){
   replaceQuestDefinitions(PROJECT_QUESTS);
   Object.assign(VISUAL_SCALE,PROJECT_VISUAL_SCALE);
   Object.assign(MOB_TYPE_SCALE,PROJECT_MOB_TYPE_SCALE);
+  Object.assign(LOOT_REMNANT_VISUAL,PROJECT_LOOT_REMNANT_VISUAL);
   devReplaceBalance(DEV_PROJECT_BALANCE);
   refreshMobTemplatesFromBalance();
   if(state) refreshAliveMobStatsForPlayer();
   rebuildWorldObjectCollision();rebuildNpcCollision();
-  devSelected=null;devSelectedNpc=null;devSelectedMob=null;devSelectedQuestId=questDefinitions[0]?.id||null;devQuestFormDraft=null;
+  devSelected=null;devSelectedNpc=null;devSelectedMob=null;devSelectedRemnant=null;devSelectedQuestId=questDefinitions[0]?.id||null;devQuestFormDraft=null;
   refreshDeveloperPanel();updateUI();
   devSetStatus("Deployed project content restored");
 }
@@ -3461,7 +3556,7 @@ function placeDeveloperNpc(kind,wx,wy){
   },sceneryNPCs.length);
   sceneryNPCs.push(npc);
   rebuildNpcCollision();
-  devSelectedNpc=npc;devSelected=null;devSelectedMob=null;devPlaceNpcTemplate=null;
+  devSelectedNpc=npc;devSelected=null;devSelectedMob=null;devSelectedRemnant=null;devPlaceNpcTemplate=null;
   setDeveloperTab("selection");
   saveDeveloperDraft();refreshDeveloperPanel();
   devSetStatus(`Placed ${npc.name} — visual size, hitbox, and depth can be edited in Selection`);
@@ -3477,7 +3572,7 @@ function placeDeveloperObject(type,wx,wy){
   const obj=defaultWorldObject(type,snapDev(wx-spec.w/2),snapDev(wy-spec.h/2));
   sceneryProps.push(obj);
   devSelected=obj;
-  devSelectedMob=null;devSelectedNpc=null;
+  devSelectedMob=null;devSelectedNpc=null;devSelectedRemnant=null;
   setDeveloperTab("selection");
   rebuildWorldObjectCollision();
   saveDeveloperDraft();
@@ -3525,10 +3620,18 @@ function devPointerDown(event){
     return;
   }
 
+  if(devSelectedRemnant && findDeveloperRemnantPreviewAt(p.x,p.y)){
+    devRemnantDragging=true;
+    devRemnantDragOffset={x:p.x-devRemnantPreview.x,y:p.y-devRemnantPreview.y};
+    try{ game.setPointerCapture?.(event.pointerId); }catch{}
+    devSetStatus("Moving remnant preview — release to keep testing scale/depth");
+    return;
+  }
+
   const npc=findDeveloperNpcAt(p.x,p.y);
   if(npc){
     devSelectedNpc=npc;
-    devSelected=null;devSelectedMob=null;
+    devSelected=null;devSelectedMob=null;devSelectedRemnant=null;
     setDeveloperTab("selection");
     if(devHitboxEditing){
       ensureDeveloperHitbox(npc);
@@ -3551,7 +3654,7 @@ function devPointerDown(event){
   const mob=findDeveloperMobAt(p.x,p.y);
   if(mob){
     devSelectedMob=mob;
-    devSelected=null;devSelectedNpc=null;
+    devSelected=null;devSelectedNpc=null;devSelectedRemnant=null;
     devDragging=false;devNpcDragging=false;
     devHitboxEditing=false;
     devHitboxDrag=null;
@@ -3565,7 +3668,7 @@ function devPointerDown(event){
     return;
   }
 
-  devSelectedMob=null;devSelectedNpc=null;
+  devSelectedMob=null;devSelectedNpc=null;devSelectedRemnant=null;
   devSelected=findWorldObjectAt(p.x,p.y);
   if(devSelected){
     setDeveloperTab("selection");
@@ -3593,6 +3696,13 @@ function devPointerMove(event){
   if(!devModeActive) return;
   const p=devWorldFromPointer(event);
 
+  if(devRemnantDragging && devRemnantPreview){
+    event.preventDefault();event.stopImmediatePropagation();
+    devRemnantPreview.x=snapDev(p.x-devRemnantDragOffset.x);
+    devRemnantPreview.y=snapDev(p.y-devRemnantDragOffset.y);
+    return;
+  }
+
   if(devNpcDragging && devSelectedNpc){
     event.preventDefault();event.stopImmediatePropagation();
     devSelectedNpc.x=snapDev(p.x-devNpcDragOffset.x);
@@ -3619,7 +3729,7 @@ function devPointerMove(event){
     game.style.cursor=findDeveloperDepthInteraction(p.x,p.y)?"ns-resize":"";
   }else if(devHitboxEditing && developerSelectedEntity() && game?.style){
     game.style.cursor=developerHitboxCursor(findDeveloperHitboxInteraction(p.x,p.y));
-  }else if(game?.style && !devDragging && !devNpcDragging){
+  }else if(game?.style && !devDragging && !devNpcDragging && !devRemnantDragging){
     game.style.cursor="";
   }
 
@@ -3631,17 +3741,19 @@ function devPointerMove(event){
   refreshDeveloperInspectorValues();
 }
 function devPointerUp(event){
-  if(!devModeActive || (!devDragging && !devNpcDragging && !devHitboxDrag && !devDepthDrag)) return;
+  if(!devModeActive || (!devDragging && !devNpcDragging && !devRemnantDragging && !devHitboxDrag && !devDepthDrag)) return;
   event.preventDefault(); event.stopImmediatePropagation();
   const finishedNpc=!!devNpcDragging;
-  devDragging=false;devNpcDragging=false;
+  const finishedRemnant=!!devRemnantDragging;
+  devDragging=false;devNpcDragging=false;devRemnantDragging=false;
   const finishedHitbox=!!devHitboxDrag;
   const finishedDepth=!!devDepthDrag;
   devHitboxDrag=null;
   devDepthDrag=null;
   try{ game.releasePointerCapture?.(event.pointerId); }catch{}
   saveDeveloperDraft();
-  if(finishedNpc) devSetStatus("NPC position updated");
+  if(finishedRemnant) devSetStatus("Remnant preview position updated — runtime piles use the same scale/depth settings");
+  else if(finishedNpc) devSetStatus("NPC position updated");
   else if(finishedHitbox) devSetStatus("Hitbox updated — keep dragging handles or click Finish Hitbox Editing");
   else if(finishedDepth) devSetStatus("Depth line updated — move around the NPC/object to test overlap");
 }
@@ -3753,6 +3865,17 @@ function drawDeveloperOverlay(camX,camY,viewW,viewH){
       ctx.strokeStyle=npc===devSelectedNpc?"rgba(213,140,255,.95)":"rgba(213,140,255,.32)";
       ctx.lineWidth=(npc===devSelectedNpc?1.7:1)/CAMERA_ZOOM;
       ctx.beginPath();ctx.moveTo(x-3,y);ctx.lineTo(x+b.w+3,y);ctx.stroke();
+    }
+  }
+  if(devSelectedRemnant && devRemnantPreview){
+    const b=developerRemnantPreviewBounds();
+    const x=b.x-camX,y=b.y-camY;
+    ctx.strokeStyle="#63e6ff";ctx.fillStyle="rgba(99,230,255,.05)";ctx.lineWidth=2/CAMERA_ZOOM;
+    ctx.fillRect(x-2,y-2,b.w+4,b.h+4);ctx.strokeRect(x-2,y-2,b.w+4,b.h+4);
+    if(devShowDepthLines && lootRemnantDepthMode()==="ysort"){
+      const lineY=devRemnantPreview.y+lootRemnantDepthY()-camY;
+      ctx.strokeStyle="#d58cff";ctx.lineWidth=2/CAMERA_ZOOM;ctx.beginPath();ctx.moveTo(x-8,lineY);ctx.lineTo(x+b.w+8,lineY);ctx.stroke();
+      ctx.font=`${Math.max(7,9/CAMERA_ZOOM)}px system-ui`;ctx.fillStyle="#f2d7ff";ctx.fillText("DEPTH",x+b.w+10,lineY-2/CAMERA_ZOOM);
     }
   }
   drawDeveloperSelectedEntityOverlay(developerSelectedEntity(),camX,camY);
@@ -3897,7 +4020,7 @@ function refreshDeveloperObjectList(){
     b.title=`${obj.type} @ ${Math.round(obj.x)}, ${Math.round(obj.y)}`;
     b.onclick=()=>{
       devPlaceType=null;devPlaceNpcTemplate=null;
-      devSelectedMob=null;devSelectedNpc=null;
+      devSelectedMob=null;devSelectedNpc=null;devSelectedRemnant=null;
       devSelected=obj;
       setDeveloperTab("selection");
       updateDevPaletteActive();
@@ -3912,16 +4035,25 @@ function refreshDeveloperSelectionList(){
   if(!devPanel) return;
   const list=devPanel.querySelector("#devSelectionList");
   const count=devPanel.querySelector("#devSelectionCount");
-  if(count) count.textContent=`${sceneryProps.length} props • ${sceneryNPCs.length} NPCs`;
+  if(count) count.textContent=`${sceneryProps.length} props • ${sceneryNPCs.length} NPCs • 2 remnants`;
   if(!list) return;
   list.innerHTML="";
+  for(const kind of ["dust","lootable"]){
+    const b=document.createElement("button");
+    const label=kind==="lootable"?"Lootable Dust":"Dust";
+    b.className="devObjectChip"+(devSelectedRemnant===kind?" active":"");
+    b.textContent=`REMNANT • ${label}`;
+    b.title=`Global ${label} runtime preview — scale and depth settings affect all mob death piles`;
+    b.onclick=()=>selectDeveloperRemnant(kind);
+    list.appendChild(b);
+  }
   for(const npc of sceneryNPCs){
     const b=document.createElement("button");
     b.className="devObjectChip"+(npc===devSelectedNpc?" active":"");
     b.textContent=`NPC • ${npc.name}`;
     b.title=`${npc.role||"NPC"} @ ${Math.round(npc.x)}, ${Math.round(npc.y)}`;
     b.onclick=()=>{
-      devPlaceType=null;devPlaceNpcTemplate=null;devSelectedMob=null;devSelected=null;devSelectedNpc=npc;
+      devPlaceType=null;devPlaceNpcTemplate=null;devSelectedMob=null;devSelectedRemnant=null;devSelected=null;devSelectedNpc=npc;
       devHitboxEditing=false;devHitboxDrag=null;devDepthEditing=false;devDepthDrag=null;
       setDeveloperTab("selection");updateDevPaletteActive();refreshDeveloperPanel();
       devSetStatus(`Selected NPC ${npc.name} — visual size, hitbox, and depth are editable here`);
@@ -3934,7 +4066,7 @@ function refreshDeveloperSelectionList(){
     b.textContent=`PROP • ${obj.label||obj.type}`;
     b.title=`${obj.type} @ ${Math.round(obj.x)}, ${Math.round(obj.y)}`;
     b.onclick=()=>{
-      devPlaceType=null;devPlaceNpcTemplate=null;devSelectedMob=null;devSelectedNpc=null;devSelected=obj;
+      devPlaceType=null;devPlaceNpcTemplate=null;devSelectedMob=null;devSelectedRemnant=null;devSelectedNpc=null;devSelected=obj;
       devHitboxEditing=false;devHitboxDrag=null;devDepthEditing=false;devDepthDrag=null;
       setDeveloperTab("selection");updateDevPaletteActive();refreshDeveloperPanel();
       devSetStatus(`Selected ${obj.label||obj.type}`);
@@ -3957,8 +4089,32 @@ function refreshDeveloperPanel(rebuild=true){
   refreshDeveloperCombatPanel();
 
   const entity=developerSelectedEntity();
+  if(devSelectedRemnant && !entity && !devSelectedMob){
+    const label=devSelectedRemnant==="lootable"?"Lootable Dust":"Dust";
+    const mode=lootRemnantDepthMode();
+    inspector.innerHTML=`
+      <div class="devSelectedTitle">REMNANT • ${label}</div>
+      <div class="devHint">This is a temporary World Builder preview. Scale and depth are global: both plain and lootable mob-death piles use the same settings. Drag the preview in the world to test overlap against the player, NPCs, and props.</div>
+      <div class="devScaleControl"><div class="devScaleTop"><span>Remnant Scale</span><span id="devRemnantScaleValue">${LOOT_REMNANT_VISUAL.scale.toFixed(2)}×</span></div><input id="devRemnantScale" type="range" min="0.25" max="3.00" step="0.05" value="${LOOT_REMNANT_VISUAL.scale}"></div>
+      <div class="devSubhead">Player overlap / depth</div>
+      <label>Depth Mode<select id="devRemnantDepthMode"><option value="ysort" ${mode==="ysort"?"selected":""}>Y-Sort (recommended)</option><option value="behind" ${mode==="behind"?"selected":""}>Always Behind Player</option><option value="front" ${mode==="front"?"selected":""}>Always In Front of Player</option><option value="ground" ${mode==="ground"?"selected":""}>Ground / Floor</option></select></label>
+      <label>Depth line Y offset<input id="devRemnantDepthY" type="range" min="-40" max="40" step="1" value="${lootRemnantDepthY()}" ${mode==="ysort"?"":"disabled"}></label>
+      <div class="devPair"><label>Depth Y<input id="devRemnantDepthYNumber" type="number" min="-80" max="80" step="1" value="${lootRemnantDepthY()}" ${mode==="ysort"?"":"disabled"}></label><label>Preview<input value="${label}" disabled></label></div>
+      <div class="devDepthEditHelp">With Y-Sort, the purple line is the pile's overlap anchor. Move the preview around and walk above/below it to test when the player passes behind or in front.</div>
+      <div class="devRow"><button id="devRemnantNearPlayer">Move Preview Near Player</button><button id="devRemnantReset">Reset Remnant Visuals</button></div>`;
+    const scaleInput=inspector.querySelector("#devRemnantScale");
+    scaleInput.oninput=e=>{updateDeveloperRemnantVisual({scale:e.target.value});const out=inspector.querySelector("#devRemnantScaleValue");if(out)out.textContent=LOOT_REMNANT_VISUAL.scale.toFixed(2)+"×";saveDeveloperDraft();};
+    inspector.querySelector("#devRemnantDepthMode").onchange=e=>{updateDeveloperRemnantVisual({depthMode:e.target.value});saveDeveloperDraft();refreshDeveloperPanel();};
+    const depthSlider=inspector.querySelector("#devRemnantDepthY");
+    const depthNumber=inspector.querySelector("#devRemnantDepthYNumber");
+    const applyDepth=v=>{updateDeveloperRemnantVisual({depthY:v});if(depthSlider)depthSlider.value=LOOT_REMNANT_VISUAL.depthY;if(depthNumber)depthNumber.value=LOOT_REMNANT_VISUAL.depthY;saveDeveloperDraft();};
+    depthSlider.oninput=e=>applyDepth(e.target.value);depthNumber.oninput=e=>applyDepth(e.target.value);
+    inspector.querySelector("#devRemnantNearPlayer").onclick=()=>{devRemnantPreview.x=snapDev(state.x+56);devRemnantPreview.y=snapDev(state.y+8);devSetStatus("Remnant preview moved near the player");};
+    inspector.querySelector("#devRemnantReset").onclick=()=>{Object.assign(LOOT_REMNANT_VISUAL,PROJECT_LOOT_REMNANT_VISUAL);saveDeveloperDraft();refreshDeveloperPanel();devSetStatus("Remnant scale/depth reset to project settings");};
+    return;
+  }
   if(!entity){
-    inspector.innerHTML='<div class="devEmpty">Choose a prop or NPC from the Selection Library, or click one directly in the world.</div>';
+    inspector.innerHTML='<div class="devEmpty">Choose a prop, NPC, or Loot Remnant from the Selection Library, or click one directly in the world.</div>';
     return;
   }
 
@@ -4042,7 +4198,7 @@ function refreshDeveloperPanel(rebuild=true){
 }
 
 function updateVisualScaleControl(key,value){
-  const n=Math.max(0.5,Math.min(3.0,Number(value)||1));
+  const n=visualScaleOr(value,VISUAL_SCALE[key]||1);
   VISUAL_SCALE[key]=Math.round(n*100)/100;
   if(devPanel){
     const out=devPanel.querySelector(`[data-scale-value="${key}"]`);
@@ -4052,7 +4208,7 @@ function updateVisualScaleControl(key,value){
 
 function setMobTypeScale(key,value){
   if(!key || !Object.prototype.hasOwnProperty.call(MOB_TYPE_SCALE,key)) return;
-  const n=Math.max(0.5,Math.min(3.0,Number(value)||1));
+  const n=visualScaleOr(value,MOB_TYPE_SCALE[key]||1);
   MOB_TYPE_SCALE[key]=Math.round(n*100)/100;
   refreshDeveloperMobPanel();
 }
@@ -4061,7 +4217,7 @@ function selectDeveloperMobType(key){
   const match=mobs.find(m=>mobTypeScaleKey(m)===key) || {kind:key,boss:key==="snickers",alive:false};
   devSelectedMob=match;
   devCombatMobType=key;
-  devSelected=null;devSelectedNpc=null;
+  devSelected=null;devSelectedNpc=null;devSelectedRemnant=null;
   setDeveloperTab("scale");
   refreshDeveloperPanel();
 }
@@ -4106,7 +4262,7 @@ function refreshDeveloperMobPanel(){
 }
 
 function exportVisualSettings(){
-  const settings={...VISUAL_SCALE,mobTypes:{...MOB_TYPE_SCALE}};
+  const settings={...VISUAL_SCALE,mobTypes:{...MOB_TYPE_SCALE},remnants:{...LOOT_REMNANT_VISUAL}};
   const text=`/* Exported from Little Realm Developer Mode */
 window.LR_VISUAL = ${JSON.stringify(settings,null,2)};
 `;
@@ -4124,6 +4280,7 @@ window.LR_VISUAL = ${JSON.stringify(settings,null,2)};
 function resetVisualScale(){
   Object.assign(VISUAL_SCALE,PROJECT_VISUAL_SCALE);
   Object.assign(MOB_TYPE_SCALE,PROJECT_MOB_TYPE_SCALE);
+  Object.assign(LOOT_REMNANT_VISUAL,PROJECT_LOOT_REMNANT_VISUAL);
   if(!devPanel) return;
   devPanel.querySelectorAll("[data-scale-key]").forEach(input=>{
     input.value=VISUAL_SCALE[input.dataset.scaleKey];
@@ -4564,7 +4721,7 @@ function buildDeveloperPanel(){
         <div class="devSection"><div class="devSectionTitle">Quest Maker</div><div id="devQuestEditor"></div></div>
       </section>
       <section class="devView" data-dev-view="selection">
-        <div class="devSection"><div class="devSectionTitle">Selection Library <span id="devSelectionCount" style="float:right;font-weight:600;text-transform:none;letter-spacing:0;color:#a99bb3"></span></div><div class="devHint">Props and NPCs live together here for visual placement work. Select an NPC to adjust its model size, collision hitbox, and depth line.</div><div id="devSelectionList"></div></div>
+        <div class="devSection"><div class="devSectionTitle">Selection Library <span id="devSelectionCount" style="float:right;font-weight:600;text-transform:none;letter-spacing:0;color:#a99bb3"></span></div><div class="devHint">Props, NPCs, and loot-remnant previews live together here for visual placement work. Select Dust or Lootable Dust to tune the global remnant scale and depth.</div><div id="devSelectionList"></div></div>
         <div class="devSection"><div class="devSectionTitle">Selected Item</div><div class="devHint">Click a prop or NPC in the world, or choose one above. Drag it directly in the world to reposition it.</div><div id="devInspector"></div></div>
         <div class="devSection"><div class="devSectionTitle">Layout File</div><div class="devProjectActions"><button id="devExport">Export world-objects.js</button><button id="devLoadDraft">Load Local Draft</button><button id="devReset">Use Project Layout</button></div></div>
       </section>

@@ -11,6 +11,15 @@ const LOOTABLE_DUST_SHEET_COLUMNS = 4;
 const LOOTABLE_DUST_SHEET_ROWS = 4;
 const LOOTABLE_DUST_FRAME_COUNT = LOOTABLE_DUST_SHEET_COLUMNS*LOOTABLE_DUST_SHEET_ROWS;
 const LOOTABLE_DUST_FRAME_MS = 90;
+const LOOT_REMNANT_DEPTH_MODES = new Set(["ysort","behind","front","ground"]);
+const LOOT_REMNANT_VISUAL = {
+  scale: visualScaleOr(VISUAL_CONFIG.remnants?.scale,1),
+  depthMode: LOOT_REMNANT_DEPTH_MODES.has(String(VISUAL_CONFIG.remnants?.depthMode||"").toLowerCase())
+    ? String(VISUAL_CONFIG.remnants.depthMode).toLowerCase()
+    : "ysort",
+  depthY: numberOr(VISUAL_CONFIG.remnants?.depthY,3)
+};
+const PROJECT_LOOT_REMNANT_VISUAL = {...LOOT_REMNANT_VISUAL};
 const warnedLootProblems = new Set();
 const lootPiles = [];
 let nextLootPileId = 1;
@@ -196,6 +205,27 @@ function lootPileRemainingMs(pile,now=performance.now()){
   return Math.max(0,numberOr(pile?.expiresAt,0)-numberOr(now,performance.now()));
 }
 
+function lootRemnantDepthMode(){
+  const raw=String(LOOT_REMNANT_VISUAL.depthMode||"ysort").toLowerCase();
+  return LOOT_REMNANT_DEPTH_MODES.has(raw)?raw:"ysort";
+}
+
+function lootRemnantDepthY(){
+  return numberOr(LOOT_REMNANT_VISUAL.depthY,3);
+}
+
+function lootRemnantRenderDepth(pile,heroY){
+  const mode=lootRemnantDepthMode();
+  if(mode==="ground") return -1000000000;
+  if(mode==="behind") return heroY-0.25;
+  if(mode==="front") return heroY+0.25;
+  return numberOr(pile?.y,0)+lootRemnantDepthY();
+}
+
+function lootRemnantDrawSize(){
+  return LOOT_PILE_DRAW_SIZE*visualScaleOr(LOOT_REMNANT_VISUAL.scale,1);
+}
+
 
 function lootableDustFrameRect(image,frameIndex){
   const cols=LOOTABLE_DUST_SHEET_COLUMNS;
@@ -228,7 +258,7 @@ function drawLootPile(c,pile,camX,camY,now=performance.now()){
 
   const fade=remaining<LOOT_PILE_FADE_MS?clamp(remaining/LOOT_PILE_FADE_MS,0,1):1;
   const pulse=hasLoot?1+Math.sin(numberOr(now,0)/240)*.018:1;
-  const size=LOOT_PILE_DRAW_SIZE*pulse;
+  const size=lootRemnantDrawSize()*pulse;
   const sx=pile.x-camX;
   const sy=pile.y-camY;
   c.save();

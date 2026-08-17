@@ -966,7 +966,14 @@ function drawWorld(){
   for(const pile of lootPiles){
     const sx=pile.x-camX, sy=pile.y-camY;
     if(sx<-70||sy<-70||sx>viewW+70||sy>viewH+70) continue;
-    queueWorldRenderable("lootPile",pile.y+3,pile);
+    queueWorldRenderable("lootPile",lootRemnantRenderDepth(pile,state.y),pile);
+  }
+
+  if(devModeActive && devSelectedRemnant && devRemnantPreview){
+    const sx=devRemnantPreview.x-camX, sy=devRemnantPreview.y-camY;
+    if(sx>=-90&&sy>=-90&&sx<=viewW+90&&sy<=viewH+90){
+      queueWorldRenderable("devLootPile",lootRemnantRenderDepth(devRemnantPreview,state.y),devRemnantPreview);
+    }
   }
 
   for(const mob of mobs){
@@ -992,7 +999,7 @@ function drawWorld(){
       drawPropObject(item.obj,camX,camY);
     }else if(item.kind==="npc"){
       drawNpcObject(item.obj,camX,camY);
-    }else if(item.kind==="lootPile"){
+    }else if(item.kind==="lootPile" || item.kind==="devLootPile"){
       drawLootPile(ctx,item.obj,camX,camY);
     }else if(item.kind==="mob"){
       const mob=item.obj;

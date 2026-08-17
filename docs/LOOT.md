@@ -28,3 +28,8 @@ Each table entry can define `itemId`, `chancePercent`, `minQty`, `maxQty`, and o
 ## Stable API
 
 `window.LR_LOOT` exposes table rolling/grant helpers plus remnant helpers such as `spawnPile`, `spawnMobPile`, `getPiles`, `pileHasLoot`, `openPile`, `updatePiles`, and `clearPiles` for developer tools and future systems.
+
+
+## World Builder remnant preview
+
+The Selection Library exposes temporary **Dust** and **Lootable Dust** previews. Drag a preview around the world while tuning the shared remnant scale and depth/Y-sort anchor. Preview positions are editor-only; only the visual settings are exported and applied to runtime mob-death piles.
