@@ -1,5 +1,17 @@
 # Little Realm Changelog
 
+## v59 — Level Pace + Quest XP
+
+- Replaced the old geometric player XP growth with the approved old-school 1–100 progression table: 400 XP for level 1→2, 209,800 XP for 59→60, and 616,400 XP for 99→100. Reaching level 100 now requires 20,118,900 total XP.
+- Added a hard level cap of 100. The HUD shows `MAX LEVEL` at the cap, and older saves automatically recalculate their current `xpNext` from the new table.
+- Standard hostile mob XP now follows the same-level pace from the reference curve: 50 XP at level 1 and +5 XP per mob level. Slimes, wolves, and goblins use the full rate; passive farm animals use reduced species multipliers; elite/boss and level-gap modifiers still apply.
+- Added configurable mob XP multipliers and live same-level XP controls to World Builder combat tuning.
+- Added quest levels, automatic minimum-level requirements, and a recommended quest range. By default a quest becomes available three levels below its intended quest level and remains permanently available afterward; e.g. a level-37 quest requires level 34 and is recommended through level 40.
+- Added automatic quest XP profiles using same-level mob equivalents plus early-level percentage caps: Minor, Gather/Delivery, Standard, Multi-Objective, Elite, Dungeon, Boss, Story, Epic Finale, and Repeatable.
+- Quest Maker now supports Automatic or Custom XP, shows the calculated XP/profile/cap, and recalculates rewards from the quest level instead of the player's turn-in level. Repeatable quests automatically use the repeatable XP profile.
+- Updated the starter quests to the new automatic XP system and added a dedicated progression regression test.
+- Bumped build/cache metadata to `v59-leveling-quest-xp`.
+
 ## v58.2 — Repository Structure Cleanup
 
 - Removed 66 obsolete root-level duplicates left from the pre-folder project layout. Runtime code, source modules, configs, tests, documentation, and assets now have one authoritative location.

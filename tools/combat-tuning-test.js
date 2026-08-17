@@ -9,7 +9,7 @@ const checks=[
  ['species live tuning',/function applyDeveloperSpeciesBalance/.test(dev)&&/Base level/.test(dev)&&/Elite chance/.test(dev)],
  ['global level tuning',/function applyDeveloperGlobalCombatBalance/.test(dev)&&/High-Level Danger Boost/.test(dev)&&/Hit \/ Miss/.test(dev)],
  ['boss elite tuning',/Elite Multipliers/.test(dev)&&/Boss Multipliers/.test(dev)],
- ['xp tuning',/XP Rules/.test(dev)&&/infinite-grind rule remains intact/.test(dev)],
+ ['xp tuning',/XP Rules/.test(dev)&&/sameLevelMobXpBase/.test(dev)&&/XP multiplier/.test(dev)],
  ['balance export',/function exportDeveloperBalance/.test(dev)&&/game-balance\.js/.test(dev)],
  ['reroll controls',/Reroll All Mob Levels \+ Elites/.test(dev)&&/function rerollMobLevelsAndElites/.test(mobs)],
  ['template refresh',/function refreshMobTemplatesFromBalance/.test(mobs)&&/configKey/.test(mobs)],

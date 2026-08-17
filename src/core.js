@@ -41,6 +41,34 @@ function booleanOr(value,fallback){
   return typeof value==="boolean"?value:fallback;
 }
 
+function playerLevelCap(){
+  return Math.max(1,Math.floor(numberOr(BALANCE.progression?.levelCap,100)));
+}
+
+function xpRequiredForLevel(level){
+  const lv=Math.max(1,Math.floor(numberOr(level,1)));
+  const cap=playerLevelCap();
+  if(lv>=cap) return 0;
+  const table=BALANCE.progression?.xpToNextLevel;
+  if(Array.isArray(table)){
+    const listed=Number(table[lv-1]);
+    if(Number.isFinite(listed)&&listed>0) return Math.floor(listed);
+  }
+  // Backward-compatible fallback for older imported balance files.
+  const start=Math.max(1,Math.floor(numberOr(BALANCE.progression?.startingXpToLevel,400)));
+  const growth=1+percentOr(BALANCE.progression?.xpRequirementGrowthPercent,35);
+  let next=start;
+  for(let i=1;i<lv;i++) next=Math.min(Number.MAX_SAFE_INTEGER,Math.floor(next*growth));
+  return next;
+}
+
+function standardMobXpForLevel(level){
+  const lv=Math.max(1,Math.floor(numberOr(level,1)));
+  const base=Math.max(1,numberOr(BALANCE.progression?.sameLevelMobXpBase,50));
+  const perLevel=Math.max(0,numberOr(BALANCE.progression?.sameLevelMobXpPerLevel,5));
+  return Math.max(1,Math.round(base+(lv-1)*perLevel));
+}
+
 function overlayIsShown(id){
   return !!document.getElementById(id)?.classList.contains("show");
 }

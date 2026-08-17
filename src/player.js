@@ -2,7 +2,7 @@ function fresh(){
   return {
     x:START_X,
     y:START_Y,
-    level:1,xp:0,xpNext:numberOr(BALANCE.progression?.startingXpToLevel,25),
+    level:1,xp:0,xpNext:xpRequiredForLevel(1),
     hp:numberOr(BALANCE.player?.maxHp,30),maxHp:numberOr(BALANCE.player?.maxHp,30),
     atk:numberOr(BALANCE.player?.attack,5),def:numberOr(BALANCE.player?.defense,1),
     gold:numberOr(BALANCE.player?.startingGold,8),potions:numberOr(BALANCE.player?.startingPotions,2),kills:0,

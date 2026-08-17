@@ -6,6 +6,84 @@ function cloneQuest(value){
   return JSON.parse(JSON.stringify(value));
 }
 
+const QUEST_XP_PROFILE_DEFAULTS={
+  minor:{mobEquivalent:3,levelCapPercent:5},
+  gather:{mobEquivalent:5,levelCapPercent:8},
+  standard:{mobEquivalent:8,levelCapPercent:12},
+  multi:{mobEquivalent:12,levelCapPercent:15},
+  elite:{mobEquivalent:18,levelCapPercent:20},
+  dungeon:{mobEquivalent:25,levelCapPercent:25},
+  boss:{mobEquivalent:35,levelCapPercent:30},
+  story:{mobEquivalent:30,levelCapPercent:25},
+  epic:{mobEquivalent:50,levelCapPercent:40},
+  repeatable:{mobEquivalent:5,levelCapPercent:8}
+};
+const QUEST_XP_PROFILE_LABELS={
+  minor:"Minor / Talk / Discovery",
+  gather:"Gather / Delivery",
+  standard:"Standard",
+  multi:"Multi-Objective",
+  elite:"Elite / Mini-Boss",
+  dungeon:"Dungeon",
+  boss:"Major Boss",
+  story:"Main Story",
+  epic:"Epic Finale",
+  repeatable:"Repeatable"
+};
+
+function normalizeQuestRewardTier(value,fallback="standard"){
+  const key=String(value||"").trim().toLowerCase();
+  return Object.prototype.hasOwnProperty.call(QUEST_XP_PROFILE_DEFAULTS,key)?key:fallback;
+}
+
+function inferQuestRewardTier(objectives,repeatable=false){
+  if(repeatable) return "repeatable";
+  const list=Array.isArray(objectives)?objectives:[];
+  if(list.length>1) return "multi";
+  const type=list[0]?.type;
+  if(type==="talk"||type==="visit") return "minor";
+  if(type==="collect"||type==="deliver") return "gather";
+  return "standard";
+}
+
+function questXpProfile(tier,repeatable=false){
+  const effective=repeatable?"repeatable":normalizeQuestRewardTier(tier);
+  const fallback=QUEST_XP_PROFILE_DEFAULTS[effective]||QUEST_XP_PROFILE_DEFAULTS.standard;
+  const configured=BALANCE.quest?.xpProfiles?.[effective]||{};
+  return {
+    tier:effective,
+    mobEquivalent:Math.max(0,numberOr(configured.mobEquivalent,fallback.mobEquivalent)),
+    levelCapPercent:Math.max(0,numberOr(configured.levelCapPercent,fallback.levelCapPercent))
+  };
+}
+
+function questAutoXpForLevel(level,tier="standard",repeatable=false){
+  const lv=Math.max(1,Math.min(playerLevelCap(),Math.floor(numberOr(level,1))));
+  const profile=questXpProfile(tier,repeatable);
+  const raw=Math.max(0,Math.floor(standardMobXpForLevel(lv)*profile.mobEquivalent));
+  const requirement=xpRequiredForLevel(lv)||xpRequiredForLevel(Math.max(1,lv-1));
+  const cap=requirement>0?Math.floor(requirement*(profile.levelCapPercent/100)):raw;
+  return Math.max(0,Math.min(raw,cap));
+}
+
+function questDefaultMinLevel(level){
+  const gap=Math.max(0,Math.floor(numberOr(BALANCE.quest?.defaultLevelGap,3)));
+  return Math.max(1,Math.floor(numberOr(level,1))-gap);
+}
+
+function questRecommendedMaxLevel(quest){
+  const above=Math.max(0,Math.floor(numberOr(BALANCE.quest?.recommendedLevelsAbove,3)));
+  return Math.min(playerLevelCap(),Math.max(quest?.level||1,(quest?.level||1)+above));
+}
+
+function questLevelRequirementMet(quest){
+  return !state || state.level>=Math.max(1,Math.floor(numberOr(quest?.minLevel,1)));
+}
+
+function questLevelText(quest){
+  return `Quest Lv ${quest.level} • Requires Lv ${quest.minLevel}+`;
+}
+
 function normalizeQuestObjective(raw={}){
   const type=["kill","collect","talk","deliver","visit"].includes(raw.type)?raw.type:"talk";
   const objective={
@@ -33,9 +111,19 @@ function normalizeQuestDefinition(raw,index=0){
   quest.completionDialogue=String(quest.completionDialogue||"Thank you for your help.");
   quest.objectives=(Array.isArray(quest.objectives)?quest.objectives:[]).map(normalizeQuestObjective);
   if(!quest.objectives.length) quest.objectives=[normalizeQuestObjective({type:"talk",target:quest.turnInNpc||quest.giverNpc,amount:1})];
+  quest.level=Math.max(1,Math.min(playerLevelCap(),Math.floor(numberOr(quest.level??quest.questLevel,1))));
+  quest.levelRequirementMode=quest.levelRequirementMode==="custom"?"custom":"auto";
+  quest.minLevel=quest.levelRequirementMode==="custom"
+    ?Math.max(1,Math.min(quest.level,Math.floor(numberOr(quest.minLevel,questDefaultMinLevel(quest.level)))))
+    :questDefaultMinLevel(quest.level);
+  quest.recommendedMaxLevel=questRecommendedMaxLevel(quest);
+  quest.repeatable=!!quest.repeatable;
+  quest.rewardTier=normalizeQuestRewardTier(quest.rewardTier,inferQuestRewardTier(quest.objectives,quest.repeatable));
   const rewards=quest.rewards||{};
+  const xpMode=rewards.xpMode==="auto"?"auto":"custom";
   quest.rewards={
-    xp:Math.max(0,Math.floor(numberOr(rewards.xp,0))),
+    xpMode,
+    xp:xpMode==="auto"?questAutoXpForLevel(quest.level,quest.rewardTier,quest.repeatable):Math.max(0,Math.floor(numberOr(rewards.xp,0))),
     gold:Math.max(0,Math.floor(numberOr(rewards.gold,0))),
     items:(Array.isArray(rewards.items)?rewards.items:[])
       .filter(item=>item&&typeof item.id==="string"&&item.id)
@@ -50,7 +138,6 @@ function normalizeQuestDefinition(raw,index=0){
     quest.prerequisite=quest.prerequisite?String(quest.prerequisite).trim():null;
   }
   quest.nextQuest=quest.nextQuest?String(quest.nextQuest).trim():null;
-  quest.repeatable=!!quest.repeatable;
   return quest;
 }
 
@@ -119,6 +206,7 @@ function getQuestStatus(questOrId){
   if(record?.status==="active") return questCanTurnIn(quest)?"ready":"active";
   if(record?.status==="completed"&&!quest.repeatable) return "completed";
   if(!questPrerequisiteMet(quest)) return "locked";
+  if(!questLevelRequirementMet(quest)) return "locked";
   return "available";
 }
 
@@ -356,7 +444,7 @@ function renderQuestLog(){
   body.innerHTML=`${active.map(quest=>{
     const ready=getQuestStatus(quest)==="ready";
     const tracked=questIsTracked(quest);
-    return `<article class="questLogEntry${ready?" ready":""}"><div class="questLogTitle"><div class="questLogTitleText">${questEscape(quest.title)}</div><div class="questLogMeta">${ready?'<span class="questReadyBadge">READY</span>':''}<label class="questTrackToggle" title="Show this quest in the on-screen tracker"><input type="checkbox" data-track-quest="${questEscape(quest.id)}"${tracked?' checked':''}><span>Track</span></label></div></div><div class="questLogDesc">${questEscape(quest.description)}</div><div class="questObjectives">${quest.objectives.map((_,index)=>`<div class="questObjectiveRow${questObjectiveComplete(quest,index)?" complete":""}"><span class="questObjectiveMark">${questObjectiveComplete(quest,index)?"✓":"•"}</span><span>${questEscape(questObjectiveText(quest,index))}</span></div>`).join("")}</div><div class="questRewards">Reward: ${questEscape(questRewardText(quest))}</div><button class="questAbandon" data-abandon-quest="${questEscape(quest.id)}">Abandon</button></article>`;
+    return `<article class="questLogEntry${ready?" ready":""}"><div class="questLogTitle"><div class="questLogTitleText">${questEscape(quest.title)}</div><div class="questLogMeta">${ready?'<span class="questReadyBadge">READY</span>':''}<label class="questTrackToggle" title="Show this quest in the on-screen tracker"><input type="checkbox" data-track-quest="${questEscape(quest.id)}"${tracked?' checked':''}><span>Track</span></label></div></div><div class="questLogDesc"><b>${questEscape(questLevelText(quest))}</b><br>${questEscape(quest.description)}</div><div class="questObjectives">${quest.objectives.map((_,index)=>`<div class="questObjectiveRow${questObjectiveComplete(quest,index)?" complete":""}"><span class="questObjectiveMark">${questObjectiveComplete(quest,index)?"✓":"•"}</span><span>${questEscape(questObjectiveText(quest,index))}</span></div>`).join("")}</div><div class="questRewards">Reward: ${questEscape(questRewardText(quest))}</div><button class="questAbandon" data-abandon-quest="${questEscape(quest.id)}">Abandon</button></article>`;
   }).join("")}${completed.length?`<div class="questCompletedHeading">Completed</div>${completed.map(q=>`<div class="questCompletedItem">✓ ${questEscape(q.title)}</div>`).join("")}`:""}`;
   body.querySelectorAll("[data-track-quest]").forEach(input=>input.onchange=()=>{
     setQuestTracked(input.dataset.trackQuest,input.checked);
@@ -404,13 +492,13 @@ function renderNpcDialogue(){
 
   const cards=[];
   for(const quest of ready){
-    cards.push(`<article class="npcQuestCard ready"><div class="npcQuestTitle">? ${questEscape(quest.title)}</div><div class="npcQuestCopy">${questEscape(quest.completionDialogue)}</div><div class="questRewards">Reward: ${questEscape(questRewardText(quest))}</div><button data-complete-quest="${questEscape(quest.id)}">Complete Quest</button></article>`);
+    cards.push(`<article class="npcQuestCard ready"><div class="npcQuestTitle">? ${questEscape(quest.title)}</div><div class="npcQuestCopy"><b>${questEscape(questLevelText(quest))}</b><br>${questEscape(quest.completionDialogue)}</div><div class="questRewards">Reward: ${questEscape(questRewardText(quest))}</div><button data-complete-quest="${questEscape(quest.id)}">Complete Quest</button></article>`);
   }
   for(const quest of available){
-    cards.push(`<article class="npcQuestCard"><div class="npcQuestTitle">! ${questEscape(quest.title)}</div><div class="npcQuestCopy">${questEscape(quest.openingDialogue)}</div><div class="questObjectives">${quest.objectives.map((_,index)=>`<div>${questEscape(questObjectiveText(quest,index))}</div>`).join("")}</div><div class="questRewards">Reward: ${questEscape(questRewardText(quest))}</div><button data-accept-quest="${questEscape(quest.id)}">Accept Quest</button></article>`);
+    cards.push(`<article class="npcQuestCard"><div class="npcQuestTitle">! ${questEscape(quest.title)}</div><div class="npcQuestCopy"><b>${questEscape(questLevelText(quest))}</b><br>${questEscape(quest.openingDialogue)}</div><div class="questObjectives">${quest.objectives.map((_,index)=>`<div>${questEscape(questObjectiveText(quest,index))}</div>`).join("")}</div><div class="questRewards">Reward: ${questEscape(questRewardText(quest))}</div><button data-accept-quest="${questEscape(quest.id)}">Accept Quest</button></article>`);
   }
   for(const quest of active){
-    cards.push(`<article class="npcQuestCard active"><div class="npcQuestTitle">${questEscape(quest.title)}</div><div class="npcQuestCopy">In progress</div><div class="questObjectives">${quest.objectives.map((_,index)=>`<div>${questEscape(questObjectiveText(quest,index))}</div>`).join("")}</div></article>`);
+    cards.push(`<article class="npcQuestCard active"><div class="npcQuestTitle">${questEscape(quest.title)}</div><div class="npcQuestCopy"><b>${questEscape(questLevelText(quest))}</b><br>In progress</div><div class="questObjectives">${quest.objectives.map((_,index)=>`<div>${questEscape(questObjectiveText(quest,index))}</div>`).join("")}</div></article>`);
   }
   actions.innerHTML=cards.join("")||'<div class="npcNoQuest">Nothing else right now.</div>';
   actions.querySelectorAll("[data-accept-quest]").forEach(button=>button.onclick=()=>acceptQuest(button.dataset.acceptQuest));

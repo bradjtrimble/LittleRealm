@@ -1,4 +1,4 @@
-const CACHE_NAME = "little-realm-v58.2-repository-cleanup";
+const CACHE_NAME = "little-realm-v59-leveling-quest-xp";
 const FILES = [
   "./",
   "./index.html",

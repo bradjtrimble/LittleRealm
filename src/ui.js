@@ -12,9 +12,10 @@ function updateUI(){
   document.getElementById("lvl").textContent=state.level;
   document.getElementById("gold").textContent=state.gold;
   document.getElementById("hpText").textContent=`${state.hp}/${state.maxHp}`;
-  document.getElementById("xpText").textContent=`${state.xp}/${state.xpNext}`;
+  const atLevelCap=state.level>=playerLevelCap();
+  document.getElementById("xpText").textContent=atLevelCap?"MAX LEVEL":`${state.xp}/${state.xpNext}`;
   document.getElementById("hpFill").style.width=`${Math.max(0,100*state.hp/state.maxHp)}%`;
-  document.getElementById("xpFill").style.width=`${Math.min(100,100*state.xp/state.xpNext)}%`;
+  document.getElementById("xpFill").style.width=atLevelCap?"100%":`${Math.min(100,100*state.xp/Math.max(1,state.xpNext))}%`;
   document.getElementById("hudAtk").textContent=state.atk;
   document.getElementById("hudDef").textContent=state.def;
   document.getElementById("hud").classList.toggle("lowHp",state.hp/state.maxHp<=0.30);

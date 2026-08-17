@@ -192,6 +192,16 @@ except Exception as e:
     failed.append('mob level system test'); print('FAIL mob level system test',e)
 
 try:
+    progression=subprocess.run(['node',str(ROOT/'tools'/'progression-test.js')],check=True,capture_output=True,text=True)
+    print(progression.stdout.strip())
+except subprocess.CalledProcessError as e:
+    failed.append('1-100 progression test')
+    detail=(e.stderr or e.stdout or str(e)).strip()
+    print('FAIL 1-100 progression test',detail)
+except Exception as e:
+    failed.append('1-100 progression test'); print('FAIL 1-100 progression test',e)
+
+try:
     tuning=subprocess.run(['node',str(ROOT/'tools'/'combat-tuning-test.js')],check=True,capture_output=True,text=True)
     print(tuning.stdout.strip())
 except Exception as e:

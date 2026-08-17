@@ -11,9 +11,12 @@ function normalizeLoadedState(raw){
   const source=raw&&typeof raw==="object"&&!Array.isArray(raw)?raw:{};
   const next={...base,...source};
 
-  next.level=loadedWholeNumber(source.level,base.level,1);
+  next.level=Math.min(playerLevelCap(),loadedWholeNumber(source.level,base.level,1));
   next.xp=loadedWholeNumber(source.xp,base.xp,0);
-  next.xpNext=loadedWholeNumber(source.xpNext,base.xpNext,1);
+  // XP requirements are derived from the active 1-100 progression table so
+  // older saves automatically migrate off the pre-v59 geometric curve.
+  next.xpNext=xpRequiredForLevel(next.level);
+  if(next.level>=playerLevelCap()) next.xp=0;
   next.maxHp=loadedWholeNumber(source.maxHp,base.maxHp,1);
   next.hp=clamp(loadedWholeNumber(source.hp,base.hp,0),0,next.maxHp);
   next.atk=loadedWholeNumber(source.atk,base.atk,0);

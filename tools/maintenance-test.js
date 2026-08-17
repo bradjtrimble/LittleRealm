@@ -34,6 +34,12 @@ function extractFunction(src,name){
   vm.runInContext(`
     const START_X=100,START_Y=100;
     function numberOr(value,fallback){const n=Number(value);return Number.isFinite(n)?n:fallback;}
+    function playerLevelCap(){return 100;}
+    function questDefaultMinLevel(level){return Math.max(1,Number(level)-3);}
+    function questRecommendedMaxLevel(quest){return Math.min(100,Number(quest.level)+3);}
+    function inferQuestRewardTier(){return "standard";}
+    function normalizeQuestRewardTier(value,fallback="standard"){return value||fallback;}
+    function questAutoXpForLevel(){return 0;}
     ${extractFunction(questSrc,"cloneQuest")}
     function normalizeQuestObjective(raw){return raw||{};}
     ${extractFunction(questSrc,"normalizeQuestDefinition")}
@@ -57,7 +63,9 @@ function extractFunction(src,name){
     function numberOr(value,fallback){const n=Number(value);return Number.isFinite(n)?n:fallback;}
     function clamp(v,a,b){return Math.max(a,Math.min(b,v));}
     function booleanOr(value,fallback){return typeof value==="boolean"?value:fallback;}
-    function fresh(){return {x:10,y:20,level:1,xp:0,xpNext:25,hp:30,maxHp:30,atk:5,def:1,gold:8,potions:2,kills:0,slimeKills:0,questComplete:false,bossDefeated:false,quests:{},inventory:[]};}
+    function fresh(){return {x:10,y:20,level:1,xp:0,xpNext:400,hp:30,maxHp:30,atk:5,def:1,gold:8,potions:2,kills:0,slimeKills:0,questComplete:false,bossDefeated:false,quests:{},inventory:[]};}
+    function playerLevelCap(){return 100;}
+    function xpRequiredForLevel(level){return level>=100?0:400;}
     function canStand(x,y){return x===10&&y===20;}
     ${extractFunction(saveSrc,"loadedWholeNumber")}
     ${extractFunction(saveSrc,"normalizeLoadedState")}
@@ -68,7 +76,7 @@ function extractFunction(src,name){
     });
   `,box);
   const s=box.result;
-  if(s.x!==10||s.y!==20||s.level!==1||s.xp!==0||s.xpNext!==25||s.maxHp!==30||s.hp!==30||
+  if(s.x!==10||s.y!==20||s.level!==1||s.xp!==0||s.xpNext!==400||s.maxHp!==30||s.hp!==30||
      s.atk!==5||s.def!==1||s.gold!==8||s.potions!==2||s.kills!==0||s.slimeKills!==0||
      s.questComplete!==false||s.bossDefeated!==true||Array.isArray(s.quests)||!Array.isArray(s.inventory)){
     throw new Error("save-state sanitization regression");

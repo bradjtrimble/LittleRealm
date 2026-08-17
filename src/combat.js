@@ -695,18 +695,29 @@ function loseBattle(){
 }
 
 function levelCheck(){
-  const growth=1+percentOr(BALANCE.progression?.xpRequirementGrowthPercent,35);
+  const cap=playerLevelCap();
   const hpGain=Math.floor(numberOr(BALANCE.progression?.hpPerLevel,8));
   const atkGain=Math.floor(numberOr(BALANCE.progression?.attackPerLevel,2));
   const defGain=Math.floor(numberOr(BALANCE.progression?.defensePerLevel,1));
-  while(state.xp>=state.xpNext){
+  if(state.level>=cap){
+    state.level=cap;
+    state.xp=0;
+    state.xpNext=0;
+    return;
+  }
+  if(!Number.isFinite(state.xpNext)||state.xpNext<=0) state.xpNext=xpRequiredForLevel(state.level);
+  while(state.level<cap && state.xpNext>0 && state.xp>=state.xpNext){
     state.xp-=state.xpNext;
     state.level++;
-    state.xpNext=Math.floor(state.xpNext*growth);
     state.maxHp+=hpGain;state.hp=state.maxHp;
     state.atk+=atkGain;state.def+=defGain;
+    state.xpNext=xpRequiredForLevel(state.level);
     refreshAliveMobStatsForPlayer();
     setTimeout(()=>toast(`Level up! Level ${state.level}`),650);
+  }
+  if(state.level>=cap){
+    state.xp=0;
+    state.xpNext=0;
   }
 }
 

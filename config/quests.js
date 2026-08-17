@@ -1,4 +1,4 @@
-/* Integrated from Little Realm World Pack v56 */
+/* Integrated from Little Realm World Pack v59 */
 window.LR_QUESTS = [
   {
     "id": "lilly_slime_samples",
@@ -17,13 +17,17 @@ window.LR_QUESTS = [
       }
     ],
     "rewards": {
-      "xp": 25,
+      "xp": 72,
       "gold": 8,
-      "items": []
+      "items": [],
+      "xpMode": "auto"
     },
     "prerequisite": "welcome_traveler",
     "nextQuest": null,
-    "repeatable": false
+    "repeatable": false,
+    "level": 2,
+    "levelRequirementMode": "auto",
+    "rewardTier": "gather"
   },
   {
     "id": "jorge_slime_problem",
@@ -41,13 +45,17 @@ window.LR_QUESTS = [
       }
     ],
     "rewards": {
-      "xp": 40,
+      "xp": 108,
       "gold": 12,
-      "items": []
+      "items": [],
+      "xpMode": "auto"
     },
     "prerequisite": "welcome_traveler",
     "nextQuest": null,
-    "repeatable": false
+    "repeatable": false,
+    "level": 2,
+    "levelRequirementMode": "auto",
+    "rewardTier": "standard"
   },
   {
     "id": "farmer_wolf_hunt",
@@ -65,13 +73,18 @@ window.LR_QUESTS = [
       }
     ],
     "rewards": {
-      "xp": 30,
+      "xp": 252,
       "gold": 10,
-      "items": []
+      "items": [],
+      "xpMode": "auto"
     },
     "prerequisite": null,
     "nextQuest": null,
-    "repeatable": false
+    "repeatable": false,
+    "level": 4,
+    "levelRequirementMode": "custom",
+    "minLevel": 3,
+    "rewardTier": "standard"
   },
   {
     "id": "welcome_traveler",
@@ -109,12 +122,16 @@ window.LR_QUESTS = [
       }
     ],
     "rewards": {
-      "xp": 25,
+      "xp": 60,
       "gold": 0,
-      "items": []
+      "items": [],
+      "xpMode": "auto"
     },
     "prerequisite": null,
     "nextQuest": null,
-    "repeatable": false
+    "repeatable": false,
+    "level": 1,
+    "levelRequirementMode": "auto",
+    "rewardTier": "multi"
   }
 ];

@@ -1,8 +1,8 @@
 {
   "format": "little-realm-world-pack",
   "schemaVersion": 1,
-  "build": "v58.2-repository-cleanup",
-  "exportedAt": "2026-08-16T21:07:04.004Z",
+  "build": "v59-leveling-quest-xp",
+  "exportedAt": "2026-08-17T00:07:45.262Z",
   "worldObjects": [
     {
       "id": "town-well",
@@ -804,13 +804,19 @@
         }
       ],
       "rewards": {
-        "xp": 25,
+        "xp": 72,
         "gold": 8,
-        "items": []
+        "items": [],
+        "xpMode": "auto"
       },
       "prerequisite": "welcome_traveler",
       "nextQuest": null,
-      "repeatable": false
+      "repeatable": false,
+      "level": 2,
+      "levelRequirementMode": "auto",
+      "rewardTier": "gather",
+      "minLevel": 1,
+      "recommendedMaxLevel": 5
     },
     {
       "id": "jorge_slime_problem",
@@ -828,13 +834,19 @@
         }
       ],
       "rewards": {
-        "xp": 40,
+        "xp": 108,
         "gold": 12,
-        "items": []
+        "items": [],
+        "xpMode": "auto"
       },
       "prerequisite": "welcome_traveler",
       "nextQuest": null,
-      "repeatable": false
+      "repeatable": false,
+      "level": 2,
+      "levelRequirementMode": "auto",
+      "rewardTier": "standard",
+      "minLevel": 1,
+      "recommendedMaxLevel": 5
     },
     {
       "id": "farmer_wolf_hunt",
@@ -852,13 +864,19 @@
         }
       ],
       "rewards": {
-        "xp": 30,
+        "xp": 252,
         "gold": 10,
-        "items": []
+        "items": [],
+        "xpMode": "auto"
       },
       "prerequisite": null,
       "nextQuest": null,
-      "repeatable": false
+      "repeatable": false,
+      "level": 4,
+      "levelRequirementMode": "custom",
+      "minLevel": 3,
+      "rewardTier": "standard",
+      "recommendedMaxLevel": 7
     },
     {
       "id": "welcome_traveler",
@@ -896,13 +914,19 @@
         }
       ],
       "rewards": {
-        "xp": 25,
+        "xp": 60,
         "gold": 0,
-        "items": []
+        "items": [],
+        "xpMode": "auto"
       },
       "prerequisite": null,
       "nextQuest": null,
-      "repeatable": false
+      "repeatable": false,
+      "level": 1,
+      "levelRequirementMode": "auto",
+      "rewardTier": "multi",
+      "minLevel": 1,
+      "recommendedMaxLevel": 4
     }
   ],
   "visualSettings": {
@@ -956,8 +980,110 @@
       "keyboardTargetRange": 220
     },
     "progression": {
-      "startingXpToLevel": 25,
-      "xpRequirementGrowthPercent": 35,
+      "levelCap": 100,
+      "sameLevelMobXpBase": 50,
+      "sameLevelMobXpPerLevel": 5,
+      "xpToNextLevel": [
+        400,
+        900,
+        1400,
+        2100,
+        2800,
+        3600,
+        4500,
+        5400,
+        6500,
+        7600,
+        8800,
+        10100,
+        11400,
+        12900,
+        14400,
+        16000,
+        17700,
+        19400,
+        21300,
+        23200,
+        25200,
+        27300,
+        29400,
+        31700,
+        34000,
+        36400,
+        38900,
+        41400,
+        44300,
+        47400,
+        50800,
+        54500,
+        58600,
+        62800,
+        67100,
+        71600,
+        76100,
+        80800,
+        85700,
+        90700,
+        95800,
+        101000,
+        106300,
+        111800,
+        117500,
+        123200,
+        129100,
+        135100,
+        141200,
+        147500,
+        153900,
+        160400,
+        167100,
+        173900,
+        180800,
+        187900,
+        195000,
+        202300,
+        209800,
+        217400,
+        225200,
+        233100,
+        241100,
+        249200,
+        257500,
+        265900,
+        274500,
+        283200,
+        292000,
+        300900,
+        309900,
+        319100,
+        328400,
+        337900,
+        347500,
+        357200,
+        367000,
+        377000,
+        387100,
+        397300,
+        407700,
+        418200,
+        428800,
+        439600,
+        450400,
+        461400,
+        472600,
+        483800,
+        495200,
+        506800,
+        518400,
+        530200,
+        542200,
+        554200,
+        566400,
+        578700,
+        591100,
+        603700,
+        616400
+      ],
       "hpPerLevel": 8,
       "attackPerLevel": 2,
       "defensePerLevel": 1
@@ -966,7 +1092,7 @@
       "hpGrowthPerLevelPercent": 14,
       "attackGrowthPerLevelPercent": 10,
       "armorPerLevel": 0.55,
-      "xpGrowthPerLevelPercent": 18,
+      "useLevelBasedXp": true,
       "dangerStartsAbovePlayerLevels": 3,
       "dangerHpPerExtraLevelPercent": 12,
       "dangerAttackPerExtraLevelPercent": 9,
@@ -1002,7 +1128,51 @@
       "higherLevelXpBonusPerLevelPercent": 8
     },
     "quest": {
-      "slimesRequired": 3
+      "slimesRequired": 3,
+      "defaultLevelGap": 3,
+      "recommendedLevelsAbove": 3,
+      "xpProfiles": {
+        "minor": {
+          "mobEquivalent": 3,
+          "levelCapPercent": 5
+        },
+        "gather": {
+          "mobEquivalent": 5,
+          "levelCapPercent": 8
+        },
+        "standard": {
+          "mobEquivalent": 8,
+          "levelCapPercent": 12
+        },
+        "multi": {
+          "mobEquivalent": 12,
+          "levelCapPercent": 15
+        },
+        "elite": {
+          "mobEquivalent": 18,
+          "levelCapPercent": 20
+        },
+        "dungeon": {
+          "mobEquivalent": 25,
+          "levelCapPercent": 25
+        },
+        "boss": {
+          "mobEquivalent": 35,
+          "levelCapPercent": 30
+        },
+        "story": {
+          "mobEquivalent": 30,
+          "levelCapPercent": 25
+        },
+        "epic": {
+          "mobEquivalent": 50,
+          "levelCapPercent": 40
+        },
+        "repeatable": {
+          "mobEquivalent": 5,
+          "levelCapPercent": 8
+        }
+      }
     },
     "shop": {
       "potionPrice": 5,
@@ -1016,6 +1186,7 @@
         "hp": 14,
         "attack": 4,
         "defense": 0,
+        "xpMultiplier": 1,
         "xp": 8,
         "goldMin": 2,
         "goldMax": 5,
@@ -1043,6 +1214,7 @@
         "hp": 44,
         "attack": 14,
         "defense": 4,
+        "xpMultiplier": 1,
         "xp": 16,
         "goldMin": 4,
         "goldMax": 8,
@@ -1070,6 +1242,7 @@
         "hp": 36,
         "attack": 12,
         "defense": 2,
+        "xpMultiplier": 1,
         "xp": 13,
         "goldMin": 3,
         "goldMax": 7,
@@ -1097,6 +1270,7 @@
         "hp": 12,
         "attack": 1,
         "defense": 0,
+        "xpMultiplier": 0.35,
         "xp": 4,
         "goldMin": 0,
         "goldMax": 0,
@@ -1124,6 +1298,7 @@
         "hp": 8,
         "attack": 1,
         "defense": 0,
+        "xpMultiplier": 0.3,
         "xp": 3,
         "goldMin": 0,
         "goldMax": 0,
@@ -1151,6 +1326,7 @@
         "hp": 4,
         "attack": 1,
         "defense": 0,
+        "xpMultiplier": 0.2,
         "xp": 2,
         "goldMin": 0,
         "goldMax": 0,
@@ -1178,6 +1354,7 @@
         "hp": 70,
         "attack": 10,
         "defense": 3,
+        "xpMultiplier": 1,
         "xp": 55,
         "goldMin": 35,
         "goldMax": 55,

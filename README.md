@@ -2,7 +2,7 @@
 
 Little Realm is a browser-based top-down RPG with a modular JavaScript source tree, data-driven world/content configuration, and an in-game World Builder.
 
-**Current build:** `v58.2-repository-cleanup`
+**Current build:** `v59-leveling-quest-xp`
 
 ## Run the game
 

@@ -46,6 +46,34 @@ function booleanOr(value,fallback){
   return typeof value==="boolean"?value:fallback;
 }
 
+function playerLevelCap(){
+  return Math.max(1,Math.floor(numberOr(BALANCE.progression?.levelCap,100)));
+}
+
+function xpRequiredForLevel(level){
+  const lv=Math.max(1,Math.floor(numberOr(level,1)));
+  const cap=playerLevelCap();
+  if(lv>=cap) return 0;
+  const table=BALANCE.progression?.xpToNextLevel;
+  if(Array.isArray(table)){
+    const listed=Number(table[lv-1]);
+    if(Number.isFinite(listed)&&listed>0) return Math.floor(listed);
+  }
+  // Backward-compatible fallback for older imported balance files.
+  const start=Math.max(1,Math.floor(numberOr(BALANCE.progression?.startingXpToLevel,400)));
+  const growth=1+percentOr(BALANCE.progression?.xpRequirementGrowthPercent,35);
+  let next=start;
+  for(let i=1;i<lv;i++) next=Math.min(Number.MAX_SAFE_INTEGER,Math.floor(next*growth));
+  return next;
+}
+
+function standardMobXpForLevel(level){
+  const lv=Math.max(1,Math.floor(numberOr(level,1)));
+  const base=Math.max(1,numberOr(BALANCE.progression?.sameLevelMobXpBase,50));
+  const perLevel=Math.max(0,numberOr(BALANCE.progression?.sameLevelMobXpPerLevel,5));
+  return Math.max(1,Math.round(base+(lv-1)*perLevel));
+}
+
 function overlayIsShown(id){
   return !!document.getElementById(id)?.classList.contains("show");
 }
@@ -2101,6 +2129,84 @@ function cloneQuest(value){
   return JSON.parse(JSON.stringify(value));
 }
 
+const QUEST_XP_PROFILE_DEFAULTS={
+  minor:{mobEquivalent:3,levelCapPercent:5},
+  gather:{mobEquivalent:5,levelCapPercent:8},
+  standard:{mobEquivalent:8,levelCapPercent:12},
+  multi:{mobEquivalent:12,levelCapPercent:15},
+  elite:{mobEquivalent:18,levelCapPercent:20},
+  dungeon:{mobEquivalent:25,levelCapPercent:25},
+  boss:{mobEquivalent:35,levelCapPercent:30},
+  story:{mobEquivalent:30,levelCapPercent:25},
+  epic:{mobEquivalent:50,levelCapPercent:40},
+  repeatable:{mobEquivalent:5,levelCapPercent:8}
+};
+const QUEST_XP_PROFILE_LABELS={
+  minor:"Minor / Talk / Discovery",
+  gather:"Gather / Delivery",
+  standard:"Standard",
+  multi:"Multi-Objective",
+  elite:"Elite / Mini-Boss",
+  dungeon:"Dungeon",
+  boss:"Major Boss",
+  story:"Main Story",
+  epic:"Epic Finale",
+  repeatable:"Repeatable"
+};
+
+function normalizeQuestRewardTier(value,fallback="standard"){
+  const key=String(value||"").trim().toLowerCase();
+  return Object.prototype.hasOwnProperty.call(QUEST_XP_PROFILE_DEFAULTS,key)?key:fallback;
+}
+
+function inferQuestRewardTier(objectives,repeatable=false){
+  if(repeatable) return "repeatable";
+  const list=Array.isArray(objectives)?objectives:[];
+  if(list.length>1) return "multi";
+  const type=list[0]?.type;
+  if(type==="talk"||type==="visit") return "minor";
+  if(type==="collect"||type==="deliver") return "gather";
+  return "standard";
+}
+
+function questXpProfile(tier,repeatable=false){
+  const effective=repeatable?"repeatable":normalizeQuestRewardTier(tier);
+  const fallback=QUEST_XP_PROFILE_DEFAULTS[effective]||QUEST_XP_PROFILE_DEFAULTS.standard;
+  const configured=BALANCE.quest?.xpProfiles?.[effective]||{};
+  return {
+    tier:effective,
+    mobEquivalent:Math.max(0,numberOr(configured.mobEquivalent,fallback.mobEquivalent)),
+    levelCapPercent:Math.max(0,numberOr(configured.levelCapPercent,fallback.levelCapPercent))
+  };
+}
+
+function questAutoXpForLevel(level,tier="standard",repeatable=false){
+  const lv=Math.max(1,Math.min(playerLevelCap(),Math.floor(numberOr(level,1))));
+  const profile=questXpProfile(tier,repeatable);
+  const raw=Math.max(0,Math.floor(standardMobXpForLevel(lv)*profile.mobEquivalent));
+  const requirement=xpRequiredForLevel(lv)||xpRequiredForLevel(Math.max(1,lv-1));
+  const cap=requirement>0?Math.floor(requirement*(profile.levelCapPercent/100)):raw;
+  return Math.max(0,Math.min(raw,cap));
+}
+
+function questDefaultMinLevel(level){
+  const gap=Math.max(0,Math.floor(numberOr(BALANCE.quest?.defaultLevelGap,3)));
+  return Math.max(1,Math.floor(numberOr(level,1))-gap);
+}
+
+function questRecommendedMaxLevel(quest){
+  const above=Math.max(0,Math.floor(numberOr(BALANCE.quest?.recommendedLevelsAbove,3)));
+  return Math.min(playerLevelCap(),Math.max(quest?.level||1,(quest?.level||1)+above));
+}
+
+function questLevelRequirementMet(quest){
+  return !state || state.level>=Math.max(1,Math.floor(numberOr(quest?.minLevel,1)));
+}
+
+function questLevelText(quest){
+  return `Quest Lv ${quest.level} • Requires Lv ${quest.minLevel}+`;
+}
+
 function normalizeQuestObjective(raw={}){
   const type=["kill","collect","talk","deliver","visit"].includes(raw.type)?raw.type:"talk";
   const objective={
@@ -2128,9 +2234,19 @@ function normalizeQuestDefinition(raw,index=0){
   quest.completionDialogue=String(quest.completionDialogue||"Thank you for your help.");
   quest.objectives=(Array.isArray(quest.objectives)?quest.objectives:[]).map(normalizeQuestObjective);
   if(!quest.objectives.length) quest.objectives=[normalizeQuestObjective({type:"talk",target:quest.turnInNpc||quest.giverNpc,amount:1})];
+  quest.level=Math.max(1,Math.min(playerLevelCap(),Math.floor(numberOr(quest.level??quest.questLevel,1))));
+  quest.levelRequirementMode=quest.levelRequirementMode==="custom"?"custom":"auto";
+  quest.minLevel=quest.levelRequirementMode==="custom"
+    ?Math.max(1,Math.min(quest.level,Math.floor(numberOr(quest.minLevel,questDefaultMinLevel(quest.level)))))
+    :questDefaultMinLevel(quest.level);
+  quest.recommendedMaxLevel=questRecommendedMaxLevel(quest);
+  quest.repeatable=!!quest.repeatable;
+  quest.rewardTier=normalizeQuestRewardTier(quest.rewardTier,inferQuestRewardTier(quest.objectives,quest.repeatable));
   const rewards=quest.rewards||{};
+  const xpMode=rewards.xpMode==="auto"?"auto":"custom";
   quest.rewards={
-    xp:Math.max(0,Math.floor(numberOr(rewards.xp,0))),
+    xpMode,
+    xp:xpMode==="auto"?questAutoXpForLevel(quest.level,quest.rewardTier,quest.repeatable):Math.max(0,Math.floor(numberOr(rewards.xp,0))),
     gold:Math.max(0,Math.floor(numberOr(rewards.gold,0))),
     items:(Array.isArray(rewards.items)?rewards.items:[])
       .filter(item=>item&&typeof item.id==="string"&&item.id)
@@ -2145,7 +2261,6 @@ function normalizeQuestDefinition(raw,index=0){
     quest.prerequisite=quest.prerequisite?String(quest.prerequisite).trim():null;
   }
   quest.nextQuest=quest.nextQuest?String(quest.nextQuest).trim():null;
-  quest.repeatable=!!quest.repeatable;
   return quest;
 }
 
@@ -2214,6 +2329,7 @@ function getQuestStatus(questOrId){
   if(record?.status==="active") return questCanTurnIn(quest)?"ready":"active";
   if(record?.status==="completed"&&!quest.repeatable) return "completed";
   if(!questPrerequisiteMet(quest)) return "locked";
+  if(!questLevelRequirementMet(quest)) return "locked";
   return "available";
 }
 
@@ -2451,7 +2567,7 @@ function renderQuestLog(){
   body.innerHTML=`${active.map(quest=>{
     const ready=getQuestStatus(quest)==="ready";
     const tracked=questIsTracked(quest);
-    return `<article class="questLogEntry${ready?" ready":""}"><div class="questLogTitle"><div class="questLogTitleText">${questEscape(quest.title)}</div><div class="questLogMeta">${ready?'<span class="questReadyBadge">READY</span>':''}<label class="questTrackToggle" title="Show this quest in the on-screen tracker"><input type="checkbox" data-track-quest="${questEscape(quest.id)}"${tracked?' checked':''}><span>Track</span></label></div></div><div class="questLogDesc">${questEscape(quest.description)}</div><div class="questObjectives">${quest.objectives.map((_,index)=>`<div class="questObjectiveRow${questObjectiveComplete(quest,index)?" complete":""}"><span class="questObjectiveMark">${questObjectiveComplete(quest,index)?"✓":"•"}</span><span>${questEscape(questObjectiveText(quest,index))}</span></div>`).join("")}</div><div class="questRewards">Reward: ${questEscape(questRewardText(quest))}</div><button class="questAbandon" data-abandon-quest="${questEscape(quest.id)}">Abandon</button></article>`;
+    return `<article class="questLogEntry${ready?" ready":""}"><div class="questLogTitle"><div class="questLogTitleText">${questEscape(quest.title)}</div><div class="questLogMeta">${ready?'<span class="questReadyBadge">READY</span>':''}<label class="questTrackToggle" title="Show this quest in the on-screen tracker"><input type="checkbox" data-track-quest="${questEscape(quest.id)}"${tracked?' checked':''}><span>Track</span></label></div></div><div class="questLogDesc"><b>${questEscape(questLevelText(quest))}</b><br>${questEscape(quest.description)}</div><div class="questObjectives">${quest.objectives.map((_,index)=>`<div class="questObjectiveRow${questObjectiveComplete(quest,index)?" complete":""}"><span class="questObjectiveMark">${questObjectiveComplete(quest,index)?"✓":"•"}</span><span>${questEscape(questObjectiveText(quest,index))}</span></div>`).join("")}</div><div class="questRewards">Reward: ${questEscape(questRewardText(quest))}</div><button class="questAbandon" data-abandon-quest="${questEscape(quest.id)}">Abandon</button></article>`;
   }).join("")}${completed.length?`<div class="questCompletedHeading">Completed</div>${completed.map(q=>`<div class="questCompletedItem">✓ ${questEscape(q.title)}</div>`).join("")}`:""}`;
   body.querySelectorAll("[data-track-quest]").forEach(input=>input.onchange=()=>{
     setQuestTracked(input.dataset.trackQuest,input.checked);
@@ -2499,13 +2615,13 @@ function renderNpcDialogue(){
 
   const cards=[];
   for(const quest of ready){
-    cards.push(`<article class="npcQuestCard ready"><div class="npcQuestTitle">? ${questEscape(quest.title)}</div><div class="npcQuestCopy">${questEscape(quest.completionDialogue)}</div><div class="questRewards">Reward: ${questEscape(questRewardText(quest))}</div><button data-complete-quest="${questEscape(quest.id)}">Complete Quest</button></article>`);
+    cards.push(`<article class="npcQuestCard ready"><div class="npcQuestTitle">? ${questEscape(quest.title)}</div><div class="npcQuestCopy"><b>${questEscape(questLevelText(quest))}</b><br>${questEscape(quest.completionDialogue)}</div><div class="questRewards">Reward: ${questEscape(questRewardText(quest))}</div><button data-complete-quest="${questEscape(quest.id)}">Complete Quest</button></article>`);
   }
   for(const quest of available){
-    cards.push(`<article class="npcQuestCard"><div class="npcQuestTitle">! ${questEscape(quest.title)}</div><div class="npcQuestCopy">${questEscape(quest.openingDialogue)}</div><div class="questObjectives">${quest.objectives.map((_,index)=>`<div>${questEscape(questObjectiveText(quest,index))}</div>`).join("")}</div><div class="questRewards">Reward: ${questEscape(questRewardText(quest))}</div><button data-accept-quest="${questEscape(quest.id)}">Accept Quest</button></article>`);
+    cards.push(`<article class="npcQuestCard"><div class="npcQuestTitle">! ${questEscape(quest.title)}</div><div class="npcQuestCopy"><b>${questEscape(questLevelText(quest))}</b><br>${questEscape(quest.openingDialogue)}</div><div class="questObjectives">${quest.objectives.map((_,index)=>`<div>${questEscape(questObjectiveText(quest,index))}</div>`).join("")}</div><div class="questRewards">Reward: ${questEscape(questRewardText(quest))}</div><button data-accept-quest="${questEscape(quest.id)}">Accept Quest</button></article>`);
   }
   for(const quest of active){
-    cards.push(`<article class="npcQuestCard active"><div class="npcQuestTitle">${questEscape(quest.title)}</div><div class="npcQuestCopy">In progress</div><div class="questObjectives">${quest.objectives.map((_,index)=>`<div>${questEscape(questObjectiveText(quest,index))}</div>`).join("")}</div></article>`);
+    cards.push(`<article class="npcQuestCard active"><div class="npcQuestTitle">${questEscape(quest.title)}</div><div class="npcQuestCopy"><b>${questEscape(questLevelText(quest))}</b><br>In progress</div><div class="questObjectives">${quest.objectives.map((_,index)=>`<div>${questEscape(questObjectiveText(quest,index))}</div>`).join("")}</div></article>`);
   }
   actions.innerHTML=cards.join("")||'<div class="npcNoQuest">Nothing else right now.</div>';
   actions.querySelectorAll("[data-accept-quest]").forEach(button=>button.onclick=()=>acceptQuest(button.dataset.acceptQuest));
@@ -2964,7 +3080,7 @@ function developerWorldPack(){
   return {
     format:"little-realm-world-pack",
     schemaVersion:1,
-    build:"v58.2-repository-cleanup",
+    build:"v59-leveling-quest-xp",
     exportedAt:new Date().toISOString(),
     worldObjects:sceneryProps.map(cloneWorldObject),
     npcs:sceneryNPCs.map(cloneNpc),
@@ -3813,11 +3929,11 @@ function devCombatField(field,label,value,step="1",min=null,max=null){
 function devGlobalField(field,label,value,step="1",min=null,max=null){
   return `<label class="devCombatField">${label}<input type="number" data-global-field="${field}" value="${value}" step="${step}"${min!==null?` min="${min}"`:""}${max!==null?` max="${max}"`:""}></label>`;
 }
+function devProgressionField(field,label,value,step="1",min=null,max=null){
+  return `<label class="devCombatField">${label}<input type="number" data-progression-field="${field}" value="${value}" step="${step}"${min!==null?` min="${min}"`:""}${max!==null?` max="${max}"`:""}></label>`;
+}
 function developerXpNextForLevel(level){
-  const growth=1+percentOr(BALANCE.progression?.xpRequirementGrowthPercent,35);
-  let next=Math.max(1,Math.floor(numberOr(BALANCE.progression?.startingXpToLevel,25)));
-  for(let i=1;i<level;i++) next=Math.min(Number.MAX_SAFE_INTEGER,Math.floor(next*growth));
-  return next;
+  return xpRequiredForLevel(level);
 }
 function captureDeveloperPlayerBaseline(){
   if(devPlayerTestBaseline) return;
@@ -3825,7 +3941,7 @@ function captureDeveloperPlayerBaseline(){
 }
 function applyDeveloperPlayerLevel(rawLevel){
   captureDeveloperPlayerBaseline();
-  const level=Math.max(1,Math.min(200,Math.floor(devCombatNum(rawLevel,state.level))));
+  const level=Math.max(1,Math.min(playerLevelCap(),Math.floor(devCombatNum(rawLevel,state.level))));
   const steps=level-1;
   state.level=level;
   state.xp=0;
@@ -3860,7 +3976,7 @@ function applyDeveloperSpeciesBalance(){
   cfg.hp=Math.max(1,devCombatNum(cfg.hp,1));
   cfg.attack=Math.max(0,devCombatNum(cfg.attack,0));
   cfg.defense=Math.max(0,devCombatNum(cfg.defense,0));
-  cfg.xp=Math.max(1,devCombatNum(cfg.xp,1));
+  cfg.xpMultiplier=Math.max(0,devCombatNum(cfg.xpMultiplier,1));
   cfg.eliteChancePercent=Math.max(0,Math.min(100,devCombatNum(cfg.eliteChancePercent,0)));
   refreshMobTemplatesFromBalance();
   refreshDeveloperCombatPanel(); updateCombatHud();
@@ -3871,6 +3987,10 @@ function applyDeveloperGlobalCombatBalance(){
   BALANCE.mobLevels=BALANCE.mobLevels||{};
   devPanel.querySelectorAll("#devCombatGlobals [data-global-field]").forEach(input=>{
     BALANCE.mobLevels[input.dataset.globalField]=devCombatNum(input.value,BALANCE.mobLevels[input.dataset.globalField]);
+  });
+  BALANCE.progression=BALANCE.progression||{};
+  devPanel.querySelectorAll("#devCombatGlobals [data-progression-field]").forEach(input=>{
+    BALANCE.progression[input.dataset.progressionField]=devCombatNum(input.value,BALANCE.progression[input.dataset.progressionField]);
   });
   refreshMobTemplatesFromBalance(); refreshAliveMobStatsForPlayer(); updateCombatHud(); refreshDeveloperCombatPanel();
   devSetStatus("Global mob-level combat settings applied live");
@@ -3909,7 +4029,7 @@ function refreshDeveloperCombatPanel(){
     return;
   }
 
-  player.innerHTML=`<div class="devPlayerTest"><label class="devCombatField">Player Test Level<input id="devPlayerTestLevel" type="number" min="1" max="200" step="1" value="${state.level}"></label><div><div class="devHint">Temporary testing control. Recalculates player HP/Attack/Defense and immediately refreshes danger scaling on living mobs.</div><div class="devQuickLevels">${[1,5,10,25,50,100].map(n=>`<button data-test-level="${n}">Lv ${n}</button>`).join("")}</div></div></div><div class="devStatPreview"><div><b>${state.level}</b><span>Level</span></div><div><b>${state.maxHp}</b><span>HP</span></div><div><b>${state.atk}</b><span>Attack</span></div><div><b>${state.def}</b><span>Defense</span></div></div><div class="devCombatActions"><button id="devSetPlayerLevel" class="primary">Apply Test Level</button><button id="devRestorePlayerLevel">Restore Before Testing</button><button id="devFullHeal">Full Heal</button></div>`;
+  player.innerHTML=`<div class="devPlayerTest"><label class="devCombatField">Player Test Level<input id="devPlayerTestLevel" type="number" min="1" max="100" step="1" value="${state.level}"></label><div><div class="devHint">Temporary testing control. Recalculates player HP/Attack/Defense and immediately refreshes danger scaling on living mobs.</div><div class="devQuickLevels">${[1,5,10,25,50,100].map(n=>`<button data-test-level="${n}">Lv ${n}</button>`).join("")}</div></div></div><div class="devStatPreview"><div><b>${state.level}</b><span>Level</span></div><div><b>${state.maxHp}</b><span>HP</span></div><div><b>${state.atk}</b><span>Attack</span></div><div><b>${state.def}</b><span>Defense</span></div></div><div class="devCombatActions"><button id="devSetPlayerLevel" class="primary">Apply Test Level</button><button id="devRestorePlayerLevel">Restore Before Testing</button><button id="devFullHeal">Full Heal</button></div>`;
   player.querySelector("#devSetPlayerLevel").onclick=()=>applyDeveloperPlayerLevel(player.querySelector("#devPlayerTestLevel").value);
   player.querySelectorAll("[data-test-level]").forEach(b=>b.onclick=()=>applyDeveloperPlayerLevel(b.dataset.testLevel));
   player.querySelector("#devRestorePlayerLevel").onclick=restoreDeveloperPlayerBaseline;
@@ -3917,20 +4037,20 @@ function refreshDeveloperCombatPanel(){
 
   const types=["slime","wolf","goblin","cow","pig","chicken","snickers"];
   const cfg=BALANCE.mobs?.[devCombatMobType]||{};
-  species.innerHTML=`<div id="devCombatMobChips">${types.map(k=>`<button class="devMobTypeChip${k===devCombatMobType?" active":""}" data-combat-mob="${k}">${mobTypeScaleLabel(k)}</button>`).join("")}</div><div class="devCombatGrid" style="margin-top:10px">${devCombatField("baseLevel","Base level",cfg.baseLevel??1,1,1,200)}${devCombatField("levelMin","Min spawn level",cfg.levelMin??cfg.baseLevel??1,1,1,200)}${devCombatField("levelMax","Max spawn level",cfg.levelMax??cfg.baseLevel??1,1,1,200)}${devCombatField("hp","Base HP",cfg.hp??1,1,1)}${devCombatField("attack","Base damage",cfg.attack??0,1,0)}${devCombatField("defense","Base armor",cfg.defense??0,.1,0)}${devCombatField("xp","Base XP",cfg.xp??1,1,1)}${devCombatField("eliteChancePercent","Elite chance %",cfg.eliteChancePercent??0,.5,0,100)}${devCombatField("attackIntervalSeconds","Attack interval",cfg.attackIntervalSeconds??1.5,.05,.1)}${devCombatField("aggroTriggerRange","Base aggro range",cfg.aggroTriggerRange??0,1,0)}${devCombatField("alertRange","Base alert range",cfg.alertRange??0,1,0)}${devCombatField("chaseSpeed","Chase speed",cfg.chaseSpeed??0,1,0)}</div><label class="devCombatCheck" style="margin-top:9px"><input type="checkbox" data-combat-field="aggressive" ${cfg.aggressive?"checked":""}> Aggressive / auto-aggro</label>${developerMobPreview()}<div class="devCombatActions"><button id="devApplySpecies" class="primary">Apply ${mobTypeScaleLabel(devCombatMobType)} Stats</button><button id="devRerollSpecies">Reroll Levels + Elites</button></div>`;
+  species.innerHTML=`<div id="devCombatMobChips">${types.map(k=>`<button class="devMobTypeChip${k===devCombatMobType?" active":""}" data-combat-mob="${k}">${mobTypeScaleLabel(k)}</button>`).join("")}</div><div class="devCombatGrid" style="margin-top:10px">${devCombatField("baseLevel","Base level",cfg.baseLevel??1,1,1,100)}${devCombatField("levelMin","Min spawn level",cfg.levelMin??cfg.baseLevel??1,1,1,100)}${devCombatField("levelMax","Max spawn level",cfg.levelMax??cfg.baseLevel??1,1,1,100)}${devCombatField("hp","Base HP",cfg.hp??1,1,1)}${devCombatField("attack","Base damage",cfg.attack??0,1,0)}${devCombatField("defense","Base armor",cfg.defense??0,.1,0)}${devCombatField("xpMultiplier","XP multiplier ×",cfg.xpMultiplier??1,.05,0)}${devCombatField("eliteChancePercent","Elite chance %",cfg.eliteChancePercent??0,.5,0,100)}${devCombatField("attackIntervalSeconds","Attack interval",cfg.attackIntervalSeconds??1.5,.05,.1)}${devCombatField("aggroTriggerRange","Base aggro range",cfg.aggroTriggerRange??0,1,0)}${devCombatField("alertRange","Base alert range",cfg.alertRange??0,1,0)}${devCombatField("chaseSpeed","Chase speed",cfg.chaseSpeed??0,1,0)}</div><label class="devCombatCheck" style="margin-top:9px"><input type="checkbox" data-combat-field="aggressive" ${cfg.aggressive?"checked":""}> Aggressive / auto-aggro</label>${developerMobPreview()}<div class="devCombatActions"><button id="devApplySpecies" class="primary">Apply ${mobTypeScaleLabel(devCombatMobType)} Stats</button><button id="devRerollSpecies">Reroll Levels + Elites</button></div>`;
   species.querySelectorAll("[data-combat-mob]").forEach(b=>b.onclick=()=>{devCombatMobType=b.dataset.combatMob;devSelectedMob=mobs.find(m=>mobTypeScaleKey(m)===devCombatMobType)||devSelectedMob;refreshDeveloperCombatPanel();});
   species.querySelector("#devApplySpecies").onclick=applyDeveloperSpeciesBalance;
   species.querySelector("#devRerollSpecies").onclick=()=>{applyDeveloperSpeciesBalance();rerollMobLevelsAndElites(devCombatMobType);refreshDeveloperCombatPanel();devSetStatus(`${mobTypeScaleLabel(devCombatMobType)} levels and elite rolls refreshed`);};
 
   const g=BALANCE.mobLevels||{};
   globals.innerHTML=`
-  <details class="devCombatDetails" open><summary>Normal Level Scaling</summary><div class="devCombatGrid">${devGlobalField("hpGrowthPerLevelPercent","HP growth / level %",g.hpGrowthPerLevelPercent??14,.5)}${devGlobalField("attackGrowthPerLevelPercent","Damage growth / level %",g.attackGrowthPerLevelPercent??10,.5)}${devGlobalField("armorPerLevel","Armor / level",g.armorPerLevel??.55,.05)}${devGlobalField("xpGrowthPerLevelPercent","XP growth / level %",g.xpGrowthPerLevelPercent??18,.5)}</div></details>
+  <details class="devCombatDetails" open><summary>Normal Level Scaling</summary><div class="devCombatGrid">${devGlobalField("hpGrowthPerLevelPercent","HP growth / level %",g.hpGrowthPerLevelPercent??14,.5)}${devGlobalField("attackGrowthPerLevelPercent","Damage growth / level %",g.attackGrowthPerLevelPercent??10,.5)}${devGlobalField("armorPerLevel","Armor / level",g.armorPerLevel??.55,.05)}</div></details>
   <details class="devCombatDetails" open><summary>High-Level Danger Boost</summary><div class="devCombatGrid">${devGlobalField("dangerStartsAbovePlayerLevels","Starts above player levels",g.dangerStartsAbovePlayerLevels??3,1,0)}${devGlobalField("dangerHpPerExtraLevelPercent","HP / danger level %",g.dangerHpPerExtraLevelPercent??12,.5)}${devGlobalField("dangerAttackPerExtraLevelPercent","Damage / danger level %",g.dangerAttackPerExtraLevelPercent??9,.5)}${devGlobalField("dangerArmorPerExtraLevel","Armor / danger level",g.dangerArmorPerExtraLevel??.6,.05)}${devGlobalField("dangerXpPerExtraLevelPercent","XP / danger level %",g.dangerXpPerExtraLevelPercent??10,.5)}</div></details>
   <details class="devCombatDetails"><summary>Elite Multipliers</summary><div class="devCombatGrid">${devGlobalField("eliteHpMultiplier","Elite HP ×",g.eliteHpMultiplier??1.65,.05)}${devGlobalField("eliteAttackMultiplier","Elite damage ×",g.eliteAttackMultiplier??1.2,.05)}${devGlobalField("eliteArmorBonus","Elite armor +",g.eliteArmorBonus??2,.1)}${devGlobalField("eliteXpMultiplier","Elite XP ×",g.eliteXpMultiplier??1.6,.05)}${devGlobalField("eliteGoldMultiplier","Elite gold ×",g.eliteGoldMultiplier??1.5,.05)}${devGlobalField("eliteAggroMultiplier","Elite aggro ×",g.eliteAggroMultiplier??1.15,.05)}</div></details>
   <details class="devCombatDetails"><summary>Boss Multipliers</summary><div class="devCombatGrid">${devGlobalField("bossHpMultiplier","Boss HP ×",g.bossHpMultiplier??1.5,.05)}${devGlobalField("bossAttackMultiplier","Boss damage ×",g.bossAttackMultiplier??1.25,.05)}${devGlobalField("bossArmorMultiplier","Boss armor ×",g.bossArmorMultiplier??1.25,.05)}${devGlobalField("bossXpMultiplier","Boss XP ×",g.bossXpMultiplier??1.75,.05)}${devGlobalField("bossAggroMultiplier","Boss aggro ×",g.bossAggroMultiplier??1.25,.05)}</div></details>
   <details class="devCombatDetails"><summary>Level-Based Aggro</summary><div class="devCombatGrid">${devGlobalField("aggroRangePerLevelDifference","Aggro / level diff",g.aggroRangePerLevelDifference??7,1)}${devGlobalField("alertRangePerLevelDifference","Alert / level diff",g.alertRangePerLevelDifference??9,1)}${devGlobalField("minimumAggroTriggerRange","Minimum aggro",g.minimumAggroTriggerRange??20,1,0)}${devGlobalField("minimumAlertRange","Minimum alert",g.minimumAlertRange??34,1,0)}</div></details>
   <details class="devCombatDetails"><summary>Hit / Miss</summary><div class="devCombatGrid">${devGlobalField("playerBaseHitChancePercent","Player base hit %",g.playerBaseHitChancePercent??96,.5,0,100)}${devGlobalField("enemyBaseHitChancePercent","Mob base hit %",g.enemyBaseHitChancePercent??92,.5,0,100)}${devGlobalField("playerHitChancePerLevelAdvantagePercent","Player hit / level %",g.playerHitChancePerLevelAdvantagePercent??4,.5)}${devGlobalField("enemyHitChancePerLevelAdvantagePercent","Mob hit / level %",g.enemyHitChancePerLevelAdvantagePercent??3,.5)}${devGlobalField("minimumHitChancePercent","Minimum hit %",g.minimumHitChancePercent??55,.5,0,100)}${devGlobalField("maximumHitChancePercent","Maximum hit %",g.maximumHitChancePercent??99,.5,0,100)}${devGlobalField("elitePlayerHitPenaltyPercent","Elite player penalty %",g.elitePlayerHitPenaltyPercent??3,.5)}${devGlobalField("eliteEnemyHitBonusPercent","Elite mob bonus %",g.eliteEnemyHitBonusPercent??3,.5)}${devGlobalField("bossPlayerHitPenaltyPercent","Boss player penalty %",g.bossPlayerHitPenaltyPercent??5,.5)}${devGlobalField("bossEnemyHitBonusPercent","Boss mob bonus %",g.bossEnemyHitBonusPercent??5,.5)}</div></details>
-  <details class="devCombatDetails"><summary>XP Rules</summary><div class="devCombatGrid">${devGlobalField("trivialXpStartsAboveMobLevels","Level-gap XP floor starts",g.trivialXpStartsAboveMobLevels??5,1,1)}${devGlobalField("lowLevelXpPenaltyPerLevelPercent","Low-level penalty / level %",g.lowLevelXpPenaltyPerLevelPercent??20,.5)}${devGlobalField("higherLevelXpBonusPerLevelPercent","High-level XP bonus / level %",g.higherLevelXpBonusPerLevelPercent??8,.5)}</div><div class="devHint" style="margin-top:8px">At the configured trivial gap, mobs still award XP equal to their own level — the infinite-grind rule remains intact.</div></details>
+  <details class="devCombatDetails"><summary>XP Rules</summary><div class="devCombatGrid">${devProgressionField("sameLevelMobXpBase","Lv 1 standard mob XP",BALANCE.progression?.sameLevelMobXpBase??50,1,1)}${devProgressionField("sameLevelMobXpPerLevel","Standard mob XP / level +",BALANCE.progression?.sameLevelMobXpPerLevel??5,1,0)}${devGlobalField("trivialXpStartsAboveMobLevels","Level-gap XP floor starts",g.trivialXpStartsAboveMobLevels??5,1,1)}${devGlobalField("lowLevelXpPenaltyPerLevelPercent","Low-level penalty / level %",g.lowLevelXpPenaltyPerLevelPercent??20,.5)}${devGlobalField("higherLevelXpBonusPerLevelPercent","High-level XP bonus / level %",g.higherLevelXpBonusPerLevelPercent??8,.5)}</div><div class="devHint" style="margin-top:8px">A normal same-level hostile follows the level curve (50 XP at Lv 1, +5 per level by default). Species XP multipliers, elite/boss bonuses, and level-gap rules are applied after that.</div></details>
   <div class="devCombatActions"><button id="devApplyGlobals" class="primary">Apply Global Combat Settings</button><button id="devRerollAll">Reroll All Mob Levels + Elites</button><button id="devExportBalance">Export game-balance.js</button><button id="devResetBalance" class="danger">Reset Combat Tuning</button></div>`;
   globals.querySelector("#devApplyGlobals").onclick=applyDeveloperGlobalCombatBalance;
   globals.querySelector("#devRerollAll").onclick=()=>{applyDeveloperGlobalCombatBalance();rerollMobLevelsAndElites();refreshDeveloperCombatPanel();devSetStatus("All mob levels and elite rolls refreshed");};
@@ -4059,7 +4179,7 @@ function developerObjectiveDefault(type="talk"){
 function developerNewQuest(){
   const giver=devSelectedNpc?.id||sceneryNPCs[0]?.id||"";
   const root=uniqueQuestId("new_quest");
-  return normalizeQuestDefinition({id:root,title:"New Quest",description:"Describe what the player should do.",giverNpc:giver,turnInNpc:giver,openingDialogue:"Could you help me?",completionDialogue:"Thank you for your help.",objectives:[developerObjectiveDefault("talk")],rewards:{xp:0,gold:0,items:[]}},questDefinitions.length);
+  return normalizeQuestDefinition({id:root,title:"New Quest",description:"Describe what the player should do.",giverNpc:giver,turnInNpc:giver,openingDialogue:"Could you help me?",completionDialogue:"Thank you for your help.",level:1,levelRequirementMode:"auto",rewardTier:"minor",objectives:[developerObjectiveDefault("talk")],rewards:{xpMode:"auto",xp:0,gold:0,items:[]}},questDefinitions.length);
 }
 function uniqueQuestId(base="quest"){
   const root=String(base||"quest").toLowerCase().replace(/[^a-z0-9_-]+/g,"_")||"quest";let id=root,n=2;
@@ -4092,8 +4212,12 @@ function readDeveloperQuestForm(){
     turnInNpc:root.querySelector("#devQuestTurnIn")?.value||"",
     openingDialogue:root.querySelector("#devQuestOpening")?.value||"",
     completionDialogue:root.querySelector("#devQuestCompletion")?.value||"",
+    level:root.querySelector("#devQuestLevel")?.value||fallback.level||1,
+    levelRequirementMode:root.querySelector("#devQuestLevelRequirementMode")?.value||fallback.levelRequirementMode||"auto",
+    minLevel:root.querySelector("#devQuestMinLevel")?.value||fallback.minLevel||1,
+    rewardTier:root.querySelector("#devQuestRewardTier")?.value||fallback.rewardTier||"standard",
     objectives:objectives.length?objectives:[developerObjectiveDefault("talk")],
-    rewards:{xp:root.querySelector("#devQuestRewardXp")?.value,gold:root.querySelector("#devQuestRewardGold")?.value,items:rewardItem?[{id:rewardItem,qty:root.querySelector("#devQuestRewardQty")?.value||1}]:[]},
+    rewards:{xpMode:root.querySelector("#devQuestXpMode")?.value||fallback.rewards?.xpMode||"custom",xp:root.querySelector("#devQuestRewardXp")?.value,gold:root.querySelector("#devQuestRewardGold")?.value,items:rewardItem?[{id:rewardItem,qty:root.querySelector("#devQuestRewardQty")?.value||1}]:[]},
     prerequisite:root.querySelector("#devQuestPrereq")?.value||null,
     nextQuest:root.querySelector("#devQuestNext")?.value||null,
     repeatable:!!root.querySelector("#devQuestRepeatable")?.checked
@@ -4101,14 +4225,23 @@ function readDeveloperQuestForm(){
 }
 function renderDeveloperQuestEditor(draft){
   const root=devPanel?.querySelector("#devQuestEditor");if(!root)return;
+  draft=normalizeQuestDefinition(draft,questDefinitions.findIndex(q=>q.id===draft?.id));
   devQuestFormDraft=cloneQuest(draft);
   const npcOptions=sceneryNPCs.map(n=>[n.id,n.name]);
   const questOptions=[["","None"],...questDefinitions.filter(q=>q.id!==draft.id).map(q=>[q.id,q.title])];
   const itemOptions=[["","No item reward"],...Object.keys(ITEM_DEFS).map(id=>[id,getItemDefinition(id).name])];
+  const rewardTierOptions=Object.entries(QUEST_XP_PROFILE_LABELS).map(([id,label])=>[id,label]);
   const rewardItem=draft.rewards.items?.[0]?.id||"",rewardQty=draft.rewards.items?.[0]?.qty||1;
+  const xpProfile=questXpProfile(draft.rewardTier,draft.repeatable&&draft.rewards.xpMode==="auto");
+  const xpProfileLabel=QUEST_XP_PROFILE_LABELS[xpProfile.tier]||xpProfile.tier;
+  const autoXp=draft.rewards.xpMode==="auto";
+  const autoMin=draft.levelRequirementMode!=="custom";
   root.innerHTML=`<div class="devQuestEditor">
     <div class="devPair"><label>Quest ID<input id="devQuestId" value="${questEscape(draft.id)}"></label><label>Quest Name<input id="devQuestTitle" value="${questEscape(draft.title)}"></label></div>
     <label>Description<textarea id="devQuestDescription">${questEscape(draft.description)}</textarea></label>
+    <div class="devSubhead">Level & Availability</div>
+    <div class="devQuad"><label>Quest Level<input id="devQuestLevel" type="number" min="1" max="${playerLevelCap()}" value="${draft.level}"></label><label>Minimum Level<select id="devQuestLevelRequirementMode">${devQuestOptions([["auto","Automatic (-3 levels)"],["custom","Custom"]],draft.levelRequirementMode)}</select></label><label>Requires Level<input id="devQuestMinLevel" type="number" min="1" max="${draft.level}" value="${draft.minLevel}" ${autoMin?"readonly":""}></label><label>Recommended Through<input type="number" value="${draft.recommendedMaxLevel}" readonly></label></div>
+    <div class="devHint">Quest Lv ${draft.level} becomes available at Lv ${draft.minLevel}. Recommended range: Lv ${draft.minLevel}–${draft.recommendedMaxLevel}. There is no maximum acceptance level, so players can always come back later.</div>
     <div class="devPair"><label>Quest Giver<select id="devQuestGiver">${devQuestOptions(npcOptions,draft.giverNpc)}</select></label><label>Turn-In NPC<select id="devQuestTurnIn">${devQuestOptions(npcOptions,draft.turnInNpc)}</select></label></div>
     <label>Opening Dialogue<textarea id="devQuestOpening">${questEscape(draft.openingDialogue)}</textarea></label>
     <label>Completion Dialogue<textarea id="devQuestCompletion">${questEscape(draft.completionDialogue)}</textarea></label>
@@ -4118,17 +4251,23 @@ function renderDeveloperQuestEditor(draft){
       return `<div class="devQuestObjective" data-objective-index="${index}"><div class="devQuestObjectiveTop"><label>Type<select data-obj-type>${devQuestOptions(types,objective.type)}</select></label>${visit?`<label>Location<span style="padding:9px 0;color:#b9aebe">World coordinates</span></label>`:`<label>Target<select data-obj-target>${devQuestOptions(developerQuestTargetOptions(objective.type,objective.target),objective.target)}</select></label>`}<label>Amount<input data-obj-amount type="number" min="1" value="${objective.amount}" ${visit?"disabled":""}></label><button data-remove-objective="${index}" title="Remove objective">×</button></div>${visit?`<div class="devVisitGrid"><label>X<input data-obj-x type="number" value="${Math.round(objective.x)}"></label><label>Y<input data-obj-y type="number" value="${Math.round(objective.y)}"></label><label>Radius<input data-obj-radius type="number" min="8" value="${Math.round(objective.radius)}"></label></div><button data-use-player-pos="${index}" style="margin-top:6px;border:1px solid rgba(255,255,255,.12);background:#4b4056;color:#fff;border-radius:7px;padding:6px 8px">Use Player Position</button>`:(objective.type==="collect"||objective.type==="deliver")?`<label style="flex-direction:row;align-items:center"><input data-obj-consume type="checkbox" ${objective.consumeOnTurnIn!==false?"checked":""}> Consume items on turn-in</label>`:""}</div>`;
     }).join("")}</div>
     <button id="devAddQuestObjective" class="devHitboxEditButton">+ Add Objective</button>
-    <div class="devSubhead">Rewards</div><div class="devQuad"><label>XP<input id="devQuestRewardXp" type="number" min="0" value="${draft.rewards.xp}"></label><label>Gold<input id="devQuestRewardGold" type="number" min="0" value="${draft.rewards.gold}"></label><label>Item<select id="devQuestRewardItem">${devQuestOptions(itemOptions,rewardItem)}</select></label><label>Qty<input id="devQuestRewardQty" type="number" min="1" value="${rewardQty}"></label></div>
+    <div class="devSubhead">Rewards</div>
+    <div class="devPair"><label>XP Mode<select id="devQuestXpMode">${devQuestOptions([["auto","Automatic"],["custom","Custom"]],draft.rewards.xpMode)}</select></label><label>XP Profile<select id="devQuestRewardTier" ${draft.repeatable&&autoXp?"disabled":""}>${devQuestOptions(rewardTierOptions,xpProfile.tier)}</select></label></div>
+    <div class="devHint">${autoXp?`Auto XP: <b>${draft.rewards.xp} XP</b> • ${questEscape(xpProfileLabel)} • ${xpProfile.mobEquivalent} same-level mob equivalents • capped at ${xpProfile.levelCapPercent}% of this level.${draft.repeatable?" Repeatable quests automatically use the Repeatable profile.":""}`:"Custom XP ignores the automatic quest-level formula."}</div>
+    <div class="devQuad"><label>XP<input id="devQuestRewardXp" type="number" min="0" value="${draft.rewards.xp}" ${autoXp?"readonly":""}></label><label>Gold<input id="devQuestRewardGold" type="number" min="0" value="${draft.rewards.gold}"></label><label>Item<select id="devQuestRewardItem">${devQuestOptions(itemOptions,rewardItem)}</select></label><label>Qty<input id="devQuestRewardQty" type="number" min="1" value="${rewardQty}"></label></div>
     <div class="devPair"><label>Prerequisite<select id="devQuestPrereq">${devQuestOptions(questOptions,draft.prerequisite||"")}</select></label><label>Next Quest<select id="devQuestNext">${devQuestOptions(questOptions,draft.nextQuest||"")}</select></label></div>
     <label style="flex-direction:row;align-items:center"><input id="devQuestRepeatable" type="checkbox" ${draft.repeatable?"checked":""}> Repeatable quest</label>
     <div class="devRow"><button id="devQuestSave">Save Quest</button><button id="devQuestTest">Reset Test Progress</button></div>
   </div>`;
   root.querySelectorAll("[data-obj-type]").forEach((select,index)=>select.onchange=()=>{
-    const next=readDeveloperQuestForm();const type=select.value;next.objectives[index]=developerObjectiveDefault(type);devQuestFormDraft=next;renderDeveloperQuestEditor(next);
+    const next=readDeveloperQuestForm();const type=select.value;next.objectives[index]=developerObjectiveDefault(type);
+    if(next.rewards.xpMode==="auto"&&!next.repeatable) next.rewardTier=inferQuestRewardTier(next.objectives,false);
+    devQuestFormDraft=next;renderDeveloperQuestEditor(next);
   });
-  root.querySelectorAll("[data-remove-objective]").forEach(button=>button.onclick=()=>{const next=readDeveloperQuestForm();next.objectives.splice(Number(button.dataset.removeObjective),1);if(!next.objectives.length)next.objectives.push(developerObjectiveDefault("talk"));renderDeveloperQuestEditor(next);});
+  root.querySelectorAll("[data-remove-objective]").forEach(button=>button.onclick=()=>{const next=readDeveloperQuestForm();next.objectives.splice(Number(button.dataset.removeObjective),1);if(!next.objectives.length)next.objectives.push(developerObjectiveDefault("talk"));if(next.rewards.xpMode==="auto"&&!next.repeatable)next.rewardTier=inferQuestRewardTier(next.objectives,false);renderDeveloperQuestEditor(next);});
   root.querySelectorAll("[data-use-player-pos]").forEach(button=>button.onclick=()=>{const next=readDeveloperQuestForm();const objective=next.objectives[Number(button.dataset.usePlayerPos)];objective.x=Math.round(state.x);objective.y=Math.round(state.y);renderDeveloperQuestEditor(next);});
-  root.querySelector("#devAddQuestObjective").onclick=()=>{const next=readDeveloperQuestForm();next.objectives.push(developerObjectiveDefault("kill"));renderDeveloperQuestEditor(next);};
+  root.querySelector("#devAddQuestObjective").onclick=()=>{const next=readDeveloperQuestForm();next.objectives.push(developerObjectiveDefault("kill"));if(next.rewards.xpMode==="auto"&&!next.repeatable)next.rewardTier="multi";renderDeveloperQuestEditor(next);};
+  ["devQuestLevel","devQuestLevelRequirementMode","devQuestMinLevel","devQuestXpMode","devQuestRewardTier","devQuestRepeatable"].forEach(id=>{const input=root.querySelector(`#${id}`);if(input)input.onchange=()=>renderDeveloperQuestEditor(readDeveloperQuestForm());});
   root.querySelector("#devQuestSave").onclick=saveDeveloperQuest;
   root.querySelector("#devQuestTest").onclick=()=>{const id=readDeveloperQuestForm().id;delete ensureQuestState()[id];refreshQuestUI();renderNpcDialogue();devSetStatus(`Reset test progress for ${id}`);};
 }
@@ -4150,7 +4289,7 @@ function refreshDeveloperQuestPanel(){
   const list=devPanel.querySelector("#devQuestList"),editor=devPanel.querySelector("#devQuestEditor"),count=devPanel.querySelector("#devQuestCount");
   if(count)count.textContent=`${questDefinitions.length} quest${questDefinitions.length===1?"":"s"}`;
   if(!devSelectedQuestId||!getQuestDefinition(devSelectedQuestId))devSelectedQuestId=questDefinitions[0]?.id||null;
-  if(list){list.innerHTML="";for(const quest of questDefinitions){const b=document.createElement("button");b.className="devQuestChip"+(quest.id===devSelectedQuestId?" active":"");b.textContent=quest.title;b.title=quest.id;b.onclick=()=>{devSelectedQuestId=quest.id;devQuestFormDraft=cloneQuest(quest);refreshDeveloperQuestPanel();};list.appendChild(b);}}
+  if(list){list.innerHTML="";for(const quest of questDefinitions){const b=document.createElement("button");b.className="devQuestChip"+(quest.id===devSelectedQuestId?" active":"");b.textContent=`Lv ${quest.level} • ${quest.title}`;b.title=`${quest.id} • requires Lv ${quest.minLevel}`;b.onclick=()=>{devSelectedQuestId=quest.id;devQuestFormDraft=cloneQuest(quest);refreshDeveloperQuestPanel();};list.appendChild(b);}}
   if(!editor)return;
   if(!devSelectedQuestId){editor.innerHTML='<div class="devEmpty">No quests yet. Click New Quest to create one.</div>';return;}
   const selected=getQuestDefinition(devSelectedQuestId);if(!devQuestFormDraft||devQuestFormDraft.id!==selected.id)devQuestFormDraft=cloneQuest(selected);renderDeveloperQuestEditor(devQuestFormDraft);
@@ -4353,7 +4492,7 @@ function fresh(){
   return {
     x:START_X,
     y:START_Y,
-    level:1,xp:0,xpNext:numberOr(BALANCE.progression?.startingXpToLevel,25),
+    level:1,xp:0,xpNext:xpRequiredForLevel(1),
     hp:numberOr(BALANCE.player?.maxHp,30),maxHp:numberOr(BALANCE.player?.maxHp,30),
     atk:numberOr(BALANCE.player?.attack,5),def:numberOr(BALANCE.player?.defense,1),
     gold:numberOr(BALANCE.player?.startingGold,8),potions:numberOr(BALANCE.player?.startingPotions,2),kills:0,
@@ -4531,6 +4670,7 @@ function createMobTemplate(name,kind,configKey,fallback,boss=false){
     hp:numberOr(cfg.hp,fallback.hp),
     atk:numberOr(cfg.attack,fallback.atk),
     def:numberOr(cfg.defense,fallback.def),
+    xpMultiplier:Math.max(0,numberOr(cfg.xpMultiplier,fallback.xpMultiplier??1)),
     xp:numberOr(cfg.xp,fallback.xp),
     gold:[numberOr(cfg.goldMin,fallback.gold[0]),numberOr(cfg.goldMax,fallback.gold[1])],
     goldDropChance:percentOr(cfg.goldDropChancePercent,100),
@@ -4574,6 +4714,7 @@ function refreshMobTemplatesFromBalance(){
     template.hp=Math.max(1,numberOr(cfg.hp,template.hp));
     template.atk=Math.max(0,numberOr(cfg.attack,template.atk));
     template.def=Math.max(0,numberOr(cfg.defense,template.def));
+    template.xpMultiplier=Math.max(0,numberOr(cfg.xpMultiplier,template.xpMultiplier??1));
     template.xp=Math.max(1,numberOr(cfg.xp,template.xp));
     template.gold=[numberOr(cfg.goldMin,template.gold?.[0]||0),numberOr(cfg.goldMax,template.gold?.[1]||0)];
     template.goldDropChance=percentOr(cfg.goldDropChancePercent,(template.goldDropChance||0)*100);
@@ -4683,12 +4824,20 @@ function mobScaledStats(template,level,elite=false){
   const hpGrowth=percentOr(cfg.hpGrowthPerLevelPercent,14);
   const atkGrowth=percentOr(cfg.attackGrowthPerLevelPercent,10);
   const armorPerLevel=numberOr(cfg.armorPerLevel,.55);
-  const xpGrowth=percentOr(cfg.xpGrowthPerLevelPercent,18);
 
   let maxHp=Math.max(1,Math.round(template.hp*Math.max(.25,1+levelDelta*hpGrowth)));
   let atk=Math.max(1,Math.round(template.atk*Math.max(.25,1+levelDelta*atkGrowth)));
   let def=Math.max(0,Math.round(template.def+levelDelta*armorPerLevel));
-  let xp=Math.max(1,Math.round(template.xp*Math.max(.25,1+levelDelta*xpGrowth)));
+  let xp;
+  if(booleanOr(cfg.useLevelBasedXp,true)){
+    // Standard hostile mobs follow the same-level XP column from the 1-100
+    // leveling curve. Species can scale this with xpMultiplier; elites/bosses
+    // then apply their existing rank multipliers below.
+    xp=Math.max(1,Math.round(standardMobXpForLevel(mobLevel)*Math.max(0,numberOr(template.xpMultiplier,1))));
+  }else{
+    const xpGrowth=percentOr(cfg.xpGrowthPerLevelPercent,18);
+    xp=Math.max(1,Math.round(template.xp*Math.max(.25,1+levelDelta*xpGrowth)));
+  }
 
   if(elite && !template.boss){
     maxHp=Math.max(1,Math.round(maxHp*numberOr(cfg.eliteHpMultiplier,1.65)));
@@ -6003,18 +6152,29 @@ function loseBattle(){
 }
 
 function levelCheck(){
-  const growth=1+percentOr(BALANCE.progression?.xpRequirementGrowthPercent,35);
+  const cap=playerLevelCap();
   const hpGain=Math.floor(numberOr(BALANCE.progression?.hpPerLevel,8));
   const atkGain=Math.floor(numberOr(BALANCE.progression?.attackPerLevel,2));
   const defGain=Math.floor(numberOr(BALANCE.progression?.defensePerLevel,1));
-  while(state.xp>=state.xpNext){
+  if(state.level>=cap){
+    state.level=cap;
+    state.xp=0;
+    state.xpNext=0;
+    return;
+  }
+  if(!Number.isFinite(state.xpNext)||state.xpNext<=0) state.xpNext=xpRequiredForLevel(state.level);
+  while(state.level<cap && state.xpNext>0 && state.xp>=state.xpNext){
     state.xp-=state.xpNext;
     state.level++;
-    state.xpNext=Math.floor(state.xpNext*growth);
     state.maxHp+=hpGain;state.hp=state.maxHp;
     state.atk+=atkGain;state.def+=defGain;
+    state.xpNext=xpRequiredForLevel(state.level);
     refreshAliveMobStatsForPlayer();
     setTimeout(()=>toast(`Level up! Level ${state.level}`),650);
+  }
+  if(state.level>=cap){
+    state.xp=0;
+    state.xpNext=0;
   }
 }
 
@@ -6045,9 +6205,10 @@ function updateUI(){
   document.getElementById("lvl").textContent=state.level;
   document.getElementById("gold").textContent=state.gold;
   document.getElementById("hpText").textContent=`${state.hp}/${state.maxHp}`;
-  document.getElementById("xpText").textContent=`${state.xp}/${state.xpNext}`;
+  const atLevelCap=state.level>=playerLevelCap();
+  document.getElementById("xpText").textContent=atLevelCap?"MAX LEVEL":`${state.xp}/${state.xpNext}`;
   document.getElementById("hpFill").style.width=`${Math.max(0,100*state.hp/state.maxHp)}%`;
-  document.getElementById("xpFill").style.width=`${Math.min(100,100*state.xp/state.xpNext)}%`;
+  document.getElementById("xpFill").style.width=atLevelCap?"100%":`${Math.min(100,100*state.xp/Math.max(1,state.xpNext))}%`;
   document.getElementById("hudAtk").textContent=state.atk;
   document.getElementById("hudDef").textContent=state.def;
   document.getElementById("hud").classList.toggle("lowHp",state.hp/state.maxHp<=0.30);
@@ -6197,9 +6358,12 @@ function normalizeLoadedState(raw){
   const source=raw&&typeof raw==="object"&&!Array.isArray(raw)?raw:{};
   const next={...base,...source};
 
-  next.level=loadedWholeNumber(source.level,base.level,1);
+  next.level=Math.min(playerLevelCap(),loadedWholeNumber(source.level,base.level,1));
   next.xp=loadedWholeNumber(source.xp,base.xp,0);
-  next.xpNext=loadedWholeNumber(source.xpNext,base.xpNext,1);
+  // XP requirements are derived from the active 1-100 progression table so
+  // older saves automatically migrate off the pre-v59 geometric curve.
+  next.xpNext=xpRequiredForLevel(next.level);
+  if(next.level>=playerLevelCap()) next.xp=0;
   next.maxHp=loadedWholeNumber(source.maxHp,base.maxHp,1);
   next.hp=clamp(loadedWholeNumber(source.hp,base.hp,0),0,next.maxHp);
   next.atk=loadedWholeNumber(source.atk,base.atk,0);
@@ -6297,7 +6461,7 @@ const INPUT_BINDINGS = {
 
 // Exposed only as read-only diagnostics so a desktop tester can confirm the
 // deployed build from DevTools without digging through bundled source.
-window.LR_BUILD_VERSION="v58.2-repository-cleanup";
+window.LR_BUILD_VERSION="v59-leveling-quest-xp";
 window.LR_INPUT_BINDINGS=Object.freeze({...INPUT_BINDINGS});
 window.LR_INPUT_STATE=()=>({...input});
 

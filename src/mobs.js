@@ -9,6 +9,7 @@ function createMobTemplate(name,kind,configKey,fallback,boss=false){
     hp:numberOr(cfg.hp,fallback.hp),
     atk:numberOr(cfg.attack,fallback.atk),
     def:numberOr(cfg.defense,fallback.def),
+    xpMultiplier:Math.max(0,numberOr(cfg.xpMultiplier,fallback.xpMultiplier??1)),
     xp:numberOr(cfg.xp,fallback.xp),
     gold:[numberOr(cfg.goldMin,fallback.gold[0]),numberOr(cfg.goldMax,fallback.gold[1])],
     goldDropChance:percentOr(cfg.goldDropChancePercent,100),
@@ -52,6 +53,7 @@ function refreshMobTemplatesFromBalance(){
     template.hp=Math.max(1,numberOr(cfg.hp,template.hp));
     template.atk=Math.max(0,numberOr(cfg.attack,template.atk));
     template.def=Math.max(0,numberOr(cfg.defense,template.def));
+    template.xpMultiplier=Math.max(0,numberOr(cfg.xpMultiplier,template.xpMultiplier??1));
     template.xp=Math.max(1,numberOr(cfg.xp,template.xp));
     template.gold=[numberOr(cfg.goldMin,template.gold?.[0]||0),numberOr(cfg.goldMax,template.gold?.[1]||0)];
     template.goldDropChance=percentOr(cfg.goldDropChancePercent,(template.goldDropChance||0)*100);
@@ -161,12 +163,20 @@ function mobScaledStats(template,level,elite=false){
   const hpGrowth=percentOr(cfg.hpGrowthPerLevelPercent,14);
   const atkGrowth=percentOr(cfg.attackGrowthPerLevelPercent,10);
   const armorPerLevel=numberOr(cfg.armorPerLevel,.55);
-  const xpGrowth=percentOr(cfg.xpGrowthPerLevelPercent,18);
 
   let maxHp=Math.max(1,Math.round(template.hp*Math.max(.25,1+levelDelta*hpGrowth)));
   let atk=Math.max(1,Math.round(template.atk*Math.max(.25,1+levelDelta*atkGrowth)));
   let def=Math.max(0,Math.round(template.def+levelDelta*armorPerLevel));
-  let xp=Math.max(1,Math.round(template.xp*Math.max(.25,1+levelDelta*xpGrowth)));
+  let xp;
+  if(booleanOr(cfg.useLevelBasedXp,true)){
+    // Standard hostile mobs follow the same-level XP column from the 1-100
+    // leveling curve. Species can scale this with xpMultiplier; elites/bosses
+    // then apply their existing rank multipliers below.
+    xp=Math.max(1,Math.round(standardMobXpForLevel(mobLevel)*Math.max(0,numberOr(template.xpMultiplier,1))));
+  }else{
+    const xpGrowth=percentOr(cfg.xpGrowthPerLevelPercent,18);
+    xp=Math.max(1,Math.round(template.xp*Math.max(.25,1+levelDelta*xpGrowth)));
+  }
 
   if(elite && !template.boss){
     maxHp=Math.max(1,Math.round(maxHp*numberOr(cfg.eliteHpMultiplier,1.65)));
