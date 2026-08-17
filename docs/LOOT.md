@@ -9,7 +9,7 @@ Mob deaths no longer open the loot panel automatically and item/gold drops do no
 1. A defeated mob always leaves a separate dust remnant at its death position.
 2. XP is awarded immediately.
 3. Gold, potion drops, and rolled item drops are stored inside that specific remnant.
-4. A remnant with anything to collect uses `assets/loot/lootable-dust.png`; an empty or fully looted remnant uses `assets/loot/dust.png`.
+4. A remnant with anything to collect uses the animated 4×4 sprite sheet at `assets/loot/lootable-dust.png`; an empty or fully looted remnant uses `assets/loot/dust.png`.
 5. Remnants last exactly 60 seconds from creation. They fade during the final 10 seconds and then despawn.
 6. Clicking/tapping a nearby sparkling remnant opens the compact floating loot list. Rewards are collected by clicking their row. Item rows can still be dragged into a chosen backpack slot.
 7. Separate mob deaths always create separate remnants. Loot is never merged between piles.

@@ -4,9 +4,12 @@ const PROJECT_NPCS = window.LR_NPCS || [];
 const PROJECT_QUESTS = window.LR_QUESTS || [];
 const VISUAL_CONFIG = window.LR_VISUAL || {};
 
+const VISUAL_SCALE_MIN = 0.25;
+const VISUAL_SCALE_MAX = 3.0;
+
 function visualScaleOr(value,fallback=1){
   const n=Number(value);
-  return Number.isFinite(n)?Math.max(0.5,Math.min(3.0,n)):fallback;
+  return Number.isFinite(n)?Math.max(VISUAL_SCALE_MIN,Math.min(VISUAL_SCALE_MAX,n)):fallback;
 }
 
 const VISUAL_SCALE = {

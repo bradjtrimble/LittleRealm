@@ -9,9 +9,12 @@ const PROJECT_NPCS = window.LR_NPCS || [];
 const PROJECT_QUESTS = window.LR_QUESTS || [];
 const VISUAL_CONFIG = window.LR_VISUAL || {};
 
+const VISUAL_SCALE_MIN = 0.25;
+const VISUAL_SCALE_MAX = 3.0;
+
 function visualScaleOr(value,fallback=1){
   const n=Number(value);
-  return Number.isFinite(n)?Math.max(0.5,Math.min(3.0,n)):fallback;
+  return Number.isFinite(n)?Math.max(VISUAL_SCALE_MIN,Math.min(VISUAL_SCALE_MAX,n)):fallback;
 }
 
 const VISUAL_SCALE = {
@@ -733,7 +736,11 @@ const LOOT_TABLES = window.LR_LOOT_TABLES || {};
 const LOOT_PILE_LIFETIME_MS = 60000;
 const LOOT_PILE_FADE_MS = 10000;
 const LOOT_PILE_INTERACT_RANGE = 84;
-const LOOT_PILE_DRAW_SIZE = 64;
+const LOOT_PILE_DRAW_SIZE = 44;
+const LOOTABLE_DUST_SHEET_COLUMNS = 4;
+const LOOTABLE_DUST_SHEET_ROWS = 4;
+const LOOTABLE_DUST_FRAME_COUNT = LOOTABLE_DUST_SHEET_COLUMNS*LOOTABLE_DUST_SHEET_ROWS;
+const LOOTABLE_DUST_FRAME_MS = 90;
 const warnedLootProblems = new Set();
 const lootPiles = [];
 let nextLootPileId = 1;
@@ -919,6 +926,28 @@ function lootPileRemainingMs(pile,now=performance.now()){
   return Math.max(0,numberOr(pile?.expiresAt,0)-numberOr(now,performance.now()));
 }
 
+
+function lootableDustFrameRect(image,frameIndex){
+  const cols=LOOTABLE_DUST_SHEET_COLUMNS;
+  const rows=LOOTABLE_DUST_SHEET_ROWS;
+  const total=Math.max(1,cols*rows);
+  const frame=((Math.floor(numberOr(frameIndex,0))%total)+total)%total;
+  const col=frame%cols;
+  const row=Math.floor(frame/cols);
+  const sx=Math.round(col*image.naturalWidth/cols);
+  const sy=Math.round(row*image.naturalHeight/rows);
+  const ex=Math.round((col+1)*image.naturalWidth/cols);
+  const ey=Math.round((row+1)*image.naturalHeight/rows);
+  return {sx,sy,sw:Math.max(1,ex-sx),sh:Math.max(1,ey-sy)};
+}
+
+function drawLootableDustSprite(c,image,sx,sy,size,now){
+  const total=Math.max(1,LOOTABLE_DUST_FRAME_COUNT);
+  const frame=Math.floor(numberOr(now,0)/LOOTABLE_DUST_FRAME_MS)%total;
+  const rect=lootableDustFrameRect(image,frame);
+  c.drawImage(image,rect.sx,rect.sy,rect.sw,rect.sh,Math.round(sx-size/2),Math.round(sy-size*.72),Math.round(size),Math.round(size));
+}
+
 function drawLootPile(c,pile,camX,camY,now=performance.now()){
   if(!pile) return;
   const hasLoot=lootPileHasLoot(pile);
@@ -936,7 +965,8 @@ function drawLootPile(c,pile,camX,camY,now=performance.now()){
   c.globalAlpha=fade;
   c.imageSmoothingEnabled=false;
   if(ready&&image.naturalWidth){
-    c.drawImage(image,Math.round(sx-size/2),Math.round(sy-size*.72),Math.round(size),Math.round(size));
+    if(hasLoot&&LOOTABLE_DUST_FRAME_COUNT>1) drawLootableDustSprite(c,image,sx,sy,size,now);
+    else c.drawImage(image,Math.round(sx-size/2),Math.round(sy-size*.72),Math.round(size),Math.round(size));
   }else{
     c.fillStyle=hasLoot?"rgba(236,208,128,.85)":"rgba(137,124,119,.72)";
     c.beginPath();c.ellipse(sx,sy+4,size*.34,size*.14,0,0,Math.PI*2);c.fill();
@@ -4052,7 +4082,7 @@ function refreshDeveloperMobPanel(){
       <div class="devMobMeta">Affects all ${count} ${mobTypeScaleLabel(key)} spawn${count===1?"":"s"}. Visual size only — combat stats and hitboxes are unchanged.</div>
       <div class="devScaleControl">
         <div class="devScaleTop"><span>${mobTypeScaleLabel(key)} scale</span><span id="devSelectedMobScaleValue">${value.toFixed(2)}×</span></div>
-        <input id="devSelectedMobScale" type="range" min="0.50" max="3.00" step="0.05" value="${value}">
+        <input id="devSelectedMobScale" type="range" min="0.25" max="3.00" step="0.05" value="${value}">
       </div>
       <div class="devRow"><button id="devResetMobScale">Reset ${mobTypeScaleLabel(key)}</button></div>
       <div id="devMobTypeChips"></div>`;
@@ -4541,10 +4571,10 @@ function buildDeveloperPanel(){
       <section class="devView" data-dev-view="scale">
         <div class="devSection"><div class="devSectionTitle">Selected Mob Type</div><div class="devHint">Click a mob in the world. This slider changes only that mob type — for example, selecting a Wolf changes Wolves without changing Goblins or Slimes.</div><div id="devMobScalePanel"></div></div>
         <div class="devSection"><div class="devSectionTitle">World Visual Scale</div><div class="devHint">These controls change broad world elements. Mob species are controlled separately above.</div><div id="devScalePanel">
-          <div class="devScaleControl"><div class="devScaleTop"><span>Player</span><span data-scale-value="player"></span></div><input data-scale-key="player" type="range" min="0.50" max="3.00" step="0.05" value="${VISUAL_SCALE.player}"></div>
-          <div class="devScaleControl"><div class="devScaleTop"><span>Houses</span><span data-scale-value="houses"></span></div><input data-scale-key="houses" type="range" min="0.50" max="3.00" step="0.05" value="${VISUAL_SCALE.houses}"></div>
-          <div class="devScaleControl"><div class="devScaleTop"><span>NPCs</span><span data-scale-value="npcs"></span></div><input data-scale-key="npcs" type="range" min="0.50" max="3.00" step="0.05" value="${VISUAL_SCALE.npcs}"></div>
-          <div class="devScaleControl"><div class="devScaleTop"><span>Props</span><span data-scale-value="props"></span></div><input data-scale-key="props" type="range" min="0.50" max="3.00" step="0.05" value="${VISUAL_SCALE.props}"></div>
+          <div class="devScaleControl"><div class="devScaleTop"><span>Player</span><span data-scale-value="player"></span></div><input data-scale-key="player" type="range" min="0.25" max="3.00" step="0.05" value="${VISUAL_SCALE.player}"></div>
+          <div class="devScaleControl"><div class="devScaleTop"><span>Houses</span><span data-scale-value="houses"></span></div><input data-scale-key="houses" type="range" min="0.25" max="3.00" step="0.05" value="${VISUAL_SCALE.houses}"></div>
+          <div class="devScaleControl"><div class="devScaleTop"><span>NPCs</span><span data-scale-value="npcs"></span></div><input data-scale-key="npcs" type="range" min="0.25" max="3.00" step="0.05" value="${VISUAL_SCALE.npcs}"></div>
+          <div class="devScaleControl"><div class="devScaleTop"><span>Props</span><span data-scale-value="props"></span></div><input data-scale-key="props" type="range" min="0.25" max="3.00" step="0.05" value="${VISUAL_SCALE.props}"></div>
         </div><div class="devRow"><button id="devExportScale">Export visual-settings.js</button><button id="devResetScale">Reset Scale Settings</button></div></div>
       </section>
       <section class="devView" data-dev-view="combat">

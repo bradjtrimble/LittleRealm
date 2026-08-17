@@ -6,7 +6,11 @@ const LOOT_TABLES = window.LR_LOOT_TABLES || {};
 const LOOT_PILE_LIFETIME_MS = 60000;
 const LOOT_PILE_FADE_MS = 10000;
 const LOOT_PILE_INTERACT_RANGE = 84;
-const LOOT_PILE_DRAW_SIZE = 64;
+const LOOT_PILE_DRAW_SIZE = 44;
+const LOOTABLE_DUST_SHEET_COLUMNS = 4;
+const LOOTABLE_DUST_SHEET_ROWS = 4;
+const LOOTABLE_DUST_FRAME_COUNT = LOOTABLE_DUST_SHEET_COLUMNS*LOOTABLE_DUST_SHEET_ROWS;
+const LOOTABLE_DUST_FRAME_MS = 90;
 const warnedLootProblems = new Set();
 const lootPiles = [];
 let nextLootPileId = 1;
@@ -192,6 +196,28 @@ function lootPileRemainingMs(pile,now=performance.now()){
   return Math.max(0,numberOr(pile?.expiresAt,0)-numberOr(now,performance.now()));
 }
 
+
+function lootableDustFrameRect(image,frameIndex){
+  const cols=LOOTABLE_DUST_SHEET_COLUMNS;
+  const rows=LOOTABLE_DUST_SHEET_ROWS;
+  const total=Math.max(1,cols*rows);
+  const frame=((Math.floor(numberOr(frameIndex,0))%total)+total)%total;
+  const col=frame%cols;
+  const row=Math.floor(frame/cols);
+  const sx=Math.round(col*image.naturalWidth/cols);
+  const sy=Math.round(row*image.naturalHeight/rows);
+  const ex=Math.round((col+1)*image.naturalWidth/cols);
+  const ey=Math.round((row+1)*image.naturalHeight/rows);
+  return {sx,sy,sw:Math.max(1,ex-sx),sh:Math.max(1,ey-sy)};
+}
+
+function drawLootableDustSprite(c,image,sx,sy,size,now){
+  const total=Math.max(1,LOOTABLE_DUST_FRAME_COUNT);
+  const frame=Math.floor(numberOr(now,0)/LOOTABLE_DUST_FRAME_MS)%total;
+  const rect=lootableDustFrameRect(image,frame);
+  c.drawImage(image,rect.sx,rect.sy,rect.sw,rect.sh,Math.round(sx-size/2),Math.round(sy-size*.72),Math.round(size),Math.round(size));
+}
+
 function drawLootPile(c,pile,camX,camY,now=performance.now()){
   if(!pile) return;
   const hasLoot=lootPileHasLoot(pile);
@@ -209,7 +235,8 @@ function drawLootPile(c,pile,camX,camY,now=performance.now()){
   c.globalAlpha=fade;
   c.imageSmoothingEnabled=false;
   if(ready&&image.naturalWidth){
-    c.drawImage(image,Math.round(sx-size/2),Math.round(sy-size*.72),Math.round(size),Math.round(size));
+    if(hasLoot&&LOOTABLE_DUST_FRAME_COUNT>1) drawLootableDustSprite(c,image,sx,sy,size,now);
+    else c.drawImage(image,Math.round(sx-size/2),Math.round(sy-size*.72),Math.round(size),Math.round(size));
   }else{
     c.fillStyle=hasLoot?"rgba(236,208,128,.85)":"rgba(137,124,119,.72)";
     c.beginPath();c.ellipse(sx,sy+4,size*.34,size*.14,0,0,Math.PI*2);c.fill();
