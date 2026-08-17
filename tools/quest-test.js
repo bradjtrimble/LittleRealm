@@ -41,9 +41,9 @@ for(const q of quests){
 const lilly=quests.find(q=>q.id==='lilly_slime_samples');
 const jorge=quests.find(q=>q.id==='jorge_slime_problem');
 if(lilly?.objectives?.[0]?.type!=='collect'||lilly.objectives[0].target!=='slimeGel'||Number(lilly.objectives[0].amount)<1) throw new Error('Lilly slime-sample quest incorrect');
-if(jorge?.objectives?.[0]?.type!=='kill'||jorge.objectives[0].target!=='slime'||jorge.objectives[0].amount!==5||jorge.prerequisite!=='welcome_traveler') throw new Error('Jorge quest prerequisite/content incorrect');
+if(jorge?.objectives?.[0]?.type!=='kill'||jorge.objectives[0].target!=='slime'||jorge.objectives[0].amount!==20||jorge.prerequisite!=='welcome_traveler') throw new Error('Jorge quest prerequisite/content incorrect');
 const welcome=quests.find(q=>q.id==='welcome_traveler');
-if(!welcome||welcome.giverNpc!=='mayor_buck'||welcome.turnInNpc!=='mayor_buck'||welcome.objectives.length!==5||welcome.objectives.some(o=>o.type!=='talk')) throw new Error('Welcome Traveler quest incorrect');
+if(!welcome||welcome.giverNpc!=='mayor_buck'||welcome.turnInNpc!=='mayor_buck'||welcome.objectives.length!==7||welcome.objectives.some(o=>o.type!=='talk')) throw new Error('Welcome Traveler quest incorrect');
 if(lilly.prerequisite!=='welcome_traveler') throw new Error('Lilly quest prerequisite should be Welcome Traveler');
 if(quests.find(q=>q.id==='farmer_wolf_hunt')?.minLevel!==3) throw new Error('Wolf Hunt should require level 3');
 if(welcome.rewards.xp!==60||lilly.rewards.xp!==72||jorge.rewards.xp!==108) throw new Error('starter auto-XP rewards do not match v59 curve');

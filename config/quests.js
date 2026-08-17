@@ -1,4 +1,4 @@
-/* Integrated from Little Realm World Pack v59 */
+/* Integrated from Little Realm World Pack v60 */
 window.LR_QUESTS = [
   {
     "id": "lilly_slime_samples",
@@ -17,17 +17,19 @@ window.LR_QUESTS = [
       }
     ],
     "rewards": {
+      "xpMode": "auto",
       "xp": 72,
       "gold": 8,
-      "items": [],
-      "xpMode": "auto"
+      "items": []
     },
     "prerequisite": "welcome_traveler",
     "nextQuest": null,
     "repeatable": false,
     "level": 2,
     "levelRequirementMode": "auto",
-    "rewardTier": "gather"
+    "rewardTier": "gather",
+    "minLevel": 1,
+    "recommendedMaxLevel": 5
   },
   {
     "id": "jorge_slime_problem",
@@ -35,27 +37,29 @@ window.LR_QUESTS = [
     "description": "Thin out the slimes near Oakrest so the road stays safe.",
     "giverNpc": "jorge",
     "turnInNpc": "jorge",
-    "openingDialogue": "Lilly says you've been helping around town. The slimes are getting too comfortable near the road. Defeat five of them for me.",
+    "openingDialogue": "Lilly says you've been helping around town. The slimes are getting too comfortable near the road. Defeat 20 of them for me.",
     "completionDialogue": "Nicely done. That should keep the road clear for a while.",
+    "level": 2,
+    "levelRequirementMode": "auto",
+    "minLevel": 1,
+    "rewardTier": "standard",
     "objectives": [
       {
         "type": "kill",
         "target": "slime",
-        "amount": 5
+        "amount": 20
       }
     ],
     "rewards": {
+      "xpMode": "auto",
       "xp": 108,
       "gold": 12,
-      "items": [],
-      "xpMode": "auto"
+      "items": []
     },
     "prerequisite": "welcome_traveler",
     "nextQuest": null,
     "repeatable": false,
-    "level": 2,
-    "levelRequirementMode": "auto",
-    "rewardTier": "standard"
+    "recommendedMaxLevel": 5
   },
   {
     "id": "farmer_wolf_hunt",
@@ -73,10 +77,10 @@ window.LR_QUESTS = [
       }
     ],
     "rewards": {
+      "xpMode": "auto",
       "xp": 252,
       "gold": 10,
-      "items": [],
-      "xpMode": "auto"
+      "items": []
     },
     "prerequisite": null,
     "nextQuest": null,
@@ -84,7 +88,8 @@ window.LR_QUESTS = [
     "level": 4,
     "levelRequirementMode": "custom",
     "minLevel": 3,
-    "rewardTier": "standard"
+    "rewardTier": "standard",
+    "recommendedMaxLevel": 7
   },
   {
     "id": "welcome_traveler",
@@ -94,6 +99,10 @@ window.LR_QUESTS = [
     "turnInNpc": "mayor_buck",
     "openingDialogue": "Welcome to Little Realm! We are pleased to have you. Please get to know the other folks around town, I'm sure they will be delighted to meet you!",
     "completionDialogue": "I'm glad you made some new friends! Enjoy your stay!",
+    "level": 1,
+    "levelRequirementMode": "auto",
+    "minLevel": 1,
+    "rewardTier": "multi",
     "objectives": [
       {
         "type": "talk",
@@ -119,19 +128,27 @@ window.LR_QUESTS = [
         "type": "talk",
         "target": "torren",
         "amount": 1
+      },
+      {
+        "type": "talk",
+        "target": "mara",
+        "amount": 1
+      },
+      {
+        "type": "talk",
+        "target": "eldon",
+        "amount": 1
       }
     ],
     "rewards": {
+      "xpMode": "auto",
       "xp": 60,
       "gold": 0,
-      "items": [],
-      "xpMode": "auto"
+      "items": []
     },
     "prerequisite": null,
     "nextQuest": null,
     "repeatable": false,
-    "level": 1,
-    "levelRequirementMode": "auto",
-    "rewardTier": "multi"
+    "recommendedMaxLevel": 4
   }
 ];

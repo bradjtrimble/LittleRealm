@@ -1,8 +1,8 @@
 {
   "format": "little-realm-world-pack",
   "schemaVersion": 1,
-  "build": "v59-leveling-quest-xp",
-  "exportedAt": "2026-08-17T00:07:45.262Z",
+  "build": "v60-remnant-loot",
+  "exportedAt": "2026-08-17T00:33:53.813Z",
   "worldObjects": [
     {
       "id": "town-well",
@@ -334,36 +334,40 @@
     {
       "id": "wild-boulder",
       "type": "boulder",
-      "x": 1874,
-      "y": 986,
+      "x": 1856,
+      "y": 984,
       "solid": true,
       "hitbox": {
-        "x": 5,
-        "y": 20,
-        "w": 34,
-        "h": 13
+        "x": 9,
+        "y": 16,
+        "w": 26,
+        "h": 10
       },
       "interactable": false,
       "label": "Boulder",
       "container": false,
-      "capacity": 0
+      "capacity": 0,
+      "depthMode": "ysort",
+      "depthY": 28
     },
     {
       "id": "wild-log",
       "type": "log",
-      "x": 1554,
-      "y": 1554,
+      "x": 1560,
+      "y": 1528,
       "solid": true,
       "hitbox": {
-        "x": 4,
-        "y": 22,
-        "w": 42,
-        "h": 11
+        "x": 6,
+        "y": 13,
+        "w": 40,
+        "h": 12
       },
       "interactable": false,
       "label": "Fallen Log",
       "container": false,
-      "capacity": 0
+      "capacity": 0,
+      "depthMode": "ysort",
+      "depthY": 26
     },
     {
       "id": "wild-flowers",
@@ -638,8 +642,8 @@
       "name": "Jorge",
       "role": "Villager",
       "sprite": "./assets/npcs/jorge.png",
-      "x": 480,
-      "y": 328,
+      "x": 488,
+      "y": 336,
       "facing": "down",
       "solid": true,
       "displayHeight": 53,
@@ -659,11 +663,11 @@
       "name": "Mara",
       "role": "Shopkeeper",
       "sprite": "./assets/npcs/npc-placeholder.png",
-      "x": 274,
-      "y": 460,
+      "x": 408,
+      "y": 256,
       "facing": "down",
       "solid": true,
-      "displayHeight": 44,
+      "displayHeight": 43,
       "shirt": "#b85c4a",
       "greeting": "The shop is still being stocked, but you're welcome in town.",
       "interactRadius": 58,
@@ -681,11 +685,11 @@
       "name": "Eldon",
       "role": "Villager",
       "sprite": "./assets/npcs/npc-placeholder.png",
-      "x": 660,
-      "y": 472,
-      "facing": "left",
+      "x": 592,
+      "y": 264,
+      "facing": "right",
       "solid": true,
-      "displayHeight": 44,
+      "displayHeight": 51,
       "shirt": "#4e79a7",
       "greeting": "Oakrest is quiet today. I hope it stays that way.",
       "interactRadius": 58,
@@ -703,8 +707,8 @@
       "name": "Rhea",
       "role": "Villager",
       "sprite": "./assets/npcs/npc-placeholder.png",
-      "x": 324,
-      "y": 530,
+      "x": 608,
+      "y": 512,
       "facing": "right",
       "solid": true,
       "displayHeight": 55,
@@ -725,9 +729,9 @@
       "name": "Torren",
       "role": "Blacksmith",
       "sprite": "./assets/npcs/npc-placeholder.png",
-      "x": 656,
-      "y": 522,
-      "facing": "left",
+      "x": 184,
+      "y": 520,
+      "facing": "down",
       "solid": true,
       "displayHeight": 55,
       "shirt": "#8a6651",
@@ -773,7 +777,7 @@
       "id": "mayor_buck",
       "x": 448,
       "y": 480,
-      "facing": "down",
+      "facing": "left",
       "solid": true,
       "interactRadius": 58,
       "hitbox": {
@@ -804,10 +808,10 @@
         }
       ],
       "rewards": {
+        "xpMode": "auto",
         "xp": 72,
         "gold": 8,
-        "items": [],
-        "xpMode": "auto"
+        "items": []
       },
       "prerequisite": "welcome_traveler",
       "nextQuest": null,
@@ -824,28 +828,28 @@
       "description": "Thin out the slimes near Oakrest so the road stays safe.",
       "giverNpc": "jorge",
       "turnInNpc": "jorge",
-      "openingDialogue": "Lilly says you've been helping around town. The slimes are getting too comfortable near the road. Defeat five of them for me.",
+      "openingDialogue": "Lilly says you've been helping around town. The slimes are getting too comfortable near the road. Defeat 20 of them for me.",
       "completionDialogue": "Nicely done. That should keep the road clear for a while.",
+      "level": 2,
+      "levelRequirementMode": "auto",
+      "minLevel": 1,
+      "rewardTier": "standard",
       "objectives": [
         {
           "type": "kill",
           "target": "slime",
-          "amount": 5
+          "amount": 20
         }
       ],
       "rewards": {
+        "xpMode": "auto",
         "xp": 108,
         "gold": 12,
-        "items": [],
-        "xpMode": "auto"
+        "items": []
       },
       "prerequisite": "welcome_traveler",
       "nextQuest": null,
       "repeatable": false,
-      "level": 2,
-      "levelRequirementMode": "auto",
-      "rewardTier": "standard",
-      "minLevel": 1,
       "recommendedMaxLevel": 5
     },
     {
@@ -864,10 +868,10 @@
         }
       ],
       "rewards": {
+        "xpMode": "auto",
         "xp": 252,
         "gold": 10,
-        "items": [],
-        "xpMode": "auto"
+        "items": []
       },
       "prerequisite": null,
       "nextQuest": null,
@@ -886,6 +890,10 @@
       "turnInNpc": "mayor_buck",
       "openingDialogue": "Welcome to Little Realm! We are pleased to have you. Please get to know the other folks around town, I'm sure they will be delighted to meet you!",
       "completionDialogue": "I'm glad you made some new friends! Enjoy your stay!",
+      "level": 1,
+      "levelRequirementMode": "auto",
+      "minLevel": 1,
+      "rewardTier": "multi",
       "objectives": [
         {
           "type": "talk",
@@ -911,21 +919,27 @@
           "type": "talk",
           "target": "torren",
           "amount": 1
+        },
+        {
+          "type": "talk",
+          "target": "mara",
+          "amount": 1
+        },
+        {
+          "type": "talk",
+          "target": "eldon",
+          "amount": 1
         }
       ],
       "rewards": {
+        "xpMode": "auto",
         "xp": 60,
         "gold": 0,
-        "items": [],
-        "xpMode": "auto"
+        "items": []
       },
       "prerequisite": null,
       "nextQuest": null,
       "repeatable": false,
-      "level": 1,
-      "levelRequirementMode": "auto",
-      "rewardTier": "multi",
-      "minLevel": 1,
       "recommendedMaxLevel": 4
     }
   ],
@@ -1183,7 +1197,7 @@
         "baseLevel": 2,
         "levelMin": 1,
         "levelMax": 3,
-        "hp": 14,
+        "hp": 25,
         "attack": 4,
         "defense": 0,
         "xpMultiplier": 1,
@@ -1193,7 +1207,7 @@
         "goldDropChancePercent": 100,
         "potionDropChancePercent": 0,
         "potionDropAmount": 1,
-        "eliteChancePercent": 5,
+        "eliteChancePercent": 1,
         "attackIntervalSeconds": 1.45,
         "respawnMinSeconds": 18,
         "respawnMaxSeconds": 28,
@@ -1221,7 +1235,7 @@
         "goldDropChancePercent": 100,
         "potionDropChancePercent": 0,
         "potionDropAmount": 1,
-        "eliteChancePercent": 12,
+        "eliteChancePercent": 1,
         "attackIntervalSeconds": 1.45,
         "respawnMinSeconds": 18,
         "respawnMaxSeconds": 28,
@@ -1249,7 +1263,7 @@
         "goldDropChancePercent": 100,
         "potionDropChancePercent": 0,
         "potionDropAmount": 1,
-        "eliteChancePercent": 8,
+        "eliteChancePercent": 1,
         "attackIntervalSeconds": 1.33,
         "respawnMinSeconds": 18,
         "respawnMaxSeconds": 28,

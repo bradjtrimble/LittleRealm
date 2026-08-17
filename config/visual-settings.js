@@ -1,4 +1,4 @@
-/* Integrated from Little Realm World Pack v56 */
+/* Integrated from Little Realm World Pack v60 */
 window.LR_VISUAL = {
   "player": 1.6,
   "hostileMobs": 1.3,

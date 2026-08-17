@@ -324,9 +324,9 @@ function defeatWorldMob(mob){
 
   const xpReward=mobXpReward(mob);
   const lootReward=rollMobLoot(mob);
+  const lootPile=spawnMobLootPile(mob,lootReward.rolled,gold,potionDrop,mobDisplayName(mob));
+  const hasLoot=lootPileHasLoot(lootPile);
   state.xp+=xpReward;
-  state.gold+=gold;
-  state.potions+=potionDrop;
   state.kills++;
 
   if(e.name==="Slime") state.slimeKills++; // legacy save compatibility
@@ -341,16 +341,13 @@ function defeatWorldMob(mob){
   disengageCombat(false);
 
   if(mob.boss){
-    toast(`You defeated Snickers!${lootReward.rolled.length?" Loot available.":""}`);
+    toast(`You defeated Snickers!${hasLoot?" Sparkling remains hold loot.":""}`);
   }else{
     const rewards=[`+${xpReward} XP`];
-    if(gold>0) rewards.push(`+${gold} gold`);
-    if(potionDrop>0) rewards.push(`+${potionDrop} potion${potionDrop===1?"":"s"}`);
-    if(lootReward.rolled.length) rewards.push("loot available");
+    rewards.push(hasLoot?"loot in sparkling remains":"no loot");
     toast(`Defeated ${mobDisplayName(mob)}: ${rewards.join(", ")}`);
   }
   updateUI();
-  if(lootReward.rolled.length) openLootWindow(lootReward.rolled,mobDisplayName(mob));
 }
 
 function worldCombatDeath(){
@@ -399,6 +396,12 @@ function handleWorldTap(ev){
   const viewW=innerWidth/CAMERA_ZOOM, viewH=innerHeight/CAMERA_ZOOM;
   const camX=state.x-viewW/2, camY=state.y-viewH/2;
   const wx=camX+sx/CAMERA_ZOOM, wy=camY+sy/CAMERA_ZOOM;
+
+  const tappedLootPile=findLootPileAtWorld(wx,wy,{lootableOnly:true});
+  if(tappedLootPile){
+    interactWithLootPile(tappedLootPile);
+    return;
+  }
 
   const tappedNpc=findNpcAtWorld(wx,wy);
   if(tappedNpc){
@@ -658,9 +661,11 @@ function winBattle(){
   const e=enemy;
   let gold=rand(e.gold[0],e.gold[1]);
   if(e.elite && gold>0) gold=Math.max(1,Math.round(gold*numberOr(BALANCE.mobLevels?.eliteGoldMultiplier,1.5)));
+  let potionDrop=0;
+  if(e.potionDropAmount>0 && Math.random()<e.potionDropChance) potionDrop=e.potionDropAmount;
   const lootReward=rollMobLoot(currentMob||e);
+  const lootPile=spawnMobLootPile(currentMob||e,lootReward.rolled,gold,potionDrop,e.elite?`Elite ${e.name}`:e.name);
   state.xp+=e.xp;
-  state.gold+=gold;
   state.kills++;
 
   if(e.name==="Slime") state.slimeKills++; // legacy save compatibility
@@ -676,11 +681,10 @@ function winBattle(){
   levelCheck();
   endBattle();
 
-  const hasLoot=lootReward.rolled.length>0;
-  if(e.boss)toast(`You defeated Snickers!${hasLoot?" Loot available.":""}`);
-  else toast(`Defeated ${e.elite?"Elite ":""}${e.name}: +${e.xp} XP, +${gold} gold${hasLoot?", loot available":""}`);
+  const hasLoot=lootPileHasLoot(lootPile);
+  if(e.boss)toast(`You defeated Snickers!${hasLoot?" Sparkling remains hold loot.":""}`);
+  else toast(`Defeated ${e.elite?"Elite ":""}${e.name}: +${e.xp} XP, ${hasLoot?"loot in sparkling remains":"no loot"}`);
   updateUI();
-  if(hasLoot) openLootWindow(lootReward.rolled,e.elite?`Elite ${e.name}`:e.name);
 }
 
 function loseBattle(){

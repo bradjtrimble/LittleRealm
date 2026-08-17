@@ -382,7 +382,7 @@ function developerWorldPack(){
   return {
     format:"little-realm-world-pack",
     schemaVersion:1,
-    build:"v59-leveling-quest-xp",
+    build:"v60-remnant-loot",
     exportedAt:new Date().toISOString(),
     worldObjects:sceneryProps.map(cloneWorldObject),
     npcs:sceneryNPCs.map(cloneNpc),

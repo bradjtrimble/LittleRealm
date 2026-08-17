@@ -963,6 +963,12 @@ function drawWorld(){
     queueWorldRenderable("npc",npcRenderDepth(npc,state.y),npc);
   }
 
+  for(const pile of lootPiles){
+    const sx=pile.x-camX, sy=pile.y-camY;
+    if(sx<-70||sy<-70||sx>viewW+70||sy>viewH+70) continue;
+    queueWorldRenderable("lootPile",pile.y+3,pile);
+  }
+
   for(const mob of mobs){
     if(!mob.alive) continue;
     const sx=mob.x-camX, sy=mob.y-camY;
@@ -986,6 +992,8 @@ function drawWorld(){
       drawPropObject(item.obj,camX,camY);
     }else if(item.kind==="npc"){
       drawNpcObject(item.obj,camX,camY);
+    }else if(item.kind==="lootPile"){
+      drawLootPile(ctx,item.obj,camX,camY);
     }else if(item.kind==="mob"){
       const mob=item.obj;
       let sx=mob.x-camX, sy=mob.y-camY;

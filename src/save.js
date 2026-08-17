@@ -76,6 +76,7 @@ function load(){
     attackButtonCooldown=0;
     input={up:false,down:false,left:false,right:false};
     spawnMobs();
+    clearLootPiles();
     closeAll();
     updateUI();
     toast("Game loaded.");

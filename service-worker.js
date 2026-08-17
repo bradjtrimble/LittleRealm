@@ -1,4 +1,4 @@
-const CACHE_NAME = "little-realm-v59-leveling-quest-xp";
+const CACHE_NAME = "little-realm-v60-remnant-loot";
 const FILES = [
   "./",
   "./index.html",
@@ -18,6 +18,8 @@ const FILES = [
   "./assets/icons/icon-192.png",
   "./assets/icons/icon-512.png",
   "./assets/items/slime-gel.png",
+  "./assets/loot/dust.png",
+  "./assets/loot/lootable-dust.png",
   "./assets/environment/terrain-seamless.png",
   "./assets/environment/water-seamless.png",
   "./assets/environment/environment-atlas.png",

@@ -1,4 +1,4 @@
-/* Integrated from Little Realm World Pack v59 */
+/* Integrated from Little Realm World Pack v60 */
 window.LR_BALANCE = {
   "player": {
     "maxHp": 30,
@@ -184,16 +184,46 @@ window.LR_BALANCE = {
     "defaultLevelGap": 3,
     "recommendedLevelsAbove": 3,
     "xpProfiles": {
-      "minor": {"mobEquivalent": 3, "levelCapPercent": 5},
-      "gather": {"mobEquivalent": 5, "levelCapPercent": 8},
-      "standard": {"mobEquivalent": 8, "levelCapPercent": 12},
-      "multi": {"mobEquivalent": 12, "levelCapPercent": 15},
-      "elite": {"mobEquivalent": 18, "levelCapPercent": 20},
-      "dungeon": {"mobEquivalent": 25, "levelCapPercent": 25},
-      "boss": {"mobEquivalent": 35, "levelCapPercent": 30},
-      "story": {"mobEquivalent": 30, "levelCapPercent": 25},
-      "epic": {"mobEquivalent": 50, "levelCapPercent": 40},
-      "repeatable": {"mobEquivalent": 5, "levelCapPercent": 8}
+      "minor": {
+        "mobEquivalent": 3,
+        "levelCapPercent": 5
+      },
+      "gather": {
+        "mobEquivalent": 5,
+        "levelCapPercent": 8
+      },
+      "standard": {
+        "mobEquivalent": 8,
+        "levelCapPercent": 12
+      },
+      "multi": {
+        "mobEquivalent": 12,
+        "levelCapPercent": 15
+      },
+      "elite": {
+        "mobEquivalent": 18,
+        "levelCapPercent": 20
+      },
+      "dungeon": {
+        "mobEquivalent": 25,
+        "levelCapPercent": 25
+      },
+      "boss": {
+        "mobEquivalent": 35,
+        "levelCapPercent": 30
+      },
+      "story": {
+        "mobEquivalent": 30,
+        "levelCapPercent": 25
+      },
+      "epic": {
+        "mobEquivalent": 50,
+        "levelCapPercent": 40
+      },
+      "repeatable": {
+        "mobEquivalent": 5,
+        "levelCapPercent": 8
+      }
     }
   },
   "shop": {
@@ -205,7 +235,7 @@ window.LR_BALANCE = {
       "baseLevel": 2,
       "levelMin": 1,
       "levelMax": 3,
-      "hp": 14,
+      "hp": 25,
       "attack": 4,
       "defense": 0,
       "xpMultiplier": 1,
@@ -215,7 +245,7 @@ window.LR_BALANCE = {
       "goldDropChancePercent": 100,
       "potionDropChancePercent": 0,
       "potionDropAmount": 1,
-      "eliteChancePercent": 5,
+      "eliteChancePercent": 1,
       "attackIntervalSeconds": 1.45,
       "respawnMinSeconds": 18,
       "respawnMaxSeconds": 28,
@@ -243,7 +273,7 @@ window.LR_BALANCE = {
       "goldDropChancePercent": 100,
       "potionDropChancePercent": 0,
       "potionDropAmount": 1,
-      "eliteChancePercent": 12,
+      "eliteChancePercent": 1,
       "attackIntervalSeconds": 1.45,
       "respawnMinSeconds": 18,
       "respawnMaxSeconds": 28,
@@ -271,7 +301,7 @@ window.LR_BALANCE = {
       "goldDropChancePercent": 100,
       "potionDropChancePercent": 0,
       "potionDropAmount": 1,
-      "eliteChancePercent": 8,
+      "eliteChancePercent": 1,
       "attackIntervalSeconds": 1.33,
       "respawnMinSeconds": 18,
       "respawnMaxSeconds": 28,

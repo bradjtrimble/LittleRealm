@@ -29,6 +29,7 @@ function reset(){
   attackButtonCooldown=0;
   input={up:false,down:false,left:false,right:false};
   spawnMobs();
+  clearLootPiles();
   closeAll();
   toast("Click/tap a mob to target it, then press ATTACK.");
   updateUI();

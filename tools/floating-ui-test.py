@@ -36,7 +36,7 @@ check('resetHeldKeyboardMovement' not in body and 'input=' not in body,'opening 
 m=re.search(r'function openLootWindow\(.*?\)\{(.*?)\n\}',loot,re.S)
 body=m.group(1) if m else ''
 check('resetHeldKeyboardMovement' not in body and 'closeBackpack' not in body,'opening loot does not stop movement or close backpack')
-check('normalizePendingLoot([...pendingLoot,...normalized])' in loot,'new drops merge while loot window remains open')
+check('const lootPiles = []' in loot and 'spawnLootPile' in loot,'loot is stored in separate world remnants rather than one merged pending list')
 check('function bindFloatingPanels()' in ui and 'localStorage.setItem' in ui,'panel positions are draggable and persisted')
 check('constrainFloatingPanel("questLogPanel")' in ui,'quest panel is constrained after viewport resize')
 

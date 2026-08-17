@@ -725,16 +725,33 @@ window.LR_INVENTORY=Object.freeze({
   requestDispose:requestDisposeInventorySlot
 });
 
-// Data-driven loot foundation. Item definitions live in config/items.js and
-// drop rules live in config/loot-tables.js. Mob deaths roll here, then the
-// player chooses what to move into the backpack from the loot window.
+// Data-driven loot + world-remnant system. Item definitions live in
+// config/items.js and drop rules live in config/loot-tables.js. Mob deaths
+// always leave a temporary dust pile; gold, potion drops, and item drops stay
+// inside the pile until the player chooses to collect them.
 const LOOT_TABLES = window.LR_LOOT_TABLES || {};
+const LOOT_PILE_LIFETIME_MS = 60000;
+const LOOT_PILE_FADE_MS = 10000;
+const LOOT_PILE_INTERACT_RANGE = 84;
+const LOOT_PILE_DRAW_SIZE = 64;
 const warnedLootProblems = new Set();
-let pendingLoot = [];
-let pendingLootSource = "Defeated enemy";
+const lootPiles = [];
+let nextLootPileId = 1;
+let activeLootPileId = null;
+let legacyLootPile = null;
 let lootPointerDrag = null;
 let suppressLootClick = false;
 let lootInteractionsBound = false;
+
+const dustPileImage = new Image();
+dustPileImage.src = "./assets/loot/dust.png";
+let dustPileImageReady = dustPileImage.complete && dustPileImage.naturalWidth > 0;
+dustPileImage.onload = () => { dustPileImageReady = true; };
+
+const lootableDustPileImage = new Image();
+lootableDustPileImage.src = "./assets/loot/lootable-dust.png";
+let lootableDustPileImageReady = lootableDustPileImage.complete && lootableDustPileImage.naturalWidth > 0;
+lootableDustPileImage.onload = () => { lootableDustPileImageReady = true; };
 
 function lootWarnOnce(key,message){
   if(warnedLootProblems.has(key)) return;
@@ -817,8 +834,8 @@ function rollMobLoot(mob,rng=Math.random){
   return {tableId,rolled};
 }
 
-// Kept for developer tools and future scripted rewards that intentionally
-// bypass the loot window. Normal mob deaths use rollMobLoot + openLootWindow.
+// Kept for developer tools and scripted rewards that intentionally bypass
+// world remnants. Normal mob deaths use rollMobLoot + spawnMobLootPile.
 function grantMobLoot(mob,rng=Math.random){
   const result=rollMobLoot(mob,rng);
   const granted=grantLootDrops(result.rolled);
@@ -842,48 +859,165 @@ function normalizePendingLoot(drops){
   return [...totals].map(([itemId,qty])=>({itemId,qty}));
 }
 
+function lootPileHasLoot(pile){
+  return !!pile && (
+    Math.max(0,Math.floor(numberOr(pile.gold,0)))>0 ||
+    Math.max(0,Math.floor(numberOr(pile.potions,0)))>0 ||
+    (Array.isArray(pile.items)&&pile.items.some(drop=>Math.max(0,Math.floor(numberOr(drop?.qty,0)))>0))
+  );
+}
+
+function activeLootPile(){
+  if(legacyLootPile && legacyLootPile.id===activeLootPileId) return legacyLootPile;
+  return lootPiles.find(pile=>pile.id===activeLootPileId)||null;
+}
+
+function spawnLootPile({x,y,drops=[],gold=0,potions=0,sourceLabel="Defeated enemy"}={},now=performance.now()){
+  const pile={
+    id:nextLootPileId++,
+    x:numberOr(x,state?.x??0),
+    y:numberOr(y,state?.y??0),
+    sourceLabel:String(sourceLabel||"Defeated enemy"),
+    items:normalizePendingLoot(drops),
+    gold:Math.max(0,Math.floor(numberOr(gold,0))),
+    potions:Math.max(0,Math.floor(numberOr(potions,0))),
+    createdAt:numberOr(now,performance.now()),
+    expiresAt:numberOr(now,performance.now())+LOOT_PILE_LIFETIME_MS
+  };
+  lootPiles.push(pile);
+  return pile;
+}
+
+function spawnMobLootPile(mob,drops=[],gold=0,potions=0,sourceLabel="Defeated enemy",now=performance.now()){
+  return spawnLootPile({
+    x:numberOr(mob?.x,state?.x??0),
+    y:numberOr(mob?.y,state?.y??0),
+    drops,gold,potions,sourceLabel
+  },now);
+}
+
+function clearLootPiles(){
+  lootPiles.length=0;
+  activeLootPileId=null;
+  legacyLootPile=null;
+  document.getElementById("lootWindow")?.classList.remove("show");
+}
+
+function updateLootPiles(now=performance.now()){
+  const t=numberOr(now,performance.now());
+  let activeExpired=false;
+  for(let i=lootPiles.length-1;i>=0;i--){
+    if(t>=lootPiles[i].expiresAt){
+      if(lootPiles[i].id===activeLootPileId) activeExpired=true;
+      lootPiles.splice(i,1);
+    }
+  }
+  if(activeExpired) closeLootWindow();
+}
+
+function lootPileRemainingMs(pile,now=performance.now()){
+  return Math.max(0,numberOr(pile?.expiresAt,0)-numberOr(now,performance.now()));
+}
+
+function drawLootPile(c,pile,camX,camY,now=performance.now()){
+  if(!pile) return;
+  const hasLoot=lootPileHasLoot(pile);
+  const image=hasLoot?lootableDustPileImage:dustPileImage;
+  const ready=hasLoot?lootableDustPileImageReady:dustPileImageReady;
+  const remaining=lootPileRemainingMs(pile,now);
+  if(remaining<=0) return;
+
+  const fade=remaining<LOOT_PILE_FADE_MS?clamp(remaining/LOOT_PILE_FADE_MS,0,1):1;
+  const pulse=hasLoot?1+Math.sin(numberOr(now,0)/240)*.018:1;
+  const size=LOOT_PILE_DRAW_SIZE*pulse;
+  const sx=pile.x-camX;
+  const sy=pile.y-camY;
+  c.save();
+  c.globalAlpha=fade;
+  c.imageSmoothingEnabled=false;
+  if(ready&&image.naturalWidth){
+    c.drawImage(image,Math.round(sx-size/2),Math.round(sy-size*.72),Math.round(size),Math.round(size));
+  }else{
+    c.fillStyle=hasLoot?"rgba(236,208,128,.85)":"rgba(137,124,119,.72)";
+    c.beginPath();c.ellipse(sx,sy+4,size*.34,size*.14,0,0,Math.PI*2);c.fill();
+  }
+  c.restore();
+}
+
+function findLootPileAtWorld(wx,wy,{lootableOnly=true}={}){
+  let best=null,bestScore=Infinity;
+  for(const pile of lootPiles){
+    if(lootableOnly&&!lootPileHasLoot(pile)) continue;
+    const dx=wx-pile.x;
+    const dy=wy-pile.y;
+    if(Math.abs(dx)>34||dy<-30||dy>24) continue;
+    const score=dx*dx+(dy*.8)*(dy*.8);
+    if(score<bestScore){best=pile;bestScore=score;}
+  }
+  return best;
+}
+
 function isLootWindowOpen(){
   return !!document.getElementById("lootWindow")?.classList.contains("show");
 }
 
 function renderLootInventory(){
-  // The backpack is its own floating panel now. Keep it in sync if the player
-  // chooses to leave it open while looting.
   if(document.getElementById("backpack")?.classList.contains("show")) renderInventory();
   else updateBackpackHud();
 }
 
+function lootCurrencyMarkup(kind,qty){
+  if(kind==="gold") return `<button class="lootSlot lootCurrencySlot" data-loot-kind="gold" aria-label="Take ${qty} gold"><span class="lootCurrencyIcon goldCoin">●</span><span class="lootItemName">Gold</span><span class="lootItemQty">${qty}</span></button>`;
+  return `<button class="lootSlot lootCurrencySlot" data-loot-kind="potions" aria-label="Take ${qty} potion${qty===1?"":"s"}"><span class="lootCurrencyIcon potionIcon">+</span><span class="lootItemName">Potion${qty===1?"":"s"}</span><span class="lootItemQty">${qty}</span></button>`;
+}
+
 function renderLootWindow(){
-  const source=document.getElementById("lootSourceName");
-  if(source) source.textContent=pendingLootSource;
+  const pile=activeLootPile();
   const grid=document.getElementById("lootGrid");
   if(grid){
-    if(!pendingLoot.length){
+    if(!pile||!lootPileHasLoot(pile)){
       grid.innerHTML='<div class="lootEmpty">Nothing left to collect.</div>';
     }else{
-      grid.innerHTML=pendingLoot.map((drop,index)=>{
+      const rows=[];
+      if(pile.gold>0) rows.push(lootCurrencyMarkup("gold",pile.gold));
+      if(pile.potions>0) rows.push(lootCurrencyMarkup("potions",pile.potions));
+      pile.items.forEach((drop,index)=>{
         const def=getItemDefinition(drop.itemId);
-        return `<button class="lootSlot" data-loot-index="${index}" aria-label="Take ${drop.qty} ${inventoryEscape(def.name)}">${itemVisualMarkup(def,"lootItemIcon","lootItemSymbol")}<span class="lootItemName">${inventoryEscape(def.name)}</span><span class="lootItemQty">${drop.qty}</span></button>`;
-      }).join("");
+        rows.push(`<button class="lootSlot" data-loot-kind="item" data-loot-index="${index}" aria-label="Take ${drop.qty} ${inventoryEscape(def.name)}">${itemVisualMarkup(def,"lootItemIcon","lootItemSymbol")}<span class="lootItemName">${inventoryEscape(def.name)}</span><span class="lootItemQty">${drop.qty}</span></button>`);
+      });
+      grid.innerHTML=rows.join("");
     }
   }
   renderLootInventory();
 }
 
+function openLootPile(pile){
+  if(!pile||!lootPileHasLoot(pile)) return false;
+  activeLootPileId=pile.id;
+  legacyLootPile=pile===legacyLootPile?legacyLootPile:null;
+  document.getElementById("lootWindow")?.classList.add("show");
+  renderLootWindow();
+  constrainFloatingPanel?.("lootPanel");
+  return true;
+}
+
+function interactWithLootPile(pile){
+  if(!pile||!lootPileHasLoot(pile)) return false;
+  if(dist(state.x,state.y,pile.x,pile.y)>LOOT_PILE_INTERACT_RANGE){
+    toast?.("Move closer to loot the remains.");
+    return true;
+  }
+  openLootPile(pile);
+  return true;
+}
+
+// Compatibility API for developer tools/tests. This opens a temporary list but
+// does not create a persistent world pile. Normal mob deaths never call it.
 function openLootWindow(drops,sourceLabel="Defeated enemy"){
   const normalized=normalizePendingLoot(drops);
   if(!normalized.length) return false;
-
-  // Because loot no longer pauses the game, another mob may die while the
-  // window is still open. Merge new drops instead of replacing unclaimed loot.
-  if(isLootWindowOpen()){
-    pendingLoot=normalizePendingLoot([...pendingLoot,...normalized]);
-    if(pendingLootSource!==String(sourceLabel||"Defeated enemy")) pendingLootSource="Recent Loot";
-  }else{
-    pendingLoot=normalized;
-    pendingLootSource=String(sourceLabel||"Defeated enemy");
-  }
-
+  legacyLootPile={id:`legacy-${nextLootPileId++}`,x:state?.x??0,y:state?.y??0,sourceLabel:String(sourceLabel||"Defeated enemy"),items:normalized,gold:0,potions:0,createdAt:performance.now(),expiresAt:Infinity};
+  activeLootPileId=legacyLootPile.id;
   document.getElementById("lootWindow")?.classList.add("show");
   renderLootWindow();
   constrainFloatingPanel?.("lootPanel");
@@ -891,14 +1025,24 @@ function openLootWindow(drops,sourceLabel="Defeated enemy"){
 }
 
 function closeLootWindow(){
-  pendingLoot=[];
-  pendingLootSource="Defeated enemy";
+  activeLootPileId=null;
+  legacyLootPile=null;
   document.getElementById("lootWindow")?.classList.remove("show");
 }
 
+function finishLootInteractionIfEmpty(pile){
+  if(!pile||lootPileHasLoot(pile)){
+    renderLootWindow();
+    return;
+  }
+  closeLootWindow();
+  renderLootInventory();
+}
+
 function takeLootAtIndex(index,targetSlot=null){
+  const pile=activeLootPile();
   const i=Math.floor(numberOr(index,-1));
-  const drop=pendingLoot[i];
+  const drop=pile?.items?.[i];
   if(!drop) return {added:0,remaining:0};
   const result=targetSlot==null
     ?addItem(drop.itemId,drop.qty)
@@ -911,24 +1055,46 @@ function takeLootAtIndex(index,targetSlot=null){
   }
 
   drop.qty=result.remaining;
-  if(drop.qty<=0) pendingLoot.splice(i,1);
-  if(!pendingLoot.length){
-    closeLootWindow();
-  }else{
-    renderLootWindow();
-  }
+  if(drop.qty<=0) pile.items.splice(i,1);
+  finishLootInteractionIfEmpty(pile);
   return result;
 }
 
+function takeGoldFromActivePile(){
+  const pile=activeLootPile();
+  if(!pile||pile.gold<=0) return 0;
+  const amount=pile.gold;
+  pile.gold=0;
+  state.gold+=amount;
+  updateUI?.();
+  finishLootInteractionIfEmpty(pile);
+  return amount;
+}
+
+function takePotionsFromActivePile(){
+  const pile=activeLootPile();
+  if(!pile||pile.potions<=0) return 0;
+  const amount=pile.potions;
+  pile.potions=0;
+  state.potions+=amount;
+  updateUI?.();
+  finishLootInteractionIfEmpty(pile);
+  return amount;
+}
+
 function takeAllLoot(){
-  if(!pendingLoot.length) return;
-  for(let i=pendingLoot.length-1;i>=0;i--){
-    const drop=pendingLoot[i];
+  const pile=activeLootPile();
+  if(!pile) return;
+  if(pile.gold>0){state.gold+=pile.gold;pile.gold=0;}
+  if(pile.potions>0){state.potions+=pile.potions;pile.potions=0;}
+  for(let i=pile.items.length-1;i>=0;i--){
+    const drop=pile.items[i];
     const result=addItem(drop.itemId,drop.qty);
     drop.qty=result.remaining;
-    if(drop.qty<=0) pendingLoot.splice(i,1);
+    if(drop.qty<=0) pile.items.splice(i,1);
   }
-  if(!pendingLoot.length) closeLootWindow();
+  updateUI?.();
+  if(!lootPileHasLoot(pile)) closeLootWindow();
   else{
     renderLootWindow();
     toast?.("Your backpack does not have room for all of the loot.");
@@ -946,10 +1112,11 @@ function createLootDragGhost(drop){
 
 function lootDragPointerDown(event){
   if(event.button!=null&&event.button!==0) return;
-  const slot=event.target.closest?.(".lootSlot[data-loot-index]");
+  const slot=event.target.closest?.('.lootSlot[data-loot-kind="item"][data-loot-index]');
   if(!slot) return;
+  const pile=activeLootPile();
   const index=Number(slot.dataset.lootIndex);
-  if(!pendingLoot[index]) return;
+  if(!pile?.items?.[index]) return;
   lootPointerDrag={pointerId:event.pointerId,index,startX:event.clientX,startY:event.clientY,active:false,ghost:null};
   slot.setPointerCapture?.(event.pointerId);
 }
@@ -960,7 +1127,7 @@ function lootDragPointerMove(event){
   const distance=Math.hypot(event.clientX-drag.startX,event.clientY-drag.startY);
   if(!drag.active&&distance<6) return;
   if(!drag.active){
-    const drop=pendingLoot[drag.index];
+    const drop=activeLootPile()?.items?.[drag.index];
     if(!drop){lootPointerDrag=null;return;}
     drag.active=true;
     drag.ghost=createLootDragGhost(drop);
@@ -987,8 +1154,12 @@ function lootDragPointerUp(event){
 
 function handleLootGridClick(event){
   if(suppressLootClick){event.preventDefault?.();return;}
-  const slot=event.target.closest?.(".lootSlot[data-loot-index]");
-  if(slot) takeLootAtIndex(Number(slot.dataset.lootIndex));
+  const slot=event.target.closest?.(".lootSlot[data-loot-kind]");
+  if(!slot) return;
+  const kind=slot.dataset.lootKind;
+  if(kind==="gold") takeGoldFromActivePile();
+  else if(kind==="potions") takePotionsFromActivePile();
+  else if(kind==="item") takeLootAtIndex(Number(slot.dataset.lootIndex));
 }
 
 function bindLootInteractions(){
@@ -1038,13 +1209,23 @@ window.LR_LOOT=Object.freeze({
   rollMobLoot,
   grantDrops:grantLootDrops,
   grantMobLoot,
+  spawnPile:spawnLootPile,
+  spawnMobPile:spawnMobLootPile,
+  clearPiles:clearLootPiles,
+  updatePiles:updateLootPiles,
+  getPiles:()=>lootPiles.map(pile=>({...pile,items:pile.items.map(drop=>({...drop}))})),
+  pileHasLoot:lootPileHasLoot,
+  openPile:openLootPile,
   openWindow:openLootWindow,
   closeWindow:closeLootWindow,
   takeAt:takeLootAtIndex,
+  takeGold:takeGoldFromActivePile,
+  takePotions:takePotionsFromActivePile,
   takeAll:takeAllLoot,
-  getPending:()=>pendingLoot.map(drop=>({...drop})),
+  getPending:()=>activeLootPile()?.items?.map(drop=>({...drop}))||[],
   formatDrops:formatLootDrops,
-  validate:validateLootConfig
+  validate:validateLootConfig,
+  lifetimeMs:LOOT_PILE_LIFETIME_MS
 });
 
 // 0 grass, 1 water, 2 forest, 3 road, 4 town, 5 legacy castle, 6 blocked forest, 7 dirt clearing
@@ -2012,6 +2193,12 @@ function drawWorld(){
     queueWorldRenderable("npc",npcRenderDepth(npc,state.y),npc);
   }
 
+  for(const pile of lootPiles){
+    const sx=pile.x-camX, sy=pile.y-camY;
+    if(sx<-70||sy<-70||sx>viewW+70||sy>viewH+70) continue;
+    queueWorldRenderable("lootPile",pile.y+3,pile);
+  }
+
   for(const mob of mobs){
     if(!mob.alive) continue;
     const sx=mob.x-camX, sy=mob.y-camY;
@@ -2035,6 +2222,8 @@ function drawWorld(){
       drawPropObject(item.obj,camX,camY);
     }else if(item.kind==="npc"){
       drawNpcObject(item.obj,camX,camY);
+    }else if(item.kind==="lootPile"){
+      drawLootPile(ctx,item.obj,camX,camY);
     }else if(item.kind==="mob"){
       const mob=item.obj;
       let sx=mob.x-camX, sy=mob.y-camY;
@@ -3080,7 +3269,7 @@ function developerWorldPack(){
   return {
     format:"little-realm-world-pack",
     schemaVersion:1,
-    build:"v59-leveling-quest-xp",
+    build:"v60-remnant-loot",
     exportedAt:new Date().toISOString(),
     worldObjects:sceneryProps.map(cloneWorldObject),
     npcs:sceneryNPCs.map(cloneNpc),
@@ -4519,6 +4708,7 @@ function reset(){
   attackButtonCooldown=0;
   input={up:false,down:false,left:false,right:false};
   spawnMobs();
+  clearLootPiles();
   closeAll();
   toast("Click/tap a mob to target it, then press ATTACK.");
   updateUI();
@@ -5781,9 +5971,9 @@ function defeatWorldMob(mob){
 
   const xpReward=mobXpReward(mob);
   const lootReward=rollMobLoot(mob);
+  const lootPile=spawnMobLootPile(mob,lootReward.rolled,gold,potionDrop,mobDisplayName(mob));
+  const hasLoot=lootPileHasLoot(lootPile);
   state.xp+=xpReward;
-  state.gold+=gold;
-  state.potions+=potionDrop;
   state.kills++;
 
   if(e.name==="Slime") state.slimeKills++; // legacy save compatibility
@@ -5798,16 +5988,13 @@ function defeatWorldMob(mob){
   disengageCombat(false);
 
   if(mob.boss){
-    toast(`You defeated Snickers!${lootReward.rolled.length?" Loot available.":""}`);
+    toast(`You defeated Snickers!${hasLoot?" Sparkling remains hold loot.":""}`);
   }else{
     const rewards=[`+${xpReward} XP`];
-    if(gold>0) rewards.push(`+${gold} gold`);
-    if(potionDrop>0) rewards.push(`+${potionDrop} potion${potionDrop===1?"":"s"}`);
-    if(lootReward.rolled.length) rewards.push("loot available");
+    rewards.push(hasLoot?"loot in sparkling remains":"no loot");
     toast(`Defeated ${mobDisplayName(mob)}: ${rewards.join(", ")}`);
   }
   updateUI();
-  if(lootReward.rolled.length) openLootWindow(lootReward.rolled,mobDisplayName(mob));
 }
 
 function worldCombatDeath(){
@@ -5856,6 +6043,12 @@ function handleWorldTap(ev){
   const viewW=innerWidth/CAMERA_ZOOM, viewH=innerHeight/CAMERA_ZOOM;
   const camX=state.x-viewW/2, camY=state.y-viewH/2;
   const wx=camX+sx/CAMERA_ZOOM, wy=camY+sy/CAMERA_ZOOM;
+
+  const tappedLootPile=findLootPileAtWorld(wx,wy,{lootableOnly:true});
+  if(tappedLootPile){
+    interactWithLootPile(tappedLootPile);
+    return;
+  }
 
   const tappedNpc=findNpcAtWorld(wx,wy);
   if(tappedNpc){
@@ -6115,9 +6308,11 @@ function winBattle(){
   const e=enemy;
   let gold=rand(e.gold[0],e.gold[1]);
   if(e.elite && gold>0) gold=Math.max(1,Math.round(gold*numberOr(BALANCE.mobLevels?.eliteGoldMultiplier,1.5)));
+  let potionDrop=0;
+  if(e.potionDropAmount>0 && Math.random()<e.potionDropChance) potionDrop=e.potionDropAmount;
   const lootReward=rollMobLoot(currentMob||e);
+  const lootPile=spawnMobLootPile(currentMob||e,lootReward.rolled,gold,potionDrop,e.elite?`Elite ${e.name}`:e.name);
   state.xp+=e.xp;
-  state.gold+=gold;
   state.kills++;
 
   if(e.name==="Slime") state.slimeKills++; // legacy save compatibility
@@ -6133,11 +6328,10 @@ function winBattle(){
   levelCheck();
   endBattle();
 
-  const hasLoot=lootReward.rolled.length>0;
-  if(e.boss)toast(`You defeated Snickers!${hasLoot?" Loot available.":""}`);
-  else toast(`Defeated ${e.elite?"Elite ":""}${e.name}: +${e.xp} XP, +${gold} gold${hasLoot?", loot available":""}`);
+  const hasLoot=lootPileHasLoot(lootPile);
+  if(e.boss)toast(`You defeated Snickers!${hasLoot?" Sparkling remains hold loot.":""}`);
+  else toast(`Defeated ${e.elite?"Elite ":""}${e.name}: +${e.xp} XP, ${hasLoot?"loot in sparkling remains":"no loot"}`);
   updateUI();
-  if(hasLoot) openLootWindow(lootReward.rolled,e.elite?`Elite ${e.name}`:e.name);
 }
 
 function loseBattle(){
@@ -6423,6 +6617,7 @@ function load(){
     attackButtonCooldown=0;
     input={up:false,down:false,left:false,right:false};
     spawnMobs();
+    clearLootPiles();
     closeAll();
     updateUI();
     toast("Game loaded.");
@@ -6461,7 +6656,7 @@ const INPUT_BINDINGS = {
 
 // Exposed only as read-only diagnostics so a desktop tester can confirm the
 // deployed build from DevTools without digging through bundled source.
-window.LR_BUILD_VERSION="v59-leveling-quest-xp";
+window.LR_BUILD_VERSION="v60-remnant-loot";
 window.LR_INPUT_BINDINGS=Object.freeze({...INPUT_BINDINGS});
 window.LR_INPUT_STATE=()=>({...input});
 
@@ -6625,6 +6820,7 @@ function frame(now){
   const dt=Math.min(.033,(now-lastFrame)/1000);
   lastFrame=now;
   updateMovement(dt);
+  updateLootPiles(now);
   updateMobs(dt);
   updateOpenCombat(dt);
   if(isHeroMoving) moveAnimTime+=dt;

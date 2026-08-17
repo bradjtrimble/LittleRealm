@@ -1,3 +1,14 @@
+## v60 — World Remnant Loot
+
+- Replaced automatic mob loot popups with 60-second world dust remnants.
+- Every defeated mob leaves a separate dust pile; piles with gold/items/potions use the sparkling remnant art.
+- Gold and potion drops now remain in the pile instead of being awarded immediately; XP still awards on defeat.
+- Clicking a nearby sparkling pile opens the existing compact loot list. Clicking each row collects that reward.
+- Fully looted piles remain as plain dust until their original 60-second lifetime ends, with a subtle fade during the final 10 seconds.
+- Integrated the latest uploaded World Builder pack across props, NPCs, quests, visual settings, and balance.
+- Added optimized `assets/loot/dust.png` and `assets/loot/lootable-dust.png` artwork and offline caching.
+- Bumped build/cache metadata to `v60-remnant-loot`.
+
 # Little Realm Changelog
 
 ## v59 — Level Pace + Quest XP

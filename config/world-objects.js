@@ -1,4 +1,4 @@
-/* Integrated from Little Realm World Pack v56 */
+/* Integrated from Little Realm World Pack v60 */
 window.LR_WORLD_OBJECTS = [
   {
     "id": "town-well",
@@ -330,36 +330,40 @@ window.LR_WORLD_OBJECTS = [
   {
     "id": "wild-boulder",
     "type": "boulder",
-    "x": 1874,
-    "y": 986,
+    "x": 1856,
+    "y": 984,
     "solid": true,
     "hitbox": {
-      "x": 5,
-      "y": 20,
-      "w": 34,
-      "h": 13
+      "x": 9,
+      "y": 16,
+      "w": 26,
+      "h": 10
     },
     "interactable": false,
     "label": "Boulder",
     "container": false,
-    "capacity": 0
+    "capacity": 0,
+    "depthMode": "ysort",
+    "depthY": 28
   },
   {
     "id": "wild-log",
     "type": "log",
-    "x": 1554,
-    "y": 1554,
+    "x": 1560,
+    "y": 1528,
     "solid": true,
     "hitbox": {
-      "x": 4,
-      "y": 22,
-      "w": 42,
-      "h": 11
+      "x": 6,
+      "y": 13,
+      "w": 40,
+      "h": 12
     },
     "interactable": false,
     "label": "Fallen Log",
     "container": false,
-    "capacity": 0
+    "capacity": 0,
+    "depthMode": "ysort",
+    "depthY": 26
   },
   {
     "id": "wild-flowers",
