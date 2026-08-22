@@ -1,0 +1,26 @@
+const fs=require('fs'),path=require('path'),vm=require('vm');
+const root=path.resolve(__dirname,'..');
+const inventory=fs.readFileSync(path.join(root,'src/inventory.js'),'utf8');
+const storage=fs.readFileSync(path.join(root,'src/storage.js'),'utf8');
+const interactions=fs.readFileSync(path.join(root,'src/world-interactions.js'),'utf8');
+const loot=fs.readFileSync(path.join(root,'src/loot.js'),'utf8');
+const quests=fs.readFileSync(path.join(root,'src/quests.js'),'utf8');
+const panel=fs.readFileSync(path.join(root,'src/builder/panel-refresh.js'),'utf8');
+function ok(v,msg){if(!v)throw new Error(msg);}
+const record={};
+const ctx={console,window:{LR_ITEMS:{apple:{name:'Apple',stackLimit:10}},LR_INVENTORY:null},BALANCE:{inventory:{slots:20,defaultStackLimit:99}},state:{inventory:Array(20).fill(null)},numberOr:(v,d)=>Number.isFinite(Number(v))?Number(v):d,clamp:(v,a,b)=>Math.max(a,Math.min(b,v)),document:{getElementById:()=>null,addEventListener:()=>{},body:{appendChild:()=>{}}},setTimeout,Math,Object,Array,String,Number,Map,Set,JSON,performance:{now:()=>0},ensureWorldObjectRecord:()=>record,worldObjectDefinition:()=>({name:'Chest'}),constrainFloatingPanel:()=>{},toast:()=>{}};
+vm.createContext(ctx);vm.runInContext(inventory,ctx);vm.runInContext(storage,ctx);
+vm.runInContext('state.inventory[0]={id:"apple",qty:5}',ctx);
+vm.runInContext('activeStorageObject={id:"box",capacity:2,contents:[{id:"apple",qty:3}]}',ctx);
+ok(vm.runInContext('storageSlotsForObject(activeStorageObject)[0].qty',ctx)===3,'starting storage contents were not initialized');
+ok(vm.runInContext('transferInventoryToStorage(0)',ctx)===true,'deposit into storage failed');
+ok(vm.runInContext('storageSlotsForObject(activeStorageObject)[0].qty',ctx)===8,'deposit did not persist in object storage state');
+ok(vm.runInContext('transferStorageToInventory(0)',ctx)===true,'withdraw from storage failed');
+ok(vm.runInContext('getItemCount("apple")',ctx)===8,'withdraw did not return items to backpack');
+ok(interactions.includes('openMode:["storage","loot","simple"]')&&interactions.includes('openStorageContainer(obj)'),'Open interaction is missing storage behavior');
+ok(interactions.includes('openWorldObjectLoot')&&interactions.includes('openPersistentLootWindow'),'object loot does not use persistent mob-style loot window');
+ok(interactions.includes('questIds:Array.isArray')&&interactions.includes('applyWorldObjectQuestActions'),'object quest attachments are missing');
+ok(loot.includes('activeLootDepletedCallback')&&loot.includes('openPersistentLootWindow'),'loot depletion callback support is missing');
+ok(quests.includes('openWorldObjectQuestDialog')&&quests.includes('data-object-accept-quest'),'object quest offer UI is missing');
+ok(panel.includes('Storage Inventory')&&panel.includes('Loot Container')&&panel.includes('Offer Quests')&&panel.includes('Start Automatically'),'Builder object inspector is missing container/quest controls');
+console.log('PASS persistent storage + loot containers + object quest offers');
