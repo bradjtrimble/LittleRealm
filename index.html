@@ -1,0 +1,230 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no,viewport-fit=cover">
+  <meta name="theme-color" content="#1c1327">
+  <link rel="manifest" href="./manifest.webmanifest">
+  <link rel="icon" type="image/png" sizes="192x192" href="./assets/icons/icon-192.png">
+  <link rel="icon" type="image/png" sizes="512x512" href="./assets/icons/icon-512.png">
+  <title>Little Realm RPG</title>
+  <link rel="stylesheet" href="./style.css?v=776">
+</head>
+<body>
+<div id="startupScreen" class="startupScreen" aria-label="Little Realm startup">
+  <div class="startupBackdrop"></div>
+  <section id="startupTitleView" class="startupView active">
+    <div class="startupLogo">LITTLE REALM</div>
+    <div class="startupTagline">A small world. A long adventure.</div>
+    <div class="startupActions">
+      <button id="startupContinue" class="startupPrimary">Continue</button>
+      <button id="startupNew">Choose Character</button>
+    </div>
+    <div class="startupHint">Your character and progress are saved on this device.</div>
+  </section>
+  <section id="characterSelectView" class="startupView characterSelectView">
+    <div class="creatorHeader"><button id="characterCreatorBack" class="creatorBack">← Back</button><div><div class="creatorEyebrow">NEW ADVENTURE</div><h1>Choose Your Character</h1><div class="characterSelectSubtitle">Pick a premade adventurer. Equipment changes gameplay, but your selected character keeps their complete visual design.</div></div></div>
+    <div class="characterCreatorLayout characterSelectLayout">
+      <div class="characterPreviewPane"><canvas id="characterPreviewCanvas" width="300" height="330"></canvas><div class="creatorPreviewLabel">Selected character • live walk preview</div></div>
+      <div class="characterOptionsPane">
+        <label class="creatorNameLabel">Character Name<input id="characterNameInput" maxlength="24" value="Adventurer" autocomplete="off"></label>
+        <div class="characterSelectSectionTitle">AVAILABLE CHARACTERS</div>
+        <div id="characterAppearanceChoices" class="characterChoiceGrid characterSelectGrid"></div>
+        <div class="characterSelectNote"><b>Simple by design.</b> Armor, boots, and other gear remain equipment for progression and inventory, but they do not need separate overlay artwork or alignment.</div>
+        <button id="characterCreateBtn" class="startupPrimary creatorCreate">Start Adventure</button>
+      </div>
+    </div>
+  </section>
+</div>
+
+<div id="gameShell">
+  <canvas id="game"></canvas>
+
+  <div id="hud">
+    <div class="hudTop">
+      <span class="hudLevel">Lv <span id="lvl">1</span></span>
+      <span class="hudGold"><span id="gold">0</span> gold</span>
+    </div>
+    <div id="hudStats"><span>ATK <b id="hudAtk">5</b></span><span>DEF <b id="hudDef">1</b></span></div>
+    <div class="small" style="margin-top:5px">HP <span id="hpText">30/30</span></div>
+    <div class="bar"><div id="hpFill" class="fill"></div></div>
+    <div class="small" style="margin-top:5px">XP <span id="xpText">0/400</span></div>
+    <div class="bar"><div id="xpFill" class="fill"></div></div>
+  </div>
+
+  <button id="menuBtn">MENU</button>
+  <button id="backpackBtn" aria-label="Open backpack"><span class="bagGlyph" aria-hidden="true"></span><span id="backpackCount">0/20</span></button>
+  <div id="questChip">Quests</div>
+  <div id="toast"></div>
+  <div id="pcControls" aria-hidden="true"></div>
+  <div id="buildBadge" aria-hidden="true">v77.6 • CHARACTER SELECT</div>
+
+  <div id="dpad">
+    <div class="pad" id="up">▲</div>
+    <div class="pad" id="left">◀</div>
+    <div class="pad" id="right">▶</div>
+    <div class="pad" id="down">▼</div>
+  </div>
+
+  <div id="actionHint">ATTACK<br>MOB</div>
+
+  <div id="targetHud">
+    <div id="targetHudTop"><span id="targetName">Target</span><span id="targetHpText">0/0</span></div>
+    <div id="targetMeta"><span id="targetThreat">EVEN</span><span id="targetCombatStats"></span></div>
+    <div id="targetHpTrack"><div id="targetHpFill"></div></div>
+    <div id="combatHint">Auto-attacking</div>
+  </div>
+  <button id="quickPotion">POTION 2</button>
+
+  <div id="backpack" class="overlay floatingOverlay">
+    <div id="backpackPanel" class="panel floatingPanel" role="region" aria-label="Backpack">
+      <div id="backpackDragHandle" class="compactPanelHeader floatingDragHandle">
+        <div class="compactPanelTitle">Backpack <span id="inventoryCapacity">0 / 20</span></div>
+        <button class="panelClose" id="closeBackpack" aria-label="Close backpack">×</button>
+      </div>
+      <div class="equipmentSectionLabel">EQUIPPED GEAR <span>drag gear here • click equipped gear to unequip</span></div>
+      <div id="equipmentGrid" aria-label="Equipped gear"></div>
+      <div class="equipmentSectionLabel backpackItemsLabel">BACKPACK <span>double-click gear to equip</span></div>
+      <div id="inventoryGrid" aria-label="Backpack inventory"></div>
+    </div>
+  </div>
+
+  <div id="lootWindow" class="overlay floatingOverlay">
+    <div id="lootPanel" class="panel floatingPanel" role="region" aria-label="Loot">
+      <div id="lootDragHandle" class="compactPanelHeader floatingDragHandle">
+        <div class="compactPanelTitle">Loot</div>
+        <button class="panelClose" id="closeLootWindow" aria-label="Close loot window">×</button>
+      </div>
+      <div id="lootGrid" aria-label="Dropped items"></div>
+    </div>
+  </div>
+
+
+  <div id="storageWindow" class="overlay floatingOverlay">
+    <div id="storagePanel" class="panel floatingPanel storagePanel" role="region" aria-label="Storage Container">
+      <div id="storageDragHandle" class="compactPanelHeader floatingDragHandle">
+        <div class="compactPanelTitle"><span id="storageTitle">Storage</span> <span id="storageCapacity">0 / 8</span></div>
+        <button class="panelClose" id="closeStorageWindow" aria-label="Close storage">×</button>
+      </div>
+      <div class="storageWorkspace">
+        <section id="storageContainerSection" class="storageSection"><div class="storageSectionTitle">Container</div><div id="storageGrid"></div><div class="storageTip">Click or drag items to your backpack.</div></section>
+        <section id="storageBagSection" class="storageSection"><div class="storageSectionTitle">Backpack</div><div id="storageInventoryGrid"></div><div class="storageTip">Click or drag items into the container.</div></section>
+      </div>
+    </div>
+  </div>
+
+  <div id="objectQuestDialog" class="overlay floatingOverlay">
+    <div id="objectQuestPanel" class="panel floatingPanel questDialoguePanel" role="region" aria-labelledby="objectQuestTitle">
+      <div id="objectQuestDragHandle" class="npcDialogHeader floatingDragHandle">
+        <div><h2 id="objectQuestTitle">Quest Board</h2><div id="objectQuestRole">Available Quests</div></div>
+        <button class="panelClose" id="closeObjectQuestDialog" aria-label="Close quest offers">×</button>
+      </div>
+      <div id="objectQuestActions"></div>
+    </div>
+  </div>
+
+  <div id="questLog" class="overlay floatingOverlay">
+    <div id="questLogPanel" class="panel floatingPanel" role="region" aria-label="Quest Log">
+      <div id="questLogDragHandle" class="compactPanelHeader floatingDragHandle">
+        <div class="compactPanelTitle">Quest Log</div>
+        <button class="panelClose" id="closeQuestLog" aria-label="Close quest log">×</button>
+      </div>
+      <div id="questLogBody"></div>
+    </div>
+  </div>
+
+  <div id="npcDialog" class="overlay floatingOverlay">
+    <div id="npcDialogPanel" class="panel floatingPanel questDialoguePanel" role="region" aria-labelledby="npcDialogName">
+      <div id="npcDialogDragHandle" class="npcDialogHeader floatingDragHandle">
+        <div><h2 id="npcDialogName">NPC</h2><div id="npcDialogRole">Villager</div></div>
+        <button class="panelClose" id="closeNpcDialog" aria-label="Close conversation">×</button>
+      </div>
+      <div id="npcDialogText"></div>
+      <div id="npcDialogActions"></div>
+    </div>
+  </div>
+
+  <div id="disposePrompt" class="overlay">
+    <div id="disposePanel" class="panel" role="dialog" aria-modal="true" aria-labelledby="disposeTitle">
+      <div class="inventoryEyebrow">DISPOSE ITEM</div>
+      <h2 id="disposeTitle">Are you sure?</h2>
+      <div id="disposeItemName"></div>
+      <div id="disposeItemText">Dispose this item? This cannot be undone.</div>
+      <div class="disposeActions">
+        <button class="action secondary" id="disposeCancel">Keep Item</button>
+        <button class="action danger" id="disposeConfirm">Dispose</button>
+      </div>
+    </div>
+  </div>
+
+  <div id="menu" class="overlay">
+    <div class="panel">
+      <h2 id="menuCharacterName">Hero</h2>
+      <div class="infoGrid">
+        <div class="infoBox">Attack<br><b id="mAtk">5</b></div>
+        <div class="infoBox">Defense<br><b id="mDef">1</b></div>
+        <div class="infoBox">Potions<br><b id="mPotions">2</b></div>
+        <div class="infoBox">Kills<br><b id="mKills">0</b></div>
+      </div>
+      <div class="infoBox" style="margin-bottom:12px">
+        <b>Quest</b><br>
+        <span id="mQuest">No active quests.</span>
+      </div>
+      <div class="infoBox" id="keybindList" style="margin-bottom:12px"></div>
+      <div class="infoBox audioSettingsBox" style="margin-bottom:12px">
+        <b>Audio</b>
+        <div class="audioSettingRow"><span>Master</span><input id="audioMaster" type="range" min="0" max="100" value="100"><span id="audioMasterValue">100%</span></div>
+        <div class="audioSettingRow"><span>Music</span><input id="audioMusic" type="range" min="0" max="100" value="75"><span id="audioMusicValue">75%</span></div>
+        <div class="audioSettingRow"><span>Ambience</span><input id="audioAmbience" type="range" min="0" max="100" value="65"><span id="audioAmbienceValue">65%</span></div>
+        <div class="audioSettingRow"><span>SFX</span><input id="audioSfx" type="range" min="0" max="100" value="85"><span id="audioSfxValue">85%</span></div>
+        <div class="audioSettingRow"><span>UI</span><input id="audioUi" type="range" min="0" max="100" value="80"><span id="audioUiValue">80%</span></div>
+        <label class="audioMuteRow"><input id="audioMute" type="checkbox"> Mute All</label>
+      </div>
+      <div class="menuActions">
+        <button class="action" id="saveBtn">Save</button>
+        <button class="action" id="loadBtn">Load</button>
+        <button class="action" id="fullBtn">Fullscreen</button>
+        <button class="action" id="newBtn">New Game</button>
+        <button class="action" id="closeMenu">Back to Game</button>
+      </div>
+    </div>
+  </div>
+
+  <div id="battle" class="overlay">
+    <div id="battlePanel" class="panel">
+      <div id="battleTopbar">
+        <h2 id="battleTitle">Encounter</h2>
+        <div id="battleTurn">YOUR TURN</div>
+      </div>
+      <div id="battleScene" data-kind="slime">
+        <div id="heroStatus" class="battleStatus">
+          <div class="statusTop"><span id="battleHeroName">Hero</span><span id="bHeroHp" class="statusHpText">30/30</span></div>
+          <div class="battleHpTrack"><div id="bHeroHpFill" class="battleHpFill"></div></div>
+        </div>
+        <div id="enemyStatus" class="battleStatus">
+          <div class="statusTop"><span id="bEnemyName">Enemy</span><span id="bEnemyHp" class="statusHpText">0/0</span></div>
+          <div class="battleHpTrack"><div id="bEnemyHpFill" class="battleHpFill"></div></div>
+        </div>
+        <div id="enemyIntent">Enemy is preparing an attack...</div>
+        <div id="battleGroundShadowHero"></div>
+        <div id="battleGroundShadowEnemy"></div>
+        <canvas id="heroBattleSprite" width="48" height="66"></canvas>
+        <canvas id="enemyBattleSprite" width="72" height="72"></canvas>
+        <div id="battleFxLayer"></div>
+      </div>
+      <div id="battleCommandArea">
+        <div id="battleMsg">Choose an action.</div>
+        <div class="battleActions">
+          <button class="battleAction" id="attackBtn"><span class="actionName">ATTACK</span><span class="actionSub">Strike the enemy</span></button>
+          <button class="battleAction" id="defendBtn"><span class="actionName">GUARD</span><span class="actionSub">Reduce the next hit</span></button>
+          <button class="battleAction" id="potionBtn"><span class="actionName">POTION <span id="potionCount">(2)</span></span><span class="actionSub">Recover 14 HP</span></button>
+          <button class="battleAction" id="runBtn"><span class="actionName">FLEE</span><span class="actionSub">Try to escape</span></button>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+  <script src="./js/pwa.js?v=59"></script>
+  <script src="./js/runtime-loader.js?v=775"></script>
+</body>
+</html>

@@ -1,0 +1,3397 @@
+{
+  "format": "little-realm-content-library",
+  "schemaVersion": 12,
+  "items": {
+    "slimeGel": {
+      "name": "Slime Gel",
+      "description": "A small glossy blob of bright lime-green translucent slime gel, slightly irregular in shape, with a few tiny bubbles inside and bright white highlights.",
+      "symbol": "G",
+      "icon": "./assets/items/slime-gel.png",
+      "category": "Material",
+      "rarity": "Common",
+      "stackLimit": 50,
+      "sellValue": 1,
+      "tags": [
+        "slime",
+        "crafting"
+      ]
+    },
+    "starterTunic": {
+      "name": "Starter Tunic",
+      "description": "A simple beginner tunic equipped in the Chest slot. It affects equipment progression without changing the selected premade character artwork.",
+      "symbol": "T",
+      "icon": "",
+      "category": "Armor",
+      "rarity": "Common",
+      "stackLimit": 1,
+      "sellValue": 0,
+      "tags": [
+        "starter",
+        "armor"
+      ],
+      "equipmentSlot": "chest"
+    },
+    "starterTrousers": {
+      "name": "Starter Trousers",
+      "description": "Simple beginner trousers equipped in the Legs slot. They remain gameplay equipment without requiring separate character-layer art.",
+      "symbol": "L",
+      "icon": "",
+      "category": "Armor",
+      "rarity": "Common",
+      "stackLimit": 1,
+      "sellValue": 0,
+      "tags": [
+        "starter",
+        "armor"
+      ],
+      "equipmentSlot": "legs"
+    },
+    "wornLeatherBoots": {
+      "name": "Worn Leather Boots",
+      "description": "Basic beginner boots equipped in the Feet slot. They remain gameplay equipment without requiring separate character-layer art.",
+      "symbol": "B",
+      "icon": "",
+      "category": "Armor",
+      "rarity": "Common",
+      "stackLimit": 1,
+      "sellValue": 0,
+      "tags": [
+        "starter",
+        "armor"
+      ],
+      "equipmentSlot": "feet"
+    }
+  },
+  "lootTables": {
+    "slime": [
+      {
+        "itemId": "slimeGel",
+        "chancePercent": 70,
+        "minQty": 1,
+        "maxQty": 2
+      }
+    ],
+    "goblin": [],
+    "wolf": [],
+    "cow": [],
+    "pig": [],
+    "chicken": [],
+    "snickers": [],
+    "mouse": [],
+    "bear": []
+  },
+  "mobs": {
+    "slime": {
+      "name": "Slime",
+      "spriteAsset": "mobsprite-slime",
+      "sizeClass": "small",
+      "displayHeight": 19,
+      "battleScale": 0.68,
+      "boss": false,
+      "baseLevel": 2,
+      "levelMin": 1,
+      "levelMax": 3,
+      "autoLevelStats": false,
+      "hp": 25,
+      "attack": 4,
+      "defense": 0,
+      "xpMultiplier": 1,
+      "xp": 8,
+      "goldMin": 2,
+      "goldMax": 5,
+      "goldDropChancePercent": 100,
+      "potionDropChancePercent": 0,
+      "potionDropAmount": 1,
+      "eliteChancePercent": 1,
+      "attackIntervalSeconds": 1.45,
+      "respawnMinSeconds": 18,
+      "respawnMaxSeconds": 28,
+      "aggressive": false,
+      "aggroTriggerRange": 58,
+      "alertRange": 82,
+      "chaseSpeed": 45,
+      "wanderSpeed": 15,
+      "leashDistance": 120,
+      "leashSpeed": 34,
+      "wanderDelayMinSeconds": 1.2,
+      "wanderDelayMaxSeconds": 4,
+      "audio": {
+        "aggro": "",
+        "attack": "",
+        "hit": "",
+        "death": ""
+      },
+      "audioRadius": 430,
+      "lootTable": "slime"
+    },
+    "goblin": {
+      "name": "Goblin",
+      "spriteAsset": "mobsprite-goblin",
+      "sizeClass": "medium",
+      "displayHeight": 23,
+      "battleScale": 0.68,
+      "boss": false,
+      "baseLevel": 5,
+      "levelMin": 4,
+      "levelMax": 6,
+      "autoLevelStats": false,
+      "hp": 44,
+      "attack": 14,
+      "defense": 4,
+      "xpMultiplier": 1,
+      "xp": 16,
+      "goldMin": 4,
+      "goldMax": 8,
+      "goldDropChancePercent": 100,
+      "potionDropChancePercent": 0,
+      "potionDropAmount": 1,
+      "eliteChancePercent": 1,
+      "attackIntervalSeconds": 1.45,
+      "respawnMinSeconds": 18,
+      "respawnMaxSeconds": 28,
+      "aggressive": true,
+      "aggroTriggerRange": 58,
+      "alertRange": 82,
+      "chaseSpeed": 58,
+      "wanderSpeed": 10,
+      "leashDistance": 120,
+      "leashSpeed": 34,
+      "wanderDelayMinSeconds": 1.2,
+      "wanderDelayMaxSeconds": 4,
+      "audio": {
+        "aggro": "",
+        "attack": "",
+        "hit": "",
+        "death": ""
+      },
+      "audioRadius": 430,
+      "lootTable": "goblin"
+    },
+    "wolf": {
+      "name": "Wolf",
+      "spriteAsset": "mobsprite-wolf",
+      "sizeClass": "medium",
+      "displayHeight": 25,
+      "battleScale": 0.68,
+      "boss": false,
+      "baseLevel": 4,
+      "levelMin": 3,
+      "levelMax": 5,
+      "autoLevelStats": false,
+      "hp": 36,
+      "attack": 12,
+      "defense": 2,
+      "xpMultiplier": 1,
+      "xp": 13,
+      "goldMin": 3,
+      "goldMax": 7,
+      "goldDropChancePercent": 100,
+      "potionDropChancePercent": 0,
+      "potionDropAmount": 1,
+      "eliteChancePercent": 1,
+      "attackIntervalSeconds": 1.33,
+      "respawnMinSeconds": 5,
+      "respawnMaxSeconds": 28,
+      "aggressive": true,
+      "aggroTriggerRange": 58,
+      "alertRange": 82,
+      "chaseSpeed": 72,
+      "wanderSpeed": 15,
+      "leashDistance": 120,
+      "leashSpeed": 34,
+      "wanderDelayMinSeconds": 1.2,
+      "wanderDelayMaxSeconds": 4,
+      "audio": {
+        "aggro": "",
+        "attack": "",
+        "hit": "",
+        "death": ""
+      },
+      "audioRadius": 430,
+      "lootTable": "wolf"
+    },
+    "cow": {
+      "name": "Cow",
+      "spriteAsset": "mobs-cow",
+      "sizeClass": "large",
+      "displayHeight": 39,
+      "battleScale": 0.48,
+      "boss": false,
+      "baseLevel": 2,
+      "levelMin": 1,
+      "levelMax": 2,
+      "autoLevelStats": false,
+      "hp": 12,
+      "attack": 1,
+      "defense": 0,
+      "xpMultiplier": 0.35,
+      "xp": 4,
+      "goldMin": 0,
+      "goldMax": 0,
+      "goldDropChancePercent": 0,
+      "potionDropChancePercent": 0,
+      "potionDropAmount": 0,
+      "eliteChancePercent": 0,
+      "attackIntervalSeconds": 1.8,
+      "respawnMinSeconds": 3,
+      "respawnMaxSeconds": 30,
+      "aggressive": false,
+      "aggroTriggerRange": 0,
+      "alertRange": 0,
+      "chaseSpeed": 28,
+      "wanderSpeed": 8,
+      "leashDistance": 54,
+      "leashSpeed": 26,
+      "wanderDelayMinSeconds": 2,
+      "wanderDelayMaxSeconds": 6,
+      "audio": {
+        "aggro": "",
+        "attack": "",
+        "hit": "",
+        "death": ""
+      },
+      "audioRadius": 430,
+      "lootTable": "cow"
+    },
+    "pig": {
+      "name": "Pig",
+      "spriteAsset": "mobs-pig",
+      "sizeClass": "medium",
+      "displayHeight": 29,
+      "battleScale": 0.48,
+      "boss": false,
+      "baseLevel": 1,
+      "levelMin": 1,
+      "levelMax": 2,
+      "autoLevelStats": false,
+      "hp": 8,
+      "attack": 1,
+      "defense": 0,
+      "xpMultiplier": 0.3,
+      "xp": 3,
+      "goldMin": 0,
+      "goldMax": 0,
+      "goldDropChancePercent": 0,
+      "potionDropChancePercent": 0,
+      "potionDropAmount": 0,
+      "eliteChancePercent": 0,
+      "attackIntervalSeconds": 1.8,
+      "respawnMinSeconds": 20,
+      "respawnMaxSeconds": 30,
+      "aggressive": false,
+      "aggroTriggerRange": 0,
+      "alertRange": 0,
+      "chaseSpeed": 30,
+      "wanderSpeed": 14,
+      "leashDistance": 48,
+      "leashSpeed": 26,
+      "wanderDelayMinSeconds": 2,
+      "wanderDelayMaxSeconds": 6,
+      "audio": {
+        "aggro": "",
+        "attack": "",
+        "hit": "",
+        "death": ""
+      },
+      "audioRadius": 430,
+      "lootTable": "pig"
+    },
+    "chicken": {
+      "name": "Chicken",
+      "boss": false,
+      "baseLevel": 1,
+      "levelMin": 1,
+      "levelMax": 1,
+      "hp": 4,
+      "attack": 1,
+      "defense": 0,
+      "xpMultiplier": 0.2,
+      "xp": 2,
+      "goldMin": 0,
+      "goldMax": 0,
+      "goldDropChancePercent": 0,
+      "potionDropChancePercent": 0,
+      "potionDropAmount": 0,
+      "eliteChancePercent": 0,
+      "attackIntervalSeconds": 1.7,
+      "respawnMinSeconds": 16,
+      "respawnMaxSeconds": 25,
+      "aggressive": false,
+      "aggroTriggerRange": 0,
+      "alertRange": 0,
+      "chaseSpeed": 34,
+      "wanderSpeed": 18,
+      "leashDistance": 46,
+      "leashSpeed": 28,
+      "wanderDelayMinSeconds": 1,
+      "wanderDelayMaxSeconds": 3.2,
+      "autoLevelStats": false,
+      "spriteAsset": "mobs-chicken",
+      "battleScale": 0.46,
+      "lootTable": "chicken",
+      "displayHeight": 20.12,
+      "sizeClass": "small",
+      "audio": {
+        "aggro": "",
+        "attack": "",
+        "hit": "",
+        "death": ""
+      },
+      "audioRadius": 430
+    },
+    "snickers": {
+      "name": "Snickers",
+      "spriteAsset": "mobsprite-cave-bear",
+      "sizeClass": "custom",
+      "displayHeight": 68,
+      "battleScale": 0.13,
+      "boss": true,
+      "baseLevel": 8,
+      "levelMin": 8,
+      "levelMax": 8,
+      "autoLevelStats": false,
+      "hp": 70,
+      "attack": 10,
+      "defense": 3,
+      "xpMultiplier": 1,
+      "xp": 55,
+      "goldMin": 35,
+      "goldMax": 55,
+      "goldDropChancePercent": 100,
+      "potionDropChancePercent": 20,
+      "potionDropAmount": 2,
+      "eliteChancePercent": 0,
+      "attackIntervalSeconds": 1.55,
+      "respawnMinSeconds": 999999,
+      "respawnMaxSeconds": 999999,
+      "aggressive": true,
+      "aggroTriggerRange": 84,
+      "alertRange": 116,
+      "chaseSpeed": 52,
+      "wanderSpeed": 0,
+      "leashDistance": 120,
+      "leashSpeed": 34,
+      "wanderDelayMinSeconds": 1.2,
+      "wanderDelayMaxSeconds": 4,
+      "audio": {
+        "aggro": "",
+        "attack": "",
+        "hit": "",
+        "death": ""
+      },
+      "audioRadius": 430,
+      "lootTable": "snickers"
+    },
+    "mouse": {
+      "name": "Mouse",
+      "spriteAsset": "mobsprite-mouse-2",
+      "sizeClass": "tiny",
+      "displayHeight": 13,
+      "battleScale": 0.55,
+      "boss": false,
+      "baseLevel": 1,
+      "levelMin": 1,
+      "levelMax": 1,
+      "autoLevelStats": true,
+      "hp": 18,
+      "attack": 3,
+      "defense": 0,
+      "xpMultiplier": 1,
+      "xp": 50,
+      "goldMin": 0,
+      "goldMax": 0,
+      "goldDropChancePercent": 0,
+      "potionDropChancePercent": 0,
+      "potionDropAmount": 1,
+      "eliteChancePercent": 0,
+      "attackIntervalSeconds": 1.5,
+      "respawnMinSeconds": 18,
+      "respawnMaxSeconds": 28,
+      "aggressive": true,
+      "aggroTriggerRange": 58,
+      "alertRange": 82,
+      "chaseSpeed": 50,
+      "wanderSpeed": 20,
+      "leashDistance": 120,
+      "leashSpeed": 34,
+      "wanderDelayMinSeconds": 1.2,
+      "wanderDelayMaxSeconds": 4,
+      "lootTable": "mouse",
+      "audio": {
+        "aggro": "",
+        "attack": "",
+        "hit": "",
+        "death": ""
+      },
+      "audioRadius": 430
+    },
+    "bear": {
+      "name": "Bear",
+      "spriteAsset": "mobsprite-bear",
+      "sizeClass": "large",
+      "displayHeight": 35,
+      "battleScale": 0.55,
+      "boss": false,
+      "baseLevel": 4,
+      "levelMin": 4,
+      "levelMax": 4,
+      "autoLevelStats": true,
+      "hp": 42,
+      "attack": 9,
+      "defense": 2,
+      "xpMultiplier": 1,
+      "xp": 50,
+      "goldMin": 0,
+      "goldMax": 0,
+      "goldDropChancePercent": 0,
+      "potionDropChancePercent": 0,
+      "potionDropAmount": 1,
+      "eliteChancePercent": 0,
+      "attackIntervalSeconds": 1.5,
+      "respawnMinSeconds": 5,
+      "respawnMaxSeconds": 28,
+      "aggressive": true,
+      "aggroTriggerRange": 58,
+      "alertRange": 82,
+      "chaseSpeed": 50,
+      "wanderSpeed": 10,
+      "leashDistance": 120,
+      "leashSpeed": 34,
+      "wanderDelayMinSeconds": 1.2,
+      "wanderDelayMaxSeconds": 4,
+      "audio": {
+        "aggro": "",
+        "attack": "",
+        "hit": "",
+        "death": ""
+      },
+      "audioRadius": 430,
+      "lootTable": "bear"
+    }
+  },
+  "assets": {
+    "mobs-chicken": {
+      "name": "Chicken",
+      "path": "assets/mobs/chicken.png",
+      "type": "mobSprite",
+      "spriteLayout": {
+        "columns": 4,
+        "rows": 4,
+        "directionRows": {
+          "down": 0,
+          "right": 1,
+          "left": 2,
+          "up": 3
+        },
+        "attackColumn": 3,
+        "walkCycle": [
+          0,
+          1,
+          2,
+          1
+        ]
+      },
+      "width": 1254,
+      "height": 1254,
+      "bytes": 790453,
+      "artProfile": "little-realm-v1",
+      "analysis": {
+        "hasTransparency": true,
+        "alphaCoverage": 0.1709,
+        "frameMetrics": {
+          "columns": 4,
+          "rows": 4,
+          "referenceVisibleWidth": 119,
+          "referenceVisibleHeight": 175,
+          "maxVisibleWidth": 217,
+          "maxVisibleHeight": 224,
+          "emptyFrames": 0,
+          "edgeTouch": false
+        }
+      },
+      "scaleMode": "visibleHeight"
+    },
+    "mobs-cow": {
+      "name": "Cow",
+      "path": "assets/mobs/cow.png",
+      "type": "mobSprite",
+      "spriteLayout": {
+        "columns": 4,
+        "rows": 4,
+        "directionRows": {
+          "down": 0,
+          "right": 1,
+          "left": 2,
+          "up": 3
+        },
+        "attackColumn": 3,
+        "walkCycle": [
+          0,
+          1,
+          2,
+          1
+        ]
+      },
+      "width": 1254,
+      "height": 1254,
+      "bytes": 786242,
+      "artProfile": "little-realm-v1",
+      "analysis": {
+        "hasTransparency": true,
+        "alphaCoverage": 0.1733,
+        "frameMetrics": {
+          "columns": 4,
+          "rows": 4,
+          "referenceVisibleWidth": 131,
+          "referenceVisibleHeight": 197,
+          "maxVisibleWidth": 217,
+          "maxVisibleHeight": 217,
+          "emptyFrames": 0,
+          "edgeTouch": false
+        }
+      },
+      "scaleMode": "visibleHeight"
+    },
+    "mobs-pig": {
+      "name": "Pig",
+      "path": "assets/mobs/pig.png",
+      "type": "mobSprite",
+      "spriteLayout": {
+        "columns": 4,
+        "rows": 4,
+        "directionRows": {
+          "down": 0,
+          "right": 1,
+          "left": 2,
+          "up": 3
+        },
+        "attackColumn": 3,
+        "walkCycle": [
+          0,
+          1,
+          2,
+          1
+        ]
+      },
+      "width": 1254,
+      "height": 1254,
+      "bytes": 762612,
+      "artProfile": "little-realm-v1",
+      "analysis": {
+        "hasTransparency": true,
+        "alphaCoverage": 0.1931,
+        "frameMetrics": {
+          "columns": 4,
+          "rows": 4,
+          "referenceVisibleWidth": 160,
+          "referenceVisibleHeight": 194,
+          "maxVisibleWidth": 199,
+          "maxVisibleHeight": 201,
+          "emptyFrames": 0,
+          "edgeTouch": false
+        }
+      },
+      "scaleMode": "visibleHeight"
+    },
+    "npcs-npc-placeholder": {
+      "name": "Npc Placeholder",
+      "path": "assets/npcs/npc-placeholder.png",
+      "type": "npcSprite",
+      "width": 1254,
+      "height": 1254,
+      "bytes": 659844,
+      "artProfile": "little-realm-v1",
+      "analysis": {
+        "hasTransparency": true,
+        "alphaCoverage": 0.1389,
+        "frameMetrics": {
+          "columns": 4,
+          "rows": 4,
+          "referenceVisibleWidth": 138,
+          "referenceVisibleHeight": 189,
+          "maxVisibleWidth": 209,
+          "maxVisibleHeight": 194,
+          "emptyFrames": 0,
+          "edgeTouch": false
+        }
+      },
+      "spriteLayout": {
+        "columns": 4,
+        "rows": 4,
+        "directionRows": {
+          "down": 0,
+          "right": 1,
+          "left": 2,
+          "up": 3
+        },
+        "attackColumn": 3,
+        "walkCycle": [
+          0,
+          1,
+          2,
+          1
+        ]
+      },
+      "scaleMode": "displayHeight"
+    },
+    "items-slime-gel": {
+      "name": "Slime Gel",
+      "path": "assets/items/slime-gel.png",
+      "type": "itemIcon",
+      "width": 256,
+      "height": 256,
+      "bytes": 52733,
+      "artProfile": "little-realm-v1",
+      "analysis": {
+        "hasTransparency": true,
+        "alphaCoverage": 0.3918
+      }
+    },
+    "environment-environment-atlas": {
+      "name": "Environment Atlas",
+      "path": "assets/environment/environment-atlas.png",
+      "type": "worldImage",
+      "width": 1024,
+      "height": 512,
+      "bytes": 456923,
+      "artProfile": "little-realm-v1",
+      "analysis": {
+        "hasTransparency": true,
+        "alphaCoverage": 0.4553
+      }
+    },
+    "environment-terrain-seamless": {
+      "name": "Terrain Seamless",
+      "path": "assets/environment/terrain-seamless.png",
+      "type": "worldImage",
+      "width": 512,
+      "height": 256,
+      "bytes": 327009,
+      "artProfile": "little-realm-v1",
+      "analysis": {
+        "hasTransparency": false,
+        "alphaCoverage": 1
+      }
+    },
+    "environment-water-seamless": {
+      "name": "Water Seamless",
+      "path": "assets/environment/water-seamless.png",
+      "type": "worldImage",
+      "width": 512,
+      "height": 512,
+      "bytes": 25013,
+      "artProfile": "little-realm-v1",
+      "analysis": {
+        "hasTransparency": false,
+        "alphaCoverage": 1
+      }
+    },
+    "loot-dust": {
+      "name": "Dust",
+      "path": "assets/loot/dust.png",
+      "type": "worldImage",
+      "width": 312,
+      "height": 320,
+      "bytes": 85128,
+      "artProfile": "little-realm-v1",
+      "analysis": {
+        "hasTransparency": true,
+        "alphaCoverage": 0.299
+      }
+    },
+    "loot-lootable-dust": {
+      "name": "Lootable Dust",
+      "path": "assets/loot/lootable-dust.png",
+      "type": "worldImage",
+      "width": 1254,
+      "height": 1254,
+      "bytes": 2532979,
+      "artProfile": "little-realm-v1",
+      "analysis": {
+        "hasTransparency": true,
+        "alphaCoverage": 0.4722
+      }
+    },
+    "props-object-atlas": {
+      "name": "Object Atlas",
+      "path": "assets/props/object-atlas.png",
+      "type": "worldImage",
+      "width": 492,
+      "height": 2048,
+      "bytes": 1217355,
+      "artProfile": "little-realm-v1",
+      "analysis": {
+        "hasTransparency": true,
+        "alphaCoverage": 0.3737
+      }
+    },
+    "terraintexture-autumn": {
+      "name": "Autumn",
+      "path": "assets/environment/terrain/autumn.png",
+      "type": "terrainTexture",
+      "width": 1254,
+      "height": 1254,
+      "bytes": 3049529,
+      "imported": true,
+      "artProfile": "little-realm-v1",
+      "analysis": {
+        "hasTransparency": false,
+        "alphaCoverage": 1
+      }
+    },
+    "terraintexture-autumn2": {
+      "name": "Autumn2",
+      "path": "assets/environment/terrain/autumn2.png",
+      "type": "terrainTexture",
+      "width": 1024,
+      "height": 1024,
+      "bytes": 536355,
+      "imported": true,
+      "artProfile": "little-realm-v1",
+      "analysis": {
+        "hasTransparency": false,
+        "alphaCoverage": 1
+      }
+    },
+    "terraintexture-beach": {
+      "name": "Beach",
+      "path": "assets/environment/terrain/beach.png",
+      "type": "terrainTexture",
+      "width": 1024,
+      "height": 1024,
+      "bytes": 471342,
+      "imported": true,
+      "artProfile": "little-realm-v1",
+      "analysis": {
+        "hasTransparency": false,
+        "alphaCoverage": 1
+      }
+    },
+    "terraintexture-brick_path": {
+      "name": "Brick Path",
+      "path": "assets/environment/terrain/brick_path.png",
+      "type": "terrainTexture",
+      "width": 1024,
+      "height": 1024,
+      "bytes": 569806,
+      "imported": true,
+      "artProfile": "little-realm-v1",
+      "analysis": {
+        "hasTransparency": false,
+        "alphaCoverage": 1
+      }
+    },
+    "terraintexture-cobble_path": {
+      "name": "Cobble Path",
+      "path": "assets/environment/terrain/cobble_path.png",
+      "type": "terrainTexture",
+      "width": 1024,
+      "height": 1024,
+      "bytes": 600007,
+      "imported": true,
+      "artProfile": "little-realm-v1",
+      "analysis": {
+        "hasTransparency": false,
+        "alphaCoverage": 1
+      }
+    },
+    "terraintexture-desert": {
+      "name": "Desert",
+      "path": "assets/environment/terrain/desert.png",
+      "type": "terrainTexture",
+      "width": 1024,
+      "height": 1024,
+      "bytes": 526049,
+      "imported": true,
+      "artProfile": "little-realm-v1",
+      "analysis": {
+        "hasTransparency": false,
+        "alphaCoverage": 1
+      }
+    },
+    "terraintexture-farmland": {
+      "name": "Farmland",
+      "path": "assets/environment/terrain/farmland.png",
+      "type": "terrainTexture",
+      "width": 1024,
+      "height": 1024,
+      "bytes": 578277,
+      "imported": true,
+      "artProfile": "little-realm-v1",
+      "analysis": {
+        "hasTransparency": false,
+        "alphaCoverage": 1
+      }
+    },
+    "terraintexture-magma": {
+      "name": "Magma",
+      "path": "assets/environment/terrain/magma.png",
+      "type": "terrainTexture",
+      "width": 1024,
+      "height": 1024,
+      "bytes": 545152,
+      "imported": true,
+      "artProfile": "little-realm-v1",
+      "analysis": {
+        "hasTransparency": false,
+        "alphaCoverage": 1
+      }
+    },
+    "terraintexture-mountain": {
+      "name": "Mountain",
+      "path": "assets/environment/terrain/mountain.png",
+      "type": "terrainTexture",
+      "width": 1024,
+      "height": 1024,
+      "bytes": 622899,
+      "imported": true,
+      "artProfile": "little-realm-v1",
+      "analysis": {
+        "hasTransparency": false,
+        "alphaCoverage": 1
+      }
+    },
+    "terraintexture-mud": {
+      "name": "Mud",
+      "path": "assets/environment/terrain/mud.png",
+      "type": "terrainTexture",
+      "width": 1024,
+      "height": 1024,
+      "bytes": 563959,
+      "imported": true,
+      "artProfile": "little-realm-v1",
+      "analysis": {
+        "hasTransparency": false,
+        "alphaCoverage": 1
+      }
+    },
+    "terraintexture-ocean": {
+      "name": "Ocean",
+      "path": "assets/environment/terrain/ocean.png",
+      "type": "terrainTexture",
+      "width": 1024,
+      "height": 1024,
+      "bytes": 510426,
+      "imported": true,
+      "artProfile": "little-realm-v1",
+      "analysis": {
+        "hasTransparency": false,
+        "alphaCoverage": 1
+      }
+    },
+    "terraintexture-pond": {
+      "name": "Pond",
+      "path": "assets/environment/terrain/pond.png",
+      "type": "terrainTexture",
+      "width": 1024,
+      "height": 1024,
+      "bytes": 529172,
+      "imported": true,
+      "artProfile": "little-realm-v1",
+      "analysis": {
+        "hasTransparency": false,
+        "alphaCoverage": 1
+      }
+    },
+    "terraintexture-snowy": {
+      "name": "Snowy",
+      "path": "assets/environment/terrain/snowy.png",
+      "type": "terrainTexture",
+      "width": 1024,
+      "height": 1024,
+      "bytes": 482397,
+      "imported": true,
+      "artProfile": "little-realm-v1",
+      "analysis": {
+        "hasTransparency": false,
+        "alphaCoverage": 1
+      }
+    },
+    "terraintexture-swamp": {
+      "name": "Swamp",
+      "path": "assets/environment/terrain/swamp.png",
+      "type": "terrainTexture",
+      "width": 1024,
+      "height": 1024,
+      "bytes": 533717,
+      "imported": true,
+      "artProfile": "little-realm-v1",
+      "analysis": {
+        "hasTransparency": false,
+        "alphaCoverage": 1
+      }
+    },
+    "worldimage-rock": {
+      "name": "Rock",
+      "path": "assets/imported/rock.png",
+      "type": "worldImage",
+      "width": 1254,
+      "height": 1254,
+      "bytes": 247389,
+      "imported": true,
+      "artProfile": "little-realm-v1",
+      "analysis": {
+        "hasTransparency": true,
+        "alphaCoverage": 0.1056
+      }
+    },
+    "terraintexture-meadow": {
+      "name": "Meadow",
+      "path": "assets/environment/terrain/meadow.jpg",
+      "type": "terrainTexture",
+      "width": 1168,
+      "height": 784,
+      "bytes": 476333,
+      "imported": true,
+      "artProfile": "little-realm-v1",
+      "analysis": {
+        "hasTransparency": false,
+        "alphaCoverage": 1
+      }
+    },
+    "terraintexture-amythest": {
+      "name": "Amythest",
+      "path": "assets/environment/terrain/amythest.jpg",
+      "type": "terrainTexture",
+      "width": 1168,
+      "height": 784,
+      "bytes": 400365,
+      "imported": true,
+      "artProfile": "little-realm-v1",
+      "analysis": {
+        "hasTransparency": false,
+        "alphaCoverage": 1
+      }
+    },
+    "terraintexture-hardwood": {
+      "name": "Hardwood",
+      "path": "assets/environment/terrain/hardwood.jpg",
+      "type": "terrainTexture",
+      "width": 1168,
+      "height": 784,
+      "bytes": 344412,
+      "imported": true,
+      "artProfile": "little-realm-v1",
+      "analysis": {
+        "hasTransparency": false,
+        "alphaCoverage": 1
+      }
+    },
+    "terraintexture-mossy-stone": {
+      "name": "Mossy Stone",
+      "path": "assets/environment/terrain/mossy-stone.jpg",
+      "type": "terrainTexture",
+      "width": 1168,
+      "height": 784,
+      "bytes": 345540,
+      "imported": true,
+      "artProfile": "little-realm-v1",
+      "analysis": {
+        "hasTransparency": false,
+        "alphaCoverage": 1
+      }
+    },
+    "terraintexture-ash": {
+      "name": "Ash",
+      "path": "assets/environment/terrain/ash.jpg",
+      "type": "terrainTexture",
+      "width": 1168,
+      "height": 784,
+      "bytes": 316164,
+      "imported": true,
+      "artProfile": "little-realm-v1",
+      "analysis": {
+        "hasTransparency": false,
+        "alphaCoverage": 1
+      }
+    },
+    "terraintexture-gravel": {
+      "name": "Gravel",
+      "path": "assets/environment/terrain/gravel.jpg",
+      "type": "terrainTexture",
+      "width": 1168,
+      "height": 784,
+      "bytes": 489774,
+      "imported": true,
+      "artProfile": "little-realm-v1",
+      "analysis": {
+        "hasTransparency": false,
+        "alphaCoverage": 1
+      }
+    },
+    "terraintexture-brick-wall": {
+      "name": "Brick Wall",
+      "path": "assets/environment/terrain/brick-wall.jpg",
+      "type": "terrainTexture",
+      "width": 1168,
+      "height": 784,
+      "bytes": 373152,
+      "imported": true,
+      "artProfile": "little-realm-v1",
+      "analysis": {
+        "hasTransparency": false,
+        "alphaCoverage": 1
+      }
+    },
+    "terraintexture-snow": {
+      "name": "Snow",
+      "path": "assets/environment/terrain/snow.jpg",
+      "type": "terrainTexture",
+      "width": 1168,
+      "height": 784,
+      "bytes": 259635,
+      "imported": true,
+      "artProfile": "little-realm-v1",
+      "analysis": {
+        "hasTransparency": false,
+        "alphaCoverage": 1
+      }
+    },
+    "terraintexture-stone": {
+      "name": "Stone",
+      "path": "assets/environment/terrain/stone.jpg",
+      "type": "terrainTexture",
+      "width": 1168,
+      "height": 784,
+      "bytes": 269600,
+      "imported": true,
+      "artProfile": "little-realm-v1",
+      "analysis": {
+        "hasTransparency": false,
+        "alphaCoverage": 1
+      }
+    },
+    "terraintexture-flower-grassland": {
+      "name": "Flower Grassland",
+      "path": "assets/environment/terrain/flower-grassland.jpg",
+      "type": "terrainTexture",
+      "width": 1168,
+      "height": 784,
+      "bytes": 471510,
+      "imported": true,
+      "artProfile": "little-realm-v1",
+      "analysis": {
+        "hasTransparency": false,
+        "alphaCoverage": 1
+      }
+    },
+    "terraintexture-muddy-rock": {
+      "name": "Muddy Rock",
+      "path": "assets/environment/terrain/muddy-rock.jpg",
+      "type": "terrainTexture",
+      "width": 1168,
+      "height": 784,
+      "bytes": 309219,
+      "imported": true,
+      "artProfile": "little-realm-v1",
+      "analysis": {
+        "hasTransparency": false,
+        "alphaCoverage": 1
+      }
+    },
+    "terraintexture-stone-squares": {
+      "name": "Stone Squares",
+      "path": "assets/environment/terrain/stone-squares.jpg",
+      "type": "terrainTexture",
+      "width": 1168,
+      "height": 784,
+      "bytes": 288019,
+      "imported": true,
+      "artProfile": "little-realm-v1",
+      "analysis": {
+        "hasTransparency": false,
+        "alphaCoverage": 1
+      }
+    },
+    "terraintexture-deep-sea": {
+      "name": "Deep Sea",
+      "path": "assets/environment/terrain/deep-sea.jpg",
+      "type": "terrainTexture",
+      "width": 1168,
+      "height": 784,
+      "bytes": 248901,
+      "imported": true,
+      "artProfile": "little-realm-v1",
+      "analysis": {
+        "hasTransparency": false,
+        "alphaCoverage": 1
+      }
+    },
+    "terraintexture-tropical-water": {
+      "name": "Tropical Water",
+      "path": "assets/environment/terrain/tropical-water.jpg",
+      "type": "terrainTexture",
+      "width": 1168,
+      "height": 784,
+      "bytes": 347253,
+      "imported": true,
+      "artProfile": "little-realm-v1",
+      "analysis": {
+        "hasTransparency": false,
+        "alphaCoverage": 1
+      }
+    },
+    "terraintexture-wetlands": {
+      "name": "Wetlands",
+      "path": "assets/environment/terrain/wetlands.jpg",
+      "type": "terrainTexture",
+      "width": 1168,
+      "height": 784,
+      "bytes": 368542,
+      "imported": true,
+      "artProfile": "little-realm-v1",
+      "analysis": {
+        "hasTransparency": false,
+        "alphaCoverage": 1
+      }
+    },
+    "terraintexture-fall-floor": {
+      "name": "Fall Floor",
+      "path": "assets/environment/terrain/fall-floor.jpg",
+      "type": "terrainTexture",
+      "width": 1168,
+      "height": 784,
+      "bytes": 514061,
+      "imported": true,
+      "artProfile": "little-realm-v1",
+      "analysis": {
+        "hasTransparency": false,
+        "alphaCoverage": 1
+      }
+    },
+    "npcsprite-lilly": {
+      "name": "Lilly",
+      "path": "assets/npcs/lilly-3.png",
+      "type": "npcSprite",
+      "width": 512,
+      "height": 512,
+      "bytes": 194270,
+      "imported": true,
+      "artProfile": "little-realm-v1",
+      "analysis": {
+        "hasTransparency": true,
+        "alphaCoverage": 0.2167,
+        "frameMetrics": {
+          "columns": 4,
+          "rows": 4,
+          "referenceVisibleWidth": 60,
+          "referenceVisibleHeight": 79,
+          "maxVisibleWidth": 67,
+          "maxVisibleHeight": 88,
+          "emptyFrames": 0,
+          "edgeTouch": false,
+          "safeAreaOverflow": false
+        }
+      },
+      "normalizedSheet": true,
+      "frameCellSize": 128,
+      "sourceName": "Lilly.png",
+      "sourceWidth": 512,
+      "sourceHeight": 512,
+      "sourceBytes": 244956,
+      "spriteLayout": {
+        "columns": 4,
+        "rows": 4,
+        "directionRows": {
+          "down": 0,
+          "right": 2,
+          "left": 1,
+          "up": 3
+        },
+        "attackColumn": 3,
+        "walkCycle": [
+          0,
+          1,
+          2,
+          1
+        ]
+      },
+      "scaleMode": "displayHeight"
+    },
+    "npcsprite-blacksmith": {
+      "name": "Blacksmith",
+      "path": "assets/npcs/blacksmith-4.png",
+      "type": "npcSprite",
+      "width": 512,
+      "height": 512,
+      "bytes": 188239,
+      "imported": true,
+      "artProfile": "little-realm-v1",
+      "analysis": {
+        "hasTransparency": true,
+        "alphaCoverage": 0.2092,
+        "frameMetrics": {
+          "columns": 4,
+          "rows": 4,
+          "referenceVisibleWidth": 59,
+          "referenceVisibleHeight": 84,
+          "maxVisibleWidth": 75,
+          "maxVisibleHeight": 89,
+          "emptyFrames": 0,
+          "edgeTouch": false,
+          "safeAreaOverflow": true
+        }
+      },
+      "normalizedSheet": true,
+      "frameCellSize": 128,
+      "sourceName": "Blacksmith.png",
+      "sourceWidth": 512,
+      "sourceHeight": 512,
+      "sourceBytes": 236879,
+      "spriteLayout": {
+        "columns": 4,
+        "rows": 4,
+        "directionRows": {
+          "down": 0,
+          "right": 1,
+          "left": 2,
+          "up": 3
+        },
+        "attackColumn": 3,
+        "walkCycle": [
+          0,
+          1,
+          2,
+          1
+        ]
+      },
+      "scaleMode": "displayHeight"
+    },
+    "npcsprite-jorge": {
+      "name": "Jorge",
+      "path": "assets/npcs/jorge-2.png",
+      "type": "npcSprite",
+      "width": 512,
+      "height": 512,
+      "bytes": 172479,
+      "imported": true,
+      "artProfile": "little-realm-v1",
+      "analysis": {
+        "hasTransparency": true,
+        "alphaCoverage": 0.1994,
+        "frameMetrics": {
+          "columns": 4,
+          "rows": 4,
+          "referenceVisibleWidth": 58,
+          "referenceVisibleHeight": 82,
+          "maxVisibleWidth": 71,
+          "maxVisibleHeight": 82,
+          "emptyFrames": 0,
+          "edgeTouch": false,
+          "safeAreaOverflow": false
+        }
+      },
+      "normalizedSheet": true,
+      "frameCellSize": 128,
+      "sourceName": "Jorge.png",
+      "sourceWidth": 512,
+      "sourceHeight": 512,
+      "sourceBytes": 215797,
+      "spriteLayout": {
+        "columns": 4,
+        "rows": 4,
+        "directionRows": {
+          "down": 0,
+          "right": 1,
+          "left": 2,
+          "up": 3
+        },
+        "attackColumn": 3,
+        "walkCycle": [
+          0,
+          1,
+          2,
+          1
+        ]
+      },
+      "scaleMode": "displayHeight"
+    },
+    "npcsprite-major": {
+      "name": "Major",
+      "path": "assets/npcs/major-3.png",
+      "type": "npcSprite",
+      "width": 512,
+      "height": 512,
+      "bytes": 172437,
+      "imported": true,
+      "artProfile": "little-realm-v1",
+      "analysis": {
+        "hasTransparency": true,
+        "alphaCoverage": 0.2039,
+        "frameMetrics": {
+          "columns": 4,
+          "rows": 4,
+          "referenceVisibleWidth": 55,
+          "referenceVisibleHeight": 80,
+          "maxVisibleWidth": 67,
+          "maxVisibleHeight": 90,
+          "emptyFrames": 0,
+          "edgeTouch": false,
+          "safeAreaOverflow": true
+        }
+      },
+      "normalizedSheet": true,
+      "frameCellSize": 128,
+      "sourceName": "Major.png",
+      "sourceWidth": 512,
+      "sourceHeight": 512,
+      "sourceBytes": 217124,
+      "spriteLayout": {
+        "columns": 4,
+        "rows": 4,
+        "directionRows": {
+          "down": 0,
+          "right": 2,
+          "left": 1,
+          "up": 3
+        },
+        "attackColumn": 3,
+        "walkCycle": [
+          0,
+          1,
+          2,
+          1
+        ]
+      },
+      "scaleMode": "displayHeight"
+    },
+    "npcsprite-farmer": {
+      "name": "Farmer",
+      "path": "assets/npcs/farmer-2.png",
+      "type": "npcSprite",
+      "width": 512,
+      "height": 512,
+      "bytes": 197321,
+      "imported": true,
+      "artProfile": "little-realm-v1",
+      "analysis": {
+        "hasTransparency": true,
+        "alphaCoverage": 0.1955,
+        "frameMetrics": {
+          "columns": 4,
+          "rows": 4,
+          "referenceVisibleWidth": 61,
+          "referenceVisibleHeight": 79,
+          "maxVisibleWidth": 73,
+          "maxVisibleHeight": 99,
+          "emptyFrames": 0,
+          "edgeTouch": false,
+          "safeAreaOverflow": true
+        }
+      },
+      "normalizedSheet": true,
+      "frameCellSize": 128,
+      "sourceName": "Farmer.png",
+      "sourceWidth": 1254,
+      "sourceHeight": 1254,
+      "sourceBytes": 972127,
+      "spriteLayout": {
+        "columns": 4,
+        "rows": 4,
+        "directionRows": {
+          "down": 0,
+          "right": 1,
+          "left": 2,
+          "up": 3
+        },
+        "attackColumn": 3,
+        "walkCycle": [
+          0,
+          1,
+          2,
+          1
+        ]
+      },
+      "scaleMode": "displayHeight"
+    },
+    "playerappearance-female-1": {
+      "name": "Female 1",
+      "path": "assets/characters/female-1.png",
+      "type": "playerAppearance",
+      "width": 512,
+      "height": 512,
+      "bytes": 175825,
+      "imported": true,
+      "artProfile": "little-realm-v1",
+      "analysis": {
+        "hasTransparency": true,
+        "alphaCoverage": 0.1895,
+        "frameMetrics": {
+          "columns": 4,
+          "rows": 4,
+          "referenceVisibleWidth": 59,
+          "referenceVisibleHeight": 84,
+          "maxVisibleWidth": 59,
+          "maxVisibleHeight": 87,
+          "emptyFrames": 0,
+          "edgeTouch": false,
+          "safeAreaOverflow": false
+        }
+      },
+      "normalizedSheet": true,
+      "frameCellSize": 128,
+      "sourceName": "Female 1.png",
+      "sourceWidth": 512,
+      "sourceHeight": 512,
+      "sourceBytes": 221635,
+      "spriteLayout": {
+        "columns": 4,
+        "rows": 4,
+        "directionRows": {
+          "down": 0,
+          "right": 1,
+          "left": 2,
+          "up": 3
+        },
+        "attackColumn": 3,
+        "walkCycle": [
+          0,
+          1,
+          2,
+          1
+        ]
+      },
+      "scaleMode": "characterRig"
+    },
+    "playerappearance-male-1": {
+      "name": "Male 1",
+      "path": "assets/characters/male-1.png",
+      "type": "playerAppearance",
+      "width": 512,
+      "height": 512,
+      "bytes": 184955,
+      "imported": true,
+      "artProfile": "little-realm-v1",
+      "analysis": {
+        "hasTransparency": true,
+        "alphaCoverage": 0.2087,
+        "frameMetrics": {
+          "columns": 4,
+          "rows": 4,
+          "referenceVisibleWidth": 61,
+          "referenceVisibleHeight": 86,
+          "maxVisibleWidth": 69,
+          "maxVisibleHeight": 89,
+          "emptyFrames": 0,
+          "edgeTouch": false,
+          "safeAreaOverflow": true
+        }
+      },
+      "normalizedSheet": true,
+      "frameCellSize": 128,
+      "sourceName": "Male 1.png",
+      "sourceWidth": 512,
+      "sourceHeight": 512,
+      "sourceBytes": 232699,
+      "spriteLayout": {
+        "columns": 4,
+        "rows": 4,
+        "directionRows": {
+          "down": 0,
+          "right": 1,
+          "left": 2,
+          "up": 3
+        },
+        "attackColumn": 3,
+        "walkCycle": [
+          0,
+          1,
+          2,
+          1
+        ]
+      },
+      "scaleMode": "characterRig"
+    },
+    "mobsprite-cave-bear": {
+      "name": "Cave Bear",
+      "path": "assets/mobs/cave-bear.png",
+      "type": "mobSprite",
+      "width": 512,
+      "height": 512,
+      "bytes": 220485,
+      "imported": true,
+      "artProfile": "little-realm-v1",
+      "analysis": {
+        "hasTransparency": true,
+        "alphaCoverage": 0.268,
+        "frameMetrics": {
+          "columns": 4,
+          "rows": 4,
+          "referenceVisibleWidth": 72,
+          "referenceVisibleHeight": 86,
+          "maxVisibleWidth": 89,
+          "maxVisibleHeight": 105,
+          "emptyFrames": 0,
+          "edgeTouch": false,
+          "safeAreaOverflow": true
+        }
+      },
+      "normalizedSheet": true,
+      "frameCellSize": 128,
+      "sourceName": "Cave Bear.png",
+      "sourceWidth": 512,
+      "sourceHeight": 512,
+      "sourceBytes": 278129,
+      "spriteLayout": {
+        "columns": 4,
+        "rows": 4,
+        "directionRows": {
+          "down": 0,
+          "right": 1,
+          "left": 2,
+          "up": 3
+        },
+        "attackColumn": 3,
+        "walkCycle": [
+          0,
+          1,
+          2,
+          1
+        ]
+      },
+      "scaleMode": "visibleHeight"
+    },
+    "mobsprite-slime": {
+      "name": "Slime",
+      "path": "assets/mobs/slime-2.png",
+      "type": "mobSprite",
+      "width": 512,
+      "height": 512,
+      "bytes": 129433,
+      "imported": true,
+      "artProfile": "little-realm-v1",
+      "analysis": {
+        "hasTransparency": true,
+        "alphaCoverage": 0.1481,
+        "frameMetrics": {
+          "columns": 4,
+          "rows": 4,
+          "referenceVisibleWidth": 72,
+          "referenceVisibleHeight": 60,
+          "maxVisibleWidth": 80,
+          "maxVisibleHeight": 60,
+          "emptyFrames": 0,
+          "edgeTouch": false,
+          "safeAreaOverflow": false
+        }
+      },
+      "normalizedSheet": true,
+      "frameCellSize": 128,
+      "sourceName": "Slime.png",
+      "sourceWidth": 512,
+      "sourceHeight": 512,
+      "sourceBytes": 161405,
+      "spriteLayout": {
+        "columns": 4,
+        "rows": 4,
+        "directionRows": {
+          "down": 0,
+          "right": 1,
+          "left": 2,
+          "up": 3
+        },
+        "attackColumn": 3,
+        "walkCycle": [
+          0,
+          1,
+          2,
+          1
+        ]
+      },
+      "scaleMode": "visibleHeight"
+    },
+    "mobsprite-goblin": {
+      "name": "Goblin",
+      "path": "assets/mobs/goblin-2.png",
+      "type": "mobSprite",
+      "width": 512,
+      "height": 512,
+      "bytes": 210767,
+      "imported": true,
+      "artProfile": "little-realm-v1",
+      "analysis": {
+        "hasTransparency": true,
+        "alphaCoverage": 0.2333,
+        "frameMetrics": {
+          "columns": 4,
+          "rows": 4,
+          "referenceVisibleWidth": 72,
+          "referenceVisibleHeight": 71,
+          "maxVisibleWidth": 86,
+          "maxVisibleHeight": 92,
+          "emptyFrames": 0,
+          "edgeTouch": false,
+          "safeAreaOverflow": true
+        }
+      },
+      "normalizedSheet": true,
+      "frameCellSize": 128,
+      "sourceName": "Goblin.png",
+      "sourceWidth": 512,
+      "sourceHeight": 512,
+      "sourceBytes": 266290,
+      "spriteLayout": {
+        "columns": 4,
+        "rows": 4,
+        "directionRows": {
+          "down": 0,
+          "right": 1,
+          "left": 2,
+          "up": 3
+        },
+        "attackColumn": 3,
+        "walkCycle": [
+          0,
+          1,
+          2,
+          1
+        ]
+      },
+      "scaleMode": "visibleHeight"
+    },
+    "mobsprite-mouse-2": {
+      "name": "Mouse",
+      "path": "assets/mobs/mouse-2.png",
+      "type": "mobSprite",
+      "width": 512,
+      "height": 512,
+      "bytes": 115456,
+      "imported": true,
+      "artProfile": "little-realm-v1",
+      "analysis": {
+        "hasTransparency": true,
+        "alphaCoverage": 0.1114,
+        "frameMetrics": {
+          "columns": 4,
+          "rows": 4,
+          "referenceVisibleWidth": 50,
+          "referenceVisibleHeight": 58,
+          "maxVisibleWidth": 88,
+          "maxVisibleHeight": 62,
+          "emptyFrames": 0,
+          "edgeTouch": false,
+          "safeAreaOverflow": false
+        }
+      },
+      "normalizedSheet": true,
+      "frameCellSize": 128,
+      "sourceName": "Mouse.png",
+      "sourceWidth": 512,
+      "sourceHeight": 512,
+      "sourceBytes": 144178,
+      "spriteLayout": {
+        "columns": 4,
+        "rows": 4,
+        "directionRows": {
+          "down": 0,
+          "right": 1,
+          "left": 2,
+          "up": 3
+        },
+        "attackColumn": 3,
+        "walkCycle": [
+          0,
+          1,
+          2,
+          1
+        ]
+      },
+      "scaleMode": "visibleHeight"
+    },
+    "mobsprite-wolf": {
+      "name": "Wolf",
+      "path": "assets/mobs/wolf-2.png",
+      "type": "mobSprite",
+      "width": 512,
+      "height": 512,
+      "bytes": 145936,
+      "imported": true,
+      "artProfile": "little-realm-v1",
+      "analysis": {
+        "hasTransparency": true,
+        "alphaCoverage": 0.1565,
+        "frameMetrics": {
+          "columns": 4,
+          "rows": 4,
+          "referenceVisibleWidth": 60,
+          "referenceVisibleHeight": 83,
+          "maxVisibleWidth": 89,
+          "maxVisibleHeight": 89,
+          "emptyFrames": 0,
+          "edgeTouch": false,
+          "safeAreaOverflow": true
+        }
+      },
+      "normalizedSheet": true,
+      "frameCellSize": 128,
+      "sourceName": "Wolf.png",
+      "sourceWidth": 512,
+      "sourceHeight": 512,
+      "sourceBytes": 183367,
+      "spriteLayout": {
+        "columns": 4,
+        "rows": 4,
+        "directionRows": {
+          "down": 0,
+          "right": 1,
+          "left": 2,
+          "up": 3
+        },
+        "attackColumn": 3,
+        "walkCycle": [
+          0,
+          1,
+          2,
+          1
+        ]
+      },
+      "scaleMode": "visibleHeight"
+    },
+    "mobsprite-bear": {
+      "name": "Bear",
+      "path": "assets/mobs/bear-2.png",
+      "type": "mobSprite",
+      "width": 512,
+      "height": 512,
+      "bytes": 189130,
+      "imported": true,
+      "artProfile": "little-realm-v1",
+      "analysis": {
+        "hasTransparency": true,
+        "alphaCoverage": 0.2348,
+        "frameMetrics": {
+          "columns": 4,
+          "rows": 4,
+          "referenceVisibleWidth": 81,
+          "referenceVisibleHeight": 82,
+          "maxVisibleWidth": 90,
+          "maxVisibleHeight": 82,
+          "emptyFrames": 0,
+          "edgeTouch": false,
+          "safeAreaOverflow": true
+        }
+      },
+      "normalizedSheet": true,
+      "frameCellSize": 128,
+      "sourceName": "Bear.png",
+      "sourceWidth": 512,
+      "sourceHeight": 512,
+      "sourceBytes": 237636,
+      "spriteLayout": {
+        "columns": 4,
+        "rows": 4,
+        "directionRows": {
+          "down": 0,
+          "right": 1,
+          "left": 2,
+          "up": 3
+        },
+        "attackColumn": 3,
+        "walkCycle": [
+          0,
+          1,
+          2,
+          1
+        ]
+      },
+      "scaleMode": "visibleHeight"
+    }
+  },
+  "objectDefinitions": {
+    "signpost": {
+      "name": "Signpost",
+      "sourceAssetId": "props-object-atlas",
+      "crop": {
+        "x": 0,
+        "y": 0,
+        "w": 79,
+        "h": 116
+      },
+      "w": 42,
+      "h": 56,
+      "solid": false,
+      "depthMode": "ysort",
+      "depthY": 56
+    },
+    "lamppost": {
+      "name": "Lamppost",
+      "sourceAssetId": "props-object-atlas",
+      "crop": {
+        "x": 124,
+        "y": 0,
+        "w": 69,
+        "h": 128
+      },
+      "w": 38,
+      "h": 60,
+      "solid": false,
+      "depthMode": "ysort",
+      "depthY": 60
+    },
+    "well": {
+      "name": "Well",
+      "sourceAssetId": "props-object-atlas",
+      "crop": {
+        "x": 247,
+        "y": 0,
+        "w": 102,
+        "h": 124
+      },
+      "w": 62,
+      "h": 64,
+      "solid": false,
+      "depthMode": "ysort",
+      "depthY": 64
+    },
+    "notice": {
+      "name": "Notice",
+      "sourceAssetId": "props-object-atlas",
+      "crop": {
+        "x": 370,
+        "y": 0,
+        "w": 86,
+        "h": 113
+      },
+      "w": 50,
+      "h": 56,
+      "solid": false,
+      "depthMode": "ysort",
+      "depthY": 56
+    },
+    "sacks": {
+      "name": "Sacks",
+      "sourceAssetId": "props-object-atlas",
+      "crop": {
+        "x": 0,
+        "y": 147,
+        "w": 100,
+        "h": 98
+      },
+      "w": 48,
+      "h": 46,
+      "solid": false,
+      "depthMode": "ysort",
+      "depthY": 46
+    },
+    "barrel": {
+      "name": "Barrel",
+      "sourceAssetId": "props-object-atlas",
+      "crop": {
+        "x": 124,
+        "y": 147,
+        "w": 74,
+        "h": 97
+      },
+      "w": 42,
+      "h": 48,
+      "solid": false,
+      "depthMode": "ysort",
+      "depthY": 48
+    },
+    "crate": {
+      "name": "Crate",
+      "sourceAssetId": "props-object-atlas",
+      "crop": {
+        "x": 247,
+        "y": 147,
+        "w": 76,
+        "h": 88
+      },
+      "w": 44,
+      "h": 44,
+      "solid": false,
+      "depthMode": "ysort",
+      "depthY": 44
+    },
+    "bench": {
+      "name": "Bench",
+      "sourceAssetId": "props-object-atlas",
+      "crop": {
+        "x": 370,
+        "y": 147,
+        "w": 110,
+        "h": 61
+      },
+      "w": 52,
+      "h": 30,
+      "solid": false,
+      "depthMode": "ysort",
+      "depthY": 30
+    },
+    "mailbox": {
+      "name": "Mailbox",
+      "sourceAssetId": "props-object-atlas",
+      "crop": {
+        "x": 0,
+        "y": 293,
+        "w": 72,
+        "h": 110
+      },
+      "w": 34,
+      "h": 46,
+      "solid": false,
+      "depthMode": "ysort",
+      "depthY": 46
+    },
+    "haystack": {
+      "name": "Haystack",
+      "sourceAssetId": "props-object-atlas",
+      "crop": {
+        "x": 124,
+        "y": 293,
+        "w": 104,
+        "h": 115
+      },
+      "w": 56,
+      "h": 58,
+      "solid": false,
+      "depthMode": "ysort",
+      "depthY": 58
+    },
+    "stool": {
+      "name": "Stool",
+      "sourceAssetId": "props-object-atlas",
+      "crop": {
+        "x": 247,
+        "y": 293,
+        "w": 68,
+        "h": 91
+      },
+      "w": 34,
+      "h": 36,
+      "solid": false,
+      "depthMode": "ysort",
+      "depthY": 36
+    },
+    "cart": {
+      "name": "Cart",
+      "sourceAssetId": "props-object-atlas",
+      "crop": {
+        "x": 370,
+        "y": 293,
+        "w": 115,
+        "h": 91
+      },
+      "w": 62,
+      "h": 44,
+      "solid": false,
+      "depthMode": "ysort",
+      "depthY": 44
+    },
+    "hay": {
+      "name": "Hay",
+      "sourceAssetId": "props-object-atlas",
+      "crop": {
+        "x": 0,
+        "y": 439,
+        "w": 98,
+        "h": 78
+      },
+      "w": 50,
+      "h": 42,
+      "solid": false,
+      "depthMode": "ysort",
+      "depthY": 42
+    },
+    "table": {
+      "name": "Table",
+      "sourceAssetId": "props-object-atlas",
+      "crop": {
+        "x": 124,
+        "y": 439,
+        "w": 98,
+        "h": 81
+      },
+      "w": 52,
+      "h": 32,
+      "solid": false,
+      "depthMode": "ysort",
+      "depthY": 32
+    },
+    "flowerBoxA": {
+      "name": "Flower Box A",
+      "sourceAssetId": "props-object-atlas",
+      "crop": {
+        "x": 247,
+        "y": 439,
+        "w": 99,
+        "h": 78
+      },
+      "w": 50,
+      "h": 30,
+      "solid": false,
+      "depthMode": "ysort",
+      "depthY": 30
+    },
+    "flowerBoxB": {
+      "name": "Flower Box B",
+      "sourceAssetId": "props-object-atlas",
+      "crop": {
+        "x": 370,
+        "y": 439,
+        "w": 95,
+        "h": 68
+      },
+      "w": 50,
+      "h": 30,
+      "solid": false,
+      "depthMode": "ysort",
+      "depthY": 30
+    },
+    "scarecrow": {
+      "name": "Scarecrow",
+      "sourceAssetId": "props-object-atlas",
+      "crop": {
+        "x": 0,
+        "y": 586,
+        "w": 103,
+        "h": 127
+      },
+      "w": 44,
+      "h": 64,
+      "solid": false,
+      "depthMode": "ysort",
+      "depthY": 64
+    },
+    "stoneWallCorner": {
+      "name": "Stone Wall Corner",
+      "sourceAssetId": "props-object-atlas",
+      "crop": {
+        "x": 124,
+        "y": 586,
+        "w": 98,
+        "h": 109
+      },
+      "w": 50,
+      "h": 48,
+      "solid": false,
+      "depthMode": "ysort",
+      "depthY": 48
+    },
+    "fenceCorner": {
+      "name": "Fence Corner",
+      "sourceAssetId": "props-object-atlas",
+      "crop": {
+        "x": 247,
+        "y": 586,
+        "w": 98,
+        "h": 96
+      },
+      "w": 48,
+      "h": 44,
+      "solid": false,
+      "depthMode": "ysort",
+      "depthY": 44
+    },
+    "trough": {
+      "name": "Trough",
+      "sourceAssetId": "props-object-atlas",
+      "crop": {
+        "x": 370,
+        "y": 586,
+        "w": 116,
+        "h": 95
+      },
+      "w": 60,
+      "h": 36,
+      "solid": false,
+      "depthMode": "ysort",
+      "depthY": 36
+    },
+    "rockPile": {
+      "name": "Rock Pile",
+      "sourceAssetId": "props-object-atlas",
+      "crop": {
+        "x": 0,
+        "y": 732,
+        "w": 103,
+        "h": 83
+      },
+      "w": 50,
+      "h": 34,
+      "solid": false,
+      "depthMode": "ysort",
+      "depthY": 34
+    },
+    "fence": {
+      "name": "Fence",
+      "sourceAssetId": "props-object-atlas",
+      "crop": {
+        "x": 124,
+        "y": 732,
+        "w": 104,
+        "h": 76
+      },
+      "w": 48,
+      "h": 28,
+      "solid": false,
+      "depthMode": "ysort",
+      "depthY": 28
+    },
+    "gate": {
+      "name": "Gate",
+      "sourceAssetId": "props-object-atlas",
+      "crop": {
+        "x": 247,
+        "y": 732,
+        "w": 106,
+        "h": 82
+      },
+      "w": 48,
+      "h": 44,
+      "solid": false,
+      "depthMode": "ysort",
+      "depthY": 44
+    },
+    "stoneWall": {
+      "name": "Stone Wall",
+      "sourceAssetId": "props-object-atlas",
+      "crop": {
+        "x": 370,
+        "y": 732,
+        "w": 106,
+        "h": 71
+      },
+      "w": 50,
+      "h": 34,
+      "solid": false,
+      "depthMode": "ysort",
+      "depthY": 34
+    },
+    "stump": {
+      "name": "Stump",
+      "sourceAssetId": "props-object-atlas",
+      "crop": {
+        "x": 0,
+        "y": 878,
+        "w": 105,
+        "h": 96
+      },
+      "w": 44,
+      "h": 36,
+      "solid": false,
+      "depthMode": "ysort",
+      "depthY": 36
+    },
+    "bush": {
+      "name": "Bush",
+      "sourceAssetId": "props-object-atlas",
+      "crop": {
+        "x": 124,
+        "y": 878,
+        "w": 101,
+        "h": 94
+      },
+      "w": 42,
+      "h": 34,
+      "solid": false,
+      "depthMode": "ysort",
+      "depthY": 34
+    },
+    "campfire": {
+      "name": "Campfire",
+      "sourceAssetId": "props-object-atlas",
+      "crop": {
+        "x": 247,
+        "y": 877,
+        "w": 102,
+        "h": 97
+      },
+      "w": 44,
+      "h": 40,
+      "solid": false,
+      "depthMode": "ysort",
+      "depthY": 40
+    },
+    "flowerBush": {
+      "name": "Flower Bush",
+      "sourceAssetId": "props-object-atlas",
+      "crop": {
+        "x": 369,
+        "y": 878,
+        "w": 91,
+        "h": 91
+      },
+      "w": 44,
+      "h": 34,
+      "solid": false,
+      "depthMode": "ysort",
+      "depthY": 34
+    },
+    "log": {
+      "name": "Log",
+      "sourceAssetId": "props-object-atlas",
+      "crop": {
+        "x": 0,
+        "y": 1024,
+        "w": 119,
+        "h": 86
+      },
+      "w": 50,
+      "h": 34,
+      "solid": false,
+      "depthMode": "ysort",
+      "depthY": 34
+    },
+    "boulder": {
+      "name": "Boulder",
+      "sourceAssetId": "props-object-atlas",
+      "crop": {
+        "x": 124,
+        "y": 1024,
+        "w": 103,
+        "h": 80
+      },
+      "w": 44,
+      "h": 34,
+      "solid": false,
+      "depthMode": "ysort",
+      "depthY": 34
+    },
+    "flowerPatch": {
+      "name": "Flower Patch",
+      "sourceAssetId": "props-object-atlas",
+      "crop": {
+        "x": 247,
+        "y": 1024,
+        "w": 97,
+        "h": 81
+      },
+      "w": 42,
+      "h": 30,
+      "solid": false,
+      "depthMode": "ysort",
+      "depthY": 30
+    },
+    "mushrooms": {
+      "name": "Mushrooms",
+      "sourceAssetId": "props-object-atlas",
+      "crop": {
+        "x": 370,
+        "y": 1024,
+        "w": 86,
+        "h": 73
+      },
+      "w": 36,
+      "h": 34,
+      "solid": false,
+      "depthMode": "ysort",
+      "depthY": 34
+    },
+    "goblinTotem": {
+      "name": "Goblin Totem",
+      "sourceAssetId": "props-object-atlas",
+      "crop": {
+        "x": 0,
+        "y": 1171,
+        "w": 89,
+        "h": 145
+      },
+      "w": 44,
+      "h": 66,
+      "solid": false,
+      "depthMode": "ysort",
+      "depthY": 66
+    },
+    "goblinTent": {
+      "name": "Goblin Tent",
+      "sourceAssetId": "props-object-atlas",
+      "crop": {
+        "x": 124,
+        "y": 1171,
+        "w": 120,
+        "h": 140
+      },
+      "w": 56,
+      "h": 56,
+      "solid": false,
+      "depthMode": "ysort",
+      "depthY": 56
+    },
+    "trainingDummy": {
+      "name": "Training Dummy",
+      "sourceAssetId": "props-object-atlas",
+      "crop": {
+        "x": 247,
+        "y": 1171,
+        "w": 90,
+        "h": 128
+      },
+      "w": 42,
+      "h": 56,
+      "solid": false,
+      "depthMode": "ysort",
+      "depthY": 56
+    },
+    "cauldron": {
+      "name": "Cauldron",
+      "sourceAssetId": "props-object-atlas",
+      "crop": {
+        "x": 370,
+        "y": 1171,
+        "w": 109,
+        "h": 121
+      },
+      "w": 52,
+      "h": 56,
+      "solid": false,
+      "depthMode": "ysort",
+      "depthY": 56
+    },
+    "archeryTarget": {
+      "name": "Archery Target",
+      "sourceAssetId": "props-object-atlas",
+      "crop": {
+        "x": 0,
+        "y": 1317,
+        "w": 97,
+        "h": 107
+      },
+      "w": 46,
+      "h": 54,
+      "solid": false,
+      "depthMode": "ysort",
+      "depthY": 54
+    },
+    "chest": {
+      "name": "Chest",
+      "sourceAssetId": "props-object-atlas",
+      "crop": {
+        "x": 124,
+        "y": 1317,
+        "w": 86,
+        "h": 87
+      },
+      "w": 44,
+      "h": 38,
+      "solid": false,
+      "depthMode": "ysort",
+      "depthY": 38
+    },
+    "spikeBarricade": {
+      "name": "Spike Barricade",
+      "sourceAssetId": "props-object-atlas",
+      "crop": {
+        "x": 247,
+        "y": 1317,
+        "w": 106,
+        "h": 104
+      },
+      "w": 52,
+      "h": 34,
+      "solid": false,
+      "depthMode": "ysort",
+      "depthY": 34
+    },
+    "bones": {
+      "name": "Bones",
+      "sourceAssetId": "props-object-atlas",
+      "crop": {
+        "x": 370,
+        "y": 1317,
+        "w": 109,
+        "h": 82
+      },
+      "w": 48,
+      "h": 38,
+      "solid": false,
+      "depthMode": "ysort",
+      "depthY": 38
+    },
+    "marketRed": {
+      "name": "Market Red",
+      "sourceAssetId": "props-object-atlas",
+      "crop": {
+        "x": 0,
+        "y": 1463,
+        "w": 107,
+        "h": 134
+      },
+      "w": 52,
+      "h": 54,
+      "solid": false,
+      "depthMode": "ysort",
+      "depthY": 54
+    },
+    "woodpile": {
+      "name": "Woodpile",
+      "sourceAssetId": "props-object-atlas",
+      "crop": {
+        "x": 124,
+        "y": 1463,
+        "w": 106,
+        "h": 118
+      },
+      "w": 52,
+      "h": 44,
+      "solid": false,
+      "depthMode": "ysort",
+      "depthY": 44
+    },
+    "barrels3": {
+      "name": "Barrels 3",
+      "sourceAssetId": "props-object-atlas",
+      "crop": {
+        "x": 247,
+        "y": 1463,
+        "w": 102,
+        "h": 106
+      },
+      "w": 54,
+      "h": 44,
+      "solid": false,
+      "depthMode": "ysort",
+      "depthY": 44
+    },
+    "crates3": {
+      "name": "Crates 3",
+      "sourceAssetId": "props-object-atlas",
+      "crop": {
+        "x": 370,
+        "y": 1463,
+        "w": 92,
+        "h": 105
+      },
+      "w": 52,
+      "h": 44,
+      "solid": false,
+      "depthMode": "ysort",
+      "depthY": 44
+    },
+    "marketBlue": {
+      "name": "Market Blue",
+      "sourceAssetId": "props-object-atlas",
+      "crop": {
+        "x": 0,
+        "y": 1610,
+        "w": 106,
+        "h": 105
+      },
+      "w": 52,
+      "h": 52,
+      "solid": false,
+      "depthMode": "ysort",
+      "depthY": 52
+    },
+    "wheel": {
+      "name": "Wheel",
+      "sourceAssetId": "props-object-atlas",
+      "crop": {
+        "x": 124,
+        "y": 1610,
+        "w": 87,
+        "h": 92
+      },
+      "w": 40,
+      "h": 40,
+      "solid": false,
+      "depthMode": "ysort",
+      "depthY": 40
+    },
+    "barrelOpen": {
+      "name": "Barrel Open",
+      "sourceAssetId": "props-object-atlas",
+      "crop": {
+        "x": 247,
+        "y": 1610,
+        "w": 89,
+        "h": 95
+      },
+      "w": 44,
+      "h": 42,
+      "solid": false,
+      "depthMode": "ysort",
+      "depthY": 42
+    },
+    "bucket": {
+      "name": "Bucket",
+      "sourceAssetId": "props-object-atlas",
+      "crop": {
+        "x": 370,
+        "y": 1610,
+        "w": 65,
+        "h": 80
+      },
+      "w": 30,
+      "h": 34,
+      "solid": false,
+      "depthMode": "ysort",
+      "depthY": 34
+    },
+    "lanternPost": {
+      "name": "Lantern Post",
+      "sourceAssetId": "props-object-atlas",
+      "crop": {
+        "x": 0,
+        "y": 1756,
+        "w": 86,
+        "h": 129
+      },
+      "w": 38,
+      "h": 60,
+      "solid": false,
+      "depthMode": "ysort",
+      "depthY": 60
+    },
+    "hayCrate": {
+      "name": "Hay Crate",
+      "sourceAssetId": "props-object-atlas",
+      "crop": {
+        "x": 124,
+        "y": 1756,
+        "w": 119,
+        "h": 126
+      },
+      "w": 56,
+      "h": 44,
+      "solid": false,
+      "depthMode": "ysort",
+      "depthY": 44
+    },
+    "grave": {
+      "name": "Grave",
+      "sourceAssetId": "props-object-atlas",
+      "crop": {
+        "x": 247,
+        "y": 1756,
+        "w": 102,
+        "h": 124
+      },
+      "w": 38,
+      "h": 44,
+      "solid": false,
+      "depthMode": "ysort",
+      "depthY": 44
+    },
+    "birdbath": {
+      "name": "Birdbath",
+      "sourceAssetId": "props-object-atlas",
+      "crop": {
+        "x": 370,
+        "y": 1756,
+        "w": 106,
+        "h": 123
+      },
+      "w": 44,
+      "h": 48,
+      "solid": false,
+      "depthMode": "ysort",
+      "depthY": 48
+    },
+    "clothesline": {
+      "name": "Clothesline",
+      "sourceAssetId": "props-object-atlas",
+      "crop": {
+        "x": 0,
+        "y": 1902,
+        "w": 123,
+        "h": 104
+      },
+      "w": 52,
+      "h": 40,
+      "solid": false,
+      "depthMode": "ysort",
+      "depthY": 40
+    },
+    "flowerCart": {
+      "name": "Flower Cart",
+      "sourceAssetId": "props-object-atlas",
+      "crop": {
+        "x": 124,
+        "y": 1902,
+        "w": 111,
+        "h": 111
+      },
+      "w": 52,
+      "h": 38,
+      "solid": false,
+      "depthMode": "ysort",
+      "depthY": 38
+    },
+    "bridge": {
+      "name": "Bridge",
+      "sourceAssetId": "props-object-atlas",
+      "crop": {
+        "x": 247,
+        "y": 1902,
+        "w": 115,
+        "h": 104
+      },
+      "w": 52,
+      "h": 40,
+      "solid": false,
+      "depthMode": "ysort",
+      "depthY": 40
+    },
+    "steppingStones": {
+      "name": "Stepping Stones",
+      "sourceAssetId": "props-object-atlas",
+      "crop": {
+        "x": 369,
+        "y": 1901,
+        "w": 100,
+        "h": 98
+      },
+      "w": 52,
+      "h": 34,
+      "solid": false,
+      "depthMode": "ysort",
+      "depthY": 34
+    },
+    "rock": {
+      "name": "Rock",
+      "w": 180,
+      "h": 180,
+      "solid": false,
+      "depthMode": "ysort",
+      "depthY": 180,
+      "sourceAssetId": "worldimage-rock"
+    }
+  },
+  "terrainDefaults": {
+    "ground": "grass",
+    "boundary": "blocked-forest"
+  },
+  "terrains": {
+    "grass": {
+      "name": "Grass",
+      "code": 0,
+      "color": "#78964d",
+      "walkable": true,
+      "healing": false,
+      "sanctuary": false,
+      "movementMultiplier": 1,
+      "renderer": "grass",
+      "edgeStyle": "none",
+      "textureAsset": "",
+      "decoration": {
+        "type": "none"
+      },
+      "textureScale": 1,
+      "footstepSet": "",
+      "footstepVolume": 0.55
+    },
+    "water": {
+      "name": "Water",
+      "code": 1,
+      "color": "#318aa5",
+      "walkable": false,
+      "healing": false,
+      "sanctuary": false,
+      "movementMultiplier": 1,
+      "renderer": "water",
+      "edgeStyle": "water",
+      "textureAsset": "environment-water-seamless",
+      "decoration": {
+        "type": "none"
+      },
+      "textureScale": 1,
+      "footstepSet": "",
+      "footstepVolume": 0.55
+    },
+    "forest": {
+      "name": "Forest",
+      "code": 2,
+      "color": "#4f743f",
+      "walkable": true,
+      "healing": false,
+      "sanctuary": false,
+      "movementMultiplier": 1,
+      "renderer": "grass",
+      "edgeStyle": "none",
+      "textureAsset": "",
+      "decoration": {
+        "type": "tree",
+        "densityPercent": 48,
+        "treeAsset": "",
+        "treeScale": 1,
+        "solid": true
+      },
+      "textureScale": 1,
+      "footstepSet": "",
+      "footstepVolume": 0.55
+    },
+    "road": {
+      "name": "Road",
+      "code": 3,
+      "color": "#a97647",
+      "walkable": true,
+      "healing": false,
+      "sanctuary": false,
+      "movementMultiplier": 1,
+      "renderer": "dirt",
+      "edgeStyle": "road",
+      "textureAsset": "",
+      "decoration": {
+        "type": "none"
+      },
+      "textureScale": 1,
+      "footstepSet": "",
+      "footstepVolume": 0.55
+    },
+    "safe-grass": {
+      "name": "Safe Grass",
+      "code": 4,
+      "color": "#b6d875",
+      "walkable": true,
+      "healing": true,
+      "sanctuary": true,
+      "movementMultiplier": 1,
+      "renderer": "grass",
+      "edgeStyle": "road",
+      "textureAsset": "",
+      "decoration": {
+        "type": "none"
+      },
+      "textureScale": 1,
+      "footstepSet": "",
+      "footstepVolume": 0.55
+    },
+    "blocked-forest": {
+      "name": "Blocked Forest",
+      "code": 6,
+      "color": "#355b36",
+      "walkable": false,
+      "healing": false,
+      "sanctuary": false,
+      "movementMultiplier": 1,
+      "renderer": "grass",
+      "edgeStyle": "none",
+      "textureAsset": "",
+      "decoration": {
+        "type": "tree",
+        "densityPercent": 82,
+        "treeAsset": "",
+        "treeScale": 1,
+        "solid": true
+      },
+      "textureScale": 1,
+      "footstepSet": "",
+      "footstepVolume": 0.55
+    },
+    "dirt": {
+      "name": "Dirt",
+      "code": 7,
+      "color": "#91663f",
+      "walkable": true,
+      "healing": false,
+      "sanctuary": false,
+      "movementMultiplier": 1,
+      "renderer": "dirt",
+      "edgeStyle": "none",
+      "textureAsset": "",
+      "decoration": {
+        "type": "none"
+      },
+      "textureScale": 1,
+      "footstepSet": "",
+      "footstepVolume": 0.55
+    },
+    "sand": {
+      "name": "Sand",
+      "code": 8,
+      "color": "#c7a66a",
+      "walkable": true,
+      "healing": false,
+      "sanctuary": false,
+      "movementMultiplier": 1,
+      "renderer": "sand",
+      "edgeStyle": "none",
+      "textureAsset": "",
+      "decoration": {
+        "type": "none"
+      },
+      "textureScale": 1,
+      "footstepSet": "",
+      "footstepVolume": 0.55
+    },
+    "rock": {
+      "name": "Rock / Mountain",
+      "code": 9,
+      "color": "#66645f",
+      "walkable": false,
+      "healing": false,
+      "sanctuary": false,
+      "movementMultiplier": 1,
+      "renderer": "rock",
+      "edgeStyle": "none",
+      "textureAsset": "",
+      "decoration": {
+        "type": "none"
+      },
+      "textureScale": 1,
+      "footstepSet": "",
+      "footstepVolume": 0.55
+    },
+    "autumn": {
+      "name": "Autumn",
+      "code": 5,
+      "color": "#777777",
+      "walkable": true,
+      "healing": false,
+      "sanctuary": false,
+      "movementMultiplier": 1,
+      "renderer": "grass",
+      "edgeStyle": "none",
+      "textureAsset": "terraintexture-autumn",
+      "textureScale": 1,
+      "decoration": {
+        "type": "none"
+      },
+      "footstepSet": "",
+      "footstepVolume": 0.55
+    },
+    "autumn2": {
+      "name": "Autumn2",
+      "code": 10,
+      "color": "#777777",
+      "walkable": true,
+      "healing": false,
+      "sanctuary": false,
+      "movementMultiplier": 1,
+      "renderer": "grass",
+      "edgeStyle": "none",
+      "textureAsset": "terraintexture-autumn2",
+      "textureScale": 1,
+      "decoration": {
+        "type": "none"
+      },
+      "footstepSet": "",
+      "footstepVolume": 0.55
+    },
+    "beach": {
+      "name": "Beach",
+      "code": 11,
+      "color": "#777777",
+      "walkable": true,
+      "healing": false,
+      "sanctuary": false,
+      "movementMultiplier": 1,
+      "renderer": "grass",
+      "edgeStyle": "none",
+      "textureAsset": "terraintexture-beach",
+      "textureScale": 1,
+      "decoration": {
+        "type": "none"
+      },
+      "footstepSet": "",
+      "footstepVolume": 0.55
+    },
+    "brick-path": {
+      "name": "Brick Path",
+      "code": 12,
+      "color": "#777777",
+      "walkable": true,
+      "healing": false,
+      "sanctuary": false,
+      "movementMultiplier": 1,
+      "renderer": "grass",
+      "edgeStyle": "none",
+      "textureAsset": "terraintexture-brick_path",
+      "textureScale": 1.35,
+      "decoration": {
+        "type": "none"
+      },
+      "footstepSet": "",
+      "footstepVolume": 0.55
+    },
+    "cobble-path": {
+      "name": "Cobble Path",
+      "code": 13,
+      "color": "#777777",
+      "walkable": true,
+      "healing": false,
+      "sanctuary": false,
+      "movementMultiplier": 1,
+      "renderer": "grass",
+      "edgeStyle": "none",
+      "textureAsset": "terraintexture-cobble_path",
+      "textureScale": 1,
+      "decoration": {
+        "type": "none"
+      },
+      "footstepSet": "",
+      "footstepVolume": 0.55
+    },
+    "desert": {
+      "name": "Desert",
+      "code": 14,
+      "color": "#777777",
+      "walkable": true,
+      "healing": false,
+      "sanctuary": false,
+      "movementMultiplier": 1,
+      "renderer": "grass",
+      "edgeStyle": "none",
+      "textureAsset": "terraintexture-desert",
+      "textureScale": 1,
+      "decoration": {
+        "type": "none"
+      },
+      "footstepSet": "",
+      "footstepVolume": 0.55
+    },
+    "farmland": {
+      "name": "Farmland",
+      "code": 15,
+      "color": "#777777",
+      "walkable": true,
+      "healing": false,
+      "sanctuary": false,
+      "movementMultiplier": 1,
+      "renderer": "grass",
+      "edgeStyle": "none",
+      "textureAsset": "terraintexture-farmland",
+      "textureScale": 1,
+      "decoration": {
+        "type": "none"
+      },
+      "footstepSet": "",
+      "footstepVolume": 0.55
+    },
+    "magma": {
+      "name": "Magma",
+      "code": 16,
+      "color": "#777777",
+      "walkable": true,
+      "healing": false,
+      "sanctuary": false,
+      "movementMultiplier": 1,
+      "renderer": "grass",
+      "edgeStyle": "none",
+      "textureAsset": "terraintexture-magma",
+      "textureScale": 1,
+      "decoration": {
+        "type": "none"
+      },
+      "footstepSet": "",
+      "footstepVolume": 0.55
+    },
+    "mountain": {
+      "name": "Mountain",
+      "code": 17,
+      "color": "#777777",
+      "walkable": true,
+      "healing": false,
+      "sanctuary": false,
+      "movementMultiplier": 1,
+      "renderer": "grass",
+      "edgeStyle": "none",
+      "textureAsset": "terraintexture-mountain",
+      "textureScale": 1,
+      "decoration": {
+        "type": "none"
+      },
+      "footstepSet": "",
+      "footstepVolume": 0.55
+    },
+    "mud": {
+      "name": "Mud",
+      "code": 18,
+      "color": "#777777",
+      "walkable": true,
+      "healing": false,
+      "sanctuary": false,
+      "movementMultiplier": 1,
+      "renderer": "grass",
+      "edgeStyle": "none",
+      "textureAsset": "terraintexture-mud",
+      "textureScale": 1,
+      "decoration": {
+        "type": "none"
+      },
+      "footstepSet": "",
+      "footstepVolume": 0.55
+    },
+    "ocean": {
+      "name": "Ocean",
+      "code": 19,
+      "color": "#777777",
+      "walkable": false,
+      "healing": false,
+      "sanctuary": false,
+      "movementMultiplier": 1,
+      "renderer": "grass",
+      "edgeStyle": "none",
+      "textureAsset": "terraintexture-ocean",
+      "textureScale": 1,
+      "decoration": {
+        "type": "none"
+      },
+      "footstepSet": "",
+      "footstepVolume": 0.55
+    },
+    "pond": {
+      "name": "Pond",
+      "code": 20,
+      "color": "#777777",
+      "walkable": false,
+      "healing": false,
+      "sanctuary": false,
+      "movementMultiplier": 1,
+      "renderer": "grass",
+      "edgeStyle": "none",
+      "textureAsset": "terraintexture-pond",
+      "textureScale": 1,
+      "decoration": {
+        "type": "none"
+      },
+      "footstepSet": "",
+      "footstepVolume": 0.55
+    },
+    "snowy": {
+      "name": "Snowy",
+      "code": 21,
+      "color": "#777777",
+      "walkable": true,
+      "healing": false,
+      "sanctuary": false,
+      "movementMultiplier": 1,
+      "renderer": "grass",
+      "edgeStyle": "none",
+      "textureAsset": "terraintexture-snowy",
+      "textureScale": 1,
+      "decoration": {
+        "type": "none"
+      },
+      "footstepSet": "",
+      "footstepVolume": 0.55
+    },
+    "swamp": {
+      "name": "Swamp",
+      "code": 22,
+      "color": "#777777",
+      "walkable": true,
+      "healing": false,
+      "sanctuary": false,
+      "movementMultiplier": 1,
+      "renderer": "grass",
+      "edgeStyle": "none",
+      "textureAsset": "terraintexture-swamp",
+      "textureScale": 1,
+      "decoration": {
+        "type": "none"
+      },
+      "footstepSet": "",
+      "footstepVolume": 0.55
+    },
+    "meadow": {
+      "name": "Meadow",
+      "code": 23,
+      "color": "#777777",
+      "walkable": true,
+      "healing": false,
+      "sanctuary": false,
+      "movementMultiplier": 1,
+      "renderer": "grass",
+      "edgeStyle": "none",
+      "textureAsset": "terraintexture-meadow",
+      "textureScale": 0.3,
+      "decoration": {
+        "type": "none"
+      },
+      "footstepSet": "",
+      "footstepVolume": 0.55
+    },
+    "amythest": {
+      "name": "Amythest",
+      "code": 24,
+      "color": "#777777",
+      "walkable": true,
+      "healing": false,
+      "sanctuary": false,
+      "movementMultiplier": 1,
+      "renderer": "grass",
+      "edgeStyle": "none",
+      "textureAsset": "terraintexture-amythest",
+      "textureScale": 0.4,
+      "decoration": {
+        "type": "none"
+      },
+      "footstepSet": "",
+      "footstepVolume": 0.55
+    },
+    "hardwood": {
+      "name": "Hardwood",
+      "code": 25,
+      "color": "#777777",
+      "walkable": true,
+      "healing": false,
+      "sanctuary": false,
+      "movementMultiplier": 1,
+      "renderer": "grass",
+      "edgeStyle": "none",
+      "textureAsset": "terraintexture-hardwood",
+      "textureScale": 0.2,
+      "decoration": {
+        "type": "none"
+      },
+      "footstepSet": "",
+      "footstepVolume": 0.55
+    },
+    "mossy-stone": {
+      "name": "Mossy Stone",
+      "code": 26,
+      "color": "#777777",
+      "walkable": true,
+      "healing": false,
+      "sanctuary": false,
+      "movementMultiplier": 1,
+      "renderer": "grass",
+      "edgeStyle": "none",
+      "textureAsset": "terraintexture-mossy-stone",
+      "textureScale": 0.3,
+      "decoration": {
+        "type": "none"
+      },
+      "footstepSet": "",
+      "footstepVolume": 0.55
+    },
+    "ash": {
+      "name": "Ash",
+      "code": 27,
+      "color": "#777777",
+      "walkable": true,
+      "healing": false,
+      "sanctuary": false,
+      "movementMultiplier": 1,
+      "renderer": "grass",
+      "edgeStyle": "none",
+      "textureAsset": "terraintexture-ash",
+      "textureScale": 0.2,
+      "decoration": {
+        "type": "none"
+      },
+      "footstepSet": "",
+      "footstepVolume": 0.55
+    },
+    "gravel": {
+      "name": "Gravel",
+      "code": 28,
+      "color": "#777777",
+      "walkable": true,
+      "healing": false,
+      "sanctuary": false,
+      "movementMultiplier": 1,
+      "renderer": "grass",
+      "edgeStyle": "none",
+      "textureAsset": "terraintexture-gravel",
+      "textureScale": 0.25,
+      "decoration": {
+        "type": "none"
+      },
+      "footstepSet": "",
+      "footstepVolume": 0.55
+    },
+    "brick-wall": {
+      "name": "Brick Wall",
+      "code": 29,
+      "color": "#777777",
+      "walkable": true,
+      "healing": false,
+      "sanctuary": false,
+      "movementMultiplier": 1,
+      "renderer": "grass",
+      "edgeStyle": "none",
+      "textureAsset": "terraintexture-brick-wall",
+      "textureScale": 0.2,
+      "decoration": {
+        "type": "none"
+      },
+      "footstepSet": "",
+      "footstepVolume": 0.55
+    },
+    "snow": {
+      "name": "Snow",
+      "code": 30,
+      "color": "#777777",
+      "walkable": true,
+      "healing": false,
+      "sanctuary": false,
+      "movementMultiplier": 1,
+      "renderer": "grass",
+      "edgeStyle": "none",
+      "textureAsset": "terraintexture-snow",
+      "textureScale": 0.15,
+      "decoration": {
+        "type": "none"
+      },
+      "footstepSet": "",
+      "footstepVolume": 0.55
+    },
+    "stone": {
+      "name": "Stone",
+      "code": 31,
+      "color": "#777777",
+      "walkable": true,
+      "healing": false,
+      "sanctuary": false,
+      "movementMultiplier": 1,
+      "renderer": "grass",
+      "edgeStyle": "none",
+      "textureAsset": "terraintexture-stone",
+      "textureScale": 0.25,
+      "decoration": {
+        "type": "none"
+      },
+      "footstepSet": "",
+      "footstepVolume": 0.55
+    },
+    "flower-grassland": {
+      "name": "Flower Grassland",
+      "code": 32,
+      "color": "#777777",
+      "walkable": true,
+      "healing": false,
+      "sanctuary": false,
+      "movementMultiplier": 1,
+      "renderer": "grass",
+      "edgeStyle": "none",
+      "textureAsset": "terraintexture-flower-grassland",
+      "textureScale": 0.3,
+      "decoration": {
+        "type": "none"
+      },
+      "footstepSet": "",
+      "footstepVolume": 0.55
+    },
+    "muddy-rock": {
+      "name": "Muddy Rock",
+      "code": 33,
+      "color": "#777777",
+      "walkable": true,
+      "healing": false,
+      "sanctuary": false,
+      "movementMultiplier": 1,
+      "renderer": "grass",
+      "edgeStyle": "none",
+      "textureAsset": "terraintexture-muddy-rock",
+      "textureScale": 0.25,
+      "decoration": {
+        "type": "none"
+      },
+      "footstepSet": "",
+      "footstepVolume": 0.55
+    },
+    "stone-squares": {
+      "name": "Stone Squares",
+      "code": 34,
+      "color": "#777777",
+      "walkable": true,
+      "healing": false,
+      "sanctuary": false,
+      "movementMultiplier": 1,
+      "renderer": "grass",
+      "edgeStyle": "none",
+      "textureAsset": "terraintexture-stone-squares",
+      "textureScale": 0.2,
+      "decoration": {
+        "type": "none"
+      },
+      "footstepSet": "",
+      "footstepVolume": 0.55
+    },
+    "deep-sea": {
+      "name": "Deep Sea",
+      "code": 35,
+      "color": "#777777",
+      "walkable": false,
+      "healing": false,
+      "sanctuary": false,
+      "movementMultiplier": 1,
+      "renderer": "grass",
+      "edgeStyle": "none",
+      "textureAsset": "terraintexture-deep-sea",
+      "textureScale": 0.3,
+      "decoration": {
+        "type": "none"
+      },
+      "footstepSet": "",
+      "footstepVolume": 0.55
+    },
+    "tropical-water": {
+      "name": "Tropical Water",
+      "code": 36,
+      "color": "#777777",
+      "walkable": false,
+      "healing": false,
+      "sanctuary": false,
+      "movementMultiplier": 1,
+      "renderer": "grass",
+      "edgeStyle": "none",
+      "textureAsset": "terraintexture-tropical-water",
+      "textureScale": 0.25,
+      "decoration": {
+        "type": "none"
+      },
+      "footstepSet": "",
+      "footstepVolume": 0.55
+    },
+    "wetlands": {
+      "name": "Wetlands",
+      "code": 37,
+      "color": "#777777",
+      "walkable": true,
+      "healing": false,
+      "sanctuary": false,
+      "movementMultiplier": 1,
+      "renderer": "grass",
+      "edgeStyle": "none",
+      "textureAsset": "terraintexture-wetlands",
+      "textureScale": 0.2,
+      "decoration": {
+        "type": "none"
+      },
+      "footstepSet": "",
+      "footstepVolume": 0.55
+    },
+    "fall-floor": {
+      "name": "Fall Floor",
+      "code": 38,
+      "color": "#777777",
+      "walkable": true,
+      "healing": false,
+      "sanctuary": false,
+      "movementMultiplier": 1,
+      "renderer": "grass",
+      "edgeStyle": "none",
+      "textureAsset": "terraintexture-fall-floor",
+      "textureScale": 0.25,
+      "decoration": {
+        "type": "none"
+      },
+      "footstepSet": "",
+      "footstepVolume": 0.55
+    }
+  },
+  "artReferences": {
+    "character": "",
+    "mob": "mobsprite-slime",
+    "npc": "npcsprite-lilly",
+    "object": "loot-dust",
+    "building": "",
+    "terrain": "environment-terrain-seamless",
+    "item": "items-slime-gel",
+    "effect": ""
+  },
+  "characterDefaults": {
+    "defaultName": "Adventurer",
+    "defaultAppearanceAsset": "playerappearance-male-1",
+    "starterEquipment": {
+      "chest": "starterTunic",
+      "legs": "starterTrousers",
+      "feet": "wornLeatherBoots"
+    }
+  },
+  "audioClips": {},
+  "audioSets": {},
+  "audioEvents": {
+    "playerAttack": "",
+    "playerHit": "",
+    "potion": "",
+    "lootPickup": "",
+    "levelUp": "",
+    "questAccept": "",
+    "questTurnIn": ""
+  }
+}

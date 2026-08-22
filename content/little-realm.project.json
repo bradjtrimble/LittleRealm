@@ -1,0 +1,18 @@
+{
+  "format": "little-realm-project",
+  "schemaVersion": 12,
+  "name": "Little Realm",
+  "defaultZone": "starter-realm",
+  "zones": [
+    {
+      "id": "starter-realm",
+      "name": "Starter Realm",
+      "pack": "content/zones/starter-realm/world-pack.json",
+      "width": 44,
+      "height": 32,
+      "startTileX": 7,
+      "startTileY": 7
+    }
+  ],
+  "sharedContent": "content/shared/content-library.json"
+}
