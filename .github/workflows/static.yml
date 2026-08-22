@@ -30,8 +30,17 @@ jobs:
       - name: Audit workflow action versions
         run: python3 tools/workflow_audit.py
 
+      - name: Build Little Realm bundles
+        run: python3 tools/build.py
+
       - name: Validate Little Realm
         run: python3 tools/validate.py
+
+      - name: Report build sizes
+        run: python3 tools/size-report.py
+
+      - name: Prepare production Pages artifact
+        run: python3 tools/prepare-pages.py
 
       - name: Setup Pages
         uses: actions/configure-pages@v6
@@ -39,7 +48,7 @@ jobs:
       - name: Upload Pages artifact
         uses: actions/upload-pages-artifact@v5
         with:
-          path: '.'
+          path: './dist'
 
   deploy:
     environment:
